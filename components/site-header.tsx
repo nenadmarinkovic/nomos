@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Pause, Play, SlidersHorizontal } from "@phosphor-icons/react";
+import {
+  PauseIcon,
+  PlayIcon,
+  SlidersHorizontalIcon,
+} from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -9,14 +13,14 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 interface SiteHeaderProps {
   running: boolean;
-  tick: number;
+  turn: number;
   onRunToggle: () => void;
   onOpenSettings: () => void;
 }
 
 export function SiteHeader({
   running,
-  tick,
+  turn,
   onRunToggle,
   onOpenSettings,
 }: SiteHeaderProps) {
@@ -24,14 +28,13 @@ export function SiteHeader({
     <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-foreground/10 bg-background px-4">
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2">
-          <span aria-label="Nomos" className="size-3 rounded-full bg-brand" />
-          <span className="relative top-px font-serif text-lg italic leading-none tracking-tight text-foreground">
+          <span className="relative font-sans top-px text-lg font-bold leading-none tracking-tight text-foreground">
             Nomos
           </span>
         </Link>
         <Separator orientation="vertical" className="!h-4" />
         <span className="font-mono text-xs text-muted-foreground tabular-nums">
-          tick {tick.toString().padStart(5, "0")}
+          turn {turn.toString().padStart(5, "0")}
         </span>
       </div>
 
@@ -43,7 +46,7 @@ export function SiteHeader({
           onClick={onOpenSettings}
           aria-label="Initial conditions"
         >
-          <SlidersHorizontal weight="regular" />
+          <SlidersHorizontalIcon weight="regular" />
           Conditions
         </Button>
         <Button
@@ -51,11 +54,7 @@ export function SiteHeader({
           size="sm"
           onClick={onRunToggle}
         >
-          {running ? (
-            <Pause weight="fill" />
-          ) : (
-            <Play weight="fill" />
-          )}
+          {running ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />}
           {running ? "Pause" : "Run"}
         </Button>
       </div>
