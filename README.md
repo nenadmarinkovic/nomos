@@ -2,14 +2,14 @@
 
 A society simulation where agents follow simple rules and AI theorists observe what emerges.
 
-> **Status:** _(development)_
+> **Status:** In development
 
 ## Architecture
 
 1. **Initial conditions** — population, resource landscape, starting equality, reproduction. Kept as minimal as defensible (Epstein's Rawlsian commitment).
-2. **Agent model** — one or two simple rules for movement, exchange, harvest, metabolism, adaptation. Each rule is one theorist's answer to _what motivates a person_.
+2. **Agent model** — one or two simple rules for movement, exchange, harvest, metabolism, adaptation.
 3. **Simulation engine** — agents follow rules, society emerges. Trade, law, states, politics, conflict aren't programmed — they emerge or don't.
-4. **Observers** — AI theorists (Bourdieu, Marx, Luhmann, Ibn Khaldun, Turchin, Schelling, Epstein, Flack) watch the same field and describe what they see in their own vocabulary.
+4. **Observers** — AI theorists (Bourdieu, Durkheim, Marx, Luhmann, Ibn Khaldun, Turchin, Schelling, Epstein, Flack) watch the same field and describe what they see in their own vocabulary.
 
 ## Stack
 
@@ -17,7 +17,7 @@ A society simulation where agents follow simple rules and AI theorists observe w
 
 - Next.js 16 (App Router, Turbopack) · React 19 · TypeScript 5
 - Tailwind CSS v4
-- Phosphor Icons · `next-themes` for light/dark
+- Phosphor Icons
 - Local fonts: Newsreader (serif) and Google Sans Flex (sans)
 
 **Simulation runtime** _(planned)_
