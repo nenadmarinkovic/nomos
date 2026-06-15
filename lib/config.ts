@@ -20,10 +20,14 @@ export type ObserverKey =
   | "epstein"
   | "bourdieu"
   | "marx"
+  | "weber"
+  | "durkheim"
   | "luhmann"
   | "ibn_khaldun"
   | "turchin"
   | "schelling"
+  | "ostrom"
+  | "butler"
   | "flack";
 
 export interface SimulationConfig {
@@ -164,6 +168,24 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
     watches:
       "Surplus extraction, alienation, and the contradictions that turn quantitative pressure into qualitative rupture.",
   },
+  weber: {
+    label: "Weber",
+    name: "Max Weber",
+    era: "1864–1920",
+    lens: "rationalization, legitimacy, bureaucracy",
+    sees: "Modernity as the disenchantment of the world — life increasingly governed by calculable rules and means-ends rationality. The iron cage builds itself.",
+    watches:
+      "How charisma routinizes into bureaucracy, how authority claims legitimacy (traditional, charismatic, legal-rational), and where rationalization corrodes meaning.",
+  },
+  durkheim: {
+    label: "Durkheim",
+    name: "Émile Durkheim",
+    era: "1858–1917",
+    lens: "solidarity, anomie, social facts",
+    sees: "Society as a moral reality above individuals. Social facts — norms, rituals, collective beliefs — have causal force no one person creates or controls.",
+    watches:
+      "The shift from mechanical to organic solidarity, anomie when shared norms loosen, and rituals that bind a group into a single conscience.",
+  },
   luhmann: {
     label: "Luhmann",
     name: "Niklas Luhmann",
@@ -199,6 +221,24 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
     sees: "Macrobehavior as the accidental sum of micromotives. Mild individual preferences can compound into outcomes nobody wanted.",
     watches:
       "Tipping points, thresholds, and the moments when small preference shifts cascade into segregation, runs, or coordination collapse.",
+  },
+  ostrom: {
+    label: "Ostrom",
+    name: "Elinor Ostrom",
+    era: "1933–2012",
+    lens: "commons, governance, polycentricity",
+    sees: "Communities can govern shared resources sustainably — neither pure market nor pure state — when the rules fit the situation. Hobbes and Smith don't exhaust the options.",
+    watches:
+      "How groups craft rules, monitor each other, and resolve disputes. The design principles that let a commons survive enclosure and free-riding.",
+  },
+  butler: {
+    label: "Butler",
+    name: "Judith Butler",
+    era: "contemporary",
+    lens: "performativity, recognition, norms",
+    sees: "Identity not as expressed but as performed. Gender, race, and selfhood are produced through repeated acts that cite norms into existence.",
+    watches:
+      "Which bodies become intelligible and which don't, how norms reproduce by being cited, and where performance fails or refuses the categories meant to contain it.",
   },
   flack: {
     label: "Flack",

@@ -135,21 +135,31 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  description,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: React.ComponentProps<typeof SelectPrimitive.Item> & {
+  description?: React.ReactNode;
+}) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 font-sans text-sm outline-none",
+        "relative flex w-full cursor-pointer select-none items-start gap-2 rounded-sm py-2 pl-2 pr-8 font-sans text-sm outline-none",
         "focus:bg-foreground/[0.06] focus:text-foreground",
         "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-      <span className="absolute right-2 flex size-3.5 items-center justify-center">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+        {description && (
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {description}
+          </span>
+        )}
+      </div>
+      <span className="absolute right-2 top-2.5 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
           <CheckIcon
             weight="bold"
