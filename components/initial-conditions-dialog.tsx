@@ -21,6 +21,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
@@ -124,40 +132,34 @@ export function InitialConditionsDialog({
               label="Starting equality"
               hint="The initial distribution of wealth and capital across agents."
             >
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {(Object.keys(EQUALITY_INFO) as Equality[]).map((e) => {
-                  const info = EQUALITY_INFO[e];
-                  return (
-                    <OptionCard
-                      key={e}
-                      active={draft.equality === e}
-                      onClick={() => setDraft((d) => ({ ...d, equality: e }))}
-                      label={info.label}
-                      hint={info.hint}
-                    />
-                  );
-                })}
-              </div>
+              <StepSlider
+                value={draft.equality}
+                onChange={(v) => setDraft((d) => ({ ...d, equality: v }))}
+                options={(Object.keys(EQUALITY_INFO) as Equality[]).map(
+                  (e) => ({
+                    value: e,
+                    label: EQUALITY_INFO[e].label,
+                    hint: EQUALITY_INFO[e].hint,
+                  }),
+                )}
+              />
             </Field>
 
             <Field
               label="Resource landscape"
               hint="The spatial layout of resources — shapes where agents settle and where conflict concentrates."
             >
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {(Object.keys(LANDSCAPE_INFO) as Landscape[]).map((l) => {
-                  const info = LANDSCAPE_INFO[l];
-                  return (
-                    <OptionCard
-                      key={l}
-                      active={draft.landscape === l}
-                      onClick={() => setDraft((d) => ({ ...d, landscape: l }))}
-                      label={info.label}
-                      hint={info.hint}
-                    />
-                  );
-                })}
-              </div>
+              <SelectField
+                value={draft.landscape}
+                onChange={(v) => setDraft((d) => ({ ...d, landscape: v }))}
+                options={(Object.keys(LANDSCAPE_INFO) as Landscape[]).map(
+                  (l) => ({
+                    value: l,
+                    label: LANDSCAPE_INFO[l].label,
+                    hint: LANDSCAPE_INFO[l].hint,
+                  }),
+                )}
+              />
             </Field>
 
             <Field label="Reproduction" hint={REPRODUCTION_HINT}>
@@ -185,46 +187,36 @@ export function InitialConditionsDialog({
               label="Sophistication"
               hint="How agents make decisions — from blind reactions to social mimicry."
             >
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {(Object.keys(SOPHISTICATION_INFO) as AgentSophistication[]).map(
-                  (s) => {
-                    const info = SOPHISTICATION_INFO[s];
-                    return (
-                      <OptionCard
-                        key={s}
-                        active={draft.sophistication === s}
-                        onClick={() =>
-                          setDraft((d) => ({ ...d, sophistication: s }))
-                        }
-                        label={info.label}
-                        hint={info.hint}
-                      />
-                    );
-                  },
-                )}
-              </div>
+              <SelectField
+                value={draft.sophistication}
+                onChange={(v) =>
+                  setDraft((d) => ({ ...d, sophistication: v }))
+                }
+                options={(
+                  Object.keys(SOPHISTICATION_INFO) as AgentSophistication[]
+                ).map((s) => ({
+                  value: s,
+                  label: SOPHISTICATION_INFO[s].label,
+                  hint: SOPHISTICATION_INFO[s].hint,
+                }))}
+              />
             </Field>
 
             <Field
               label="Interaction topology"
               hint="Who can talk to whom — the structure of the social graph."
             >
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {(Object.keys(TOPOLOGY_INFO) as InteractionTopology[]).map(
-                  (t) => {
-                    const info = TOPOLOGY_INFO[t];
-                    return (
-                      <OptionCard
-                        key={t}
-                        active={draft.topology === t}
-                        onClick={() => setDraft((d) => ({ ...d, topology: t }))}
-                        label={info.label}
-                        hint={info.hint}
-                      />
-                    );
-                  },
+              <SelectField
+                value={draft.topology}
+                onChange={(v) => setDraft((d) => ({ ...d, topology: v }))}
+                options={(Object.keys(TOPOLOGY_INFO) as InteractionTopology[]).map(
+                  (t) => ({
+                    value: t,
+                    label: TOPOLOGY_INFO[t].label,
+                    hint: TOPOLOGY_INFO[t].hint,
+                  }),
                 )}
-              </div>
+              />
             </Field>
           </Section>
 
@@ -475,3 +467,93 @@ function OptionCard({
   );
 }
 
+function StepSlider<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string; hint: string }[];
+}) {
+  const index = Math.max(
+    0,
+    options.findIndex((o) => o.value === value),
+  );
+  const current = options[index];
+
+  return (
+    <div className="space-y-3 rounded-md border border-foreground/10 bg-card px-4 pb-3 pt-3.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm font-medium">{current.label}</span>
+        <span className="text-[11px] leading-snug text-muted-foreground">
+          {current.hint}
+        </span>
+      </div>
+      <Slider
+        value={[index]}
+        min={0}
+        max={options.length - 1}
+        step={1}
+        onValueChange={(v) => {
+          const idx = Array.isArray(v) ? v[0] : v;
+          onChange(options[idx as number].value);
+        }}
+      />
+      <div className="flex justify-between gap-2 text-[10px] uppercase tracking-[0.12em]">
+        {options.map((o, i) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "cursor-pointer transition-colors",
+              i === index
+                ? "text-foreground"
+                : "text-muted-foreground/60 hover:text-foreground/80",
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SelectField<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string; hint: string }[];
+}) {
+  const current = options.find((o) => o.value === value);
+  return (
+    <div className="space-y-2">
+      <Select value={value} onValueChange={(v) => onChange(v as T)}>
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem
+              key={o.value}
+              value={o.value}
+              description={o.hint}
+            >
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {current && (
+        <p className="px-1 text-[11px] leading-snug text-muted-foreground">
+          {current.hint}
+        </p>
+      )}
+    </div>
+  );
+}
