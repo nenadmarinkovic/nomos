@@ -15,15 +15,16 @@ import {
 export default function Home() {
   const [config, setConfig] = useState<SimulationConfig>(DEFAULT_CONFIG);
   const [running, setRunning] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [turn, setTurn] = useState(0);
   const [section, setSection] = useState<SectionKey>("world");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="flex h-screen flex-col">
       <SiteHeader
         running={running}
-        tick={tick}
+        turn={turn}
         onRunToggle={() => setRunning((r) => !r)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
@@ -34,6 +35,8 @@ export default function Home() {
           onSelect={setSection}
           agentCount={SCALE_INFO[config.scale].agents}
           observerCount={config.observers.length}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((v) => !v)}
         />
         <main className="flex flex-1 overflow-hidden">
           <SimulationCanvas running={running} />
@@ -47,7 +50,7 @@ export default function Home() {
         onApply={(next) => {
           setConfig(next);
           setRunning(false);
-          setTick(0);
+          setTurn(0);
         }}
       />
     </div>
