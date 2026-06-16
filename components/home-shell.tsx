@@ -19,7 +19,7 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
   const [running, setRunning] = useState(false);
   const [turn, setTurn] = useState(0);
   const [section, setSection] = useState<SectionKey>("world");
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultCollapsed);
 
   const toggleSidebar = () =>
@@ -34,8 +34,8 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
       <SiteHeader
         running={running}
         turn={turn}
-        onRunToggle={() => setRunning((r) => !r)}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onRun={() => setRunDialogOpen(true)}
+        onPause={() => setRunning(false)}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -53,13 +53,13 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
       </div>
 
       <InitialConditionsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
+        open={runDialogOpen}
+        onOpenChange={setRunDialogOpen}
         config={config}
-        onApply={(next) => {
+        onRun={(next) => {
           setConfig(next);
-          setRunning(false);
           setTurn(0);
+          setRunning(true);
         }}
       />
     </div>
