@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-import { ChartsPanel } from "@/components/charts-panel";
 import { ChroniclePanel } from "@/components/chronicle-panel";
+import { FloatingWindows } from "@/components/floating-windows";
 import { ObserverNarrator } from "@/components/observer-narrator";
 import { Sidebar, type SectionKey } from "@/components/sidebar";
 import { SimulationCanvas } from "@/components/simulation-canvas";
@@ -60,10 +60,10 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
         <main className="flex flex-1 flex-col overflow-hidden">
           <div className="flex flex-1 overflow-hidden">
             <div className="flex flex-1 flex-col overflow-hidden">
-              <div className="flex flex-1 overflow-hidden">
+              <div className="relative flex flex-1 overflow-hidden">
                 <SimulationCanvas running={running} />
+                <FloatingWindows />
               </div>
-              <ChartsPanel />
             </div>
             {showChronicle && <ChroniclePanel />}
           </div>

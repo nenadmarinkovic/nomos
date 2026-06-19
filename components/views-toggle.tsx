@@ -8,16 +8,30 @@ const VIEWS: { key: ViewKey; label: string }[] = [
   { key: "gini", label: "Gini" },
   { key: "alive", label: "Alive" },
   { key: "wealth", label: "Wealth" },
+  { key: "narrator", label: "Narrator" },
 ];
 
 export function ViewsToggle() {
+  const started = useSimulationStore((s) => s.started);
   const views = useSimulationStore((s) => s.views);
   const toggleView = useSimulationStore((s) => s.toggleView);
+  const resetWindows = useSimulationStore((s) => s.resetWindows);
+
+  if (!started) return null;
 
   return (
     <div className="space-y-2.5 px-3 py-3">
-      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        Views
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          Windows
+        </span>
+        <button
+          type="button"
+          onClick={resetWindows}
+          className="cursor-pointer font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Reset
+        </button>
       </div>
       <div className="flex flex-col gap-1.5">
         {VIEWS.map((v) => {
