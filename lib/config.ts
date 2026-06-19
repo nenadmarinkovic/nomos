@@ -107,7 +107,7 @@ export const SOPHISTICATION_INFO: Record<
   },
   bounded_rational: {
     label: "Bounded",
-    hint: "Limited info, satisficing choices. Herbert Simon's agents.",
+    hint: "Limited information, good-enough rather than optimal choices.",
   },
   adaptive: {
     label: "Adaptive",
@@ -125,15 +125,15 @@ export const MOTIVATION_INFO: Record<
 > = {
   material: {
     label: "Material",
-    hint: "Resources and labour come first. Marx's productive subject.",
+    hint: "Resources and labour come first.",
   },
   symbolic: {
     label: "Symbolic",
-    hint: "Status, taste, and distinction drive choices. Bourdieu's capital game.",
+    hint: "Status, taste, and distinction drive choices.",
   },
   normative: {
     label: "Normative",
-    hint: "Belonging and ritual conformity guide action. Durkheim's collective conscience.",
+    hint: "Belonging and ritual conformity guide action.",
   },
   mixed: {
     label: "Mixed",
@@ -164,7 +164,7 @@ export const TOPOLOGY_INFO: Record<
 };
 
 export const REPRODUCTION_HINT =
-  "Agents inherit wealth and traits from parents at Bourdieusian rates. Reveals how structure reproduces across generations.";
+  "Agents inherit wealth and traits from their parents. Reveals how structure reproduces across generations.";
 
 export interface ObserverEntry {
   label: string;

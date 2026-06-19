@@ -22,10 +22,12 @@ import type { SectionKey } from "@/components/sidebar";
 
 interface SiteHeaderProps {
   running: boolean;
+  paused: boolean;
   sidebarCollapsed: boolean;
   activeSection: SectionKey;
   onToggleSidebar?: () => void;
   onPause: () => void;
+  onResume: () => void;
 }
 
 const SECTION_LABELS: Record<SectionKey, { group: string; label: string }> = {
@@ -38,13 +40,27 @@ const SECTION_LABELS: Record<SectionKey, { group: string; label: string }> = {
 
 export function SiteHeader({
   running,
+  paused,
   sidebarCollapsed,
   activeSection,
   onToggleSidebar,
   onPause,
+  onResume,
 }: SiteHeaderProps) {
   const router = useRouter();
   const breadcrumb = SECTION_LABELS[activeSection];
+
+  const action: "pause" | "resume" | "run" = running
+    ? "pause"
+    : paused
+      ? "resume"
+      : "run";
+
+  function handleClick() {
+    if (action === "pause") onPause();
+    else if (action === "resume") onResume();
+    else router.push("/setup");
+  }
 
   return (
     <header className="flex h-14 shrink-0 items-stretch border-b border-foreground/10 bg-background">
@@ -122,12 +138,20 @@ export function SiteHeader({
         <div className="flex shrink-0 items-center gap-2">
           <ThemeToggle />
           <Button
-            variant={running ? "secondary" : "default"}
+            variant={action === "pause" ? "secondary" : "default"}
             size="sm"
-            onClick={running ? onPause : () => router.push("/setup")}
+            onClick={handleClick}
           >
-            {running ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />}
-            {running ? "Pause" : "Run"}
+            {action === "pause" ? (
+              <PauseIcon weight="fill" />
+            ) : (
+              <PlayIcon weight="fill" />
+            )}
+            {action === "pause"
+              ? "Pause"
+              : action === "resume"
+                ? "Resume"
+                : "Run"}
           </Button>
         </div>
       </div>

@@ -14,8 +14,12 @@ const SIDEBAR_COOKIE = "sidebar-collapsed";
 export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
   const config = useSimulationStore((s) => s.config);
   const running = useSimulationStore((s) => s.running);
+  const started = useSimulationStore((s) => s.started);
   const turn = useSimulationStore((s) => s.turn);
   const pauseRun = useSimulationStore((s) => s.pauseRun);
+  const resumeRun = useSimulationStore((s) => s.resumeRun);
+
+  const paused = started && !running;
 
   const [section, setSection] = useState<SectionKey>("world");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultCollapsed);
@@ -31,10 +35,12 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
     <div className="flex h-screen flex-col">
       <SiteHeader
         running={running}
+        paused={paused}
         sidebarCollapsed={sidebarCollapsed}
         activeSection={section}
         onToggleSidebar={toggleSidebar}
         onPause={pauseRun}
+        onResume={resumeRun}
       />
 
       <div className="flex flex-1 overflow-hidden">

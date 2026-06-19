@@ -8,11 +8,13 @@ import { DEFAULT_CONFIG, type SimulationConfig } from "@/lib/config";
 interface SimulationState {
   config: SimulationConfig;
   running: boolean;
+  started: boolean;
   turn: number;
   setConfig: (next: SimulationConfig) => void;
   patchConfig: (patch: Partial<SimulationConfig>) => void;
   resetConfig: () => void;
   startRun: (next?: SimulationConfig) => void;
+  resumeRun: () => void;
   pauseRun: () => void;
 }
 
@@ -21,6 +23,7 @@ export const useSimulationStore = create<SimulationState>()(
     (set) => ({
       config: DEFAULT_CONFIG,
       running: false,
+      started: false,
       turn: 0,
       setConfig: (next) => set({ config: next }),
       patchConfig: (patch) =>
@@ -30,8 +33,10 @@ export const useSimulationStore = create<SimulationState>()(
         set((s) => ({
           config: next ?? s.config,
           running: true,
+          started: true,
           turn: 0,
         })),
+      resumeRun: () => set({ running: true }),
       pauseRun: () => set({ running: false }),
     }),
     {
