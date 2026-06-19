@@ -9,7 +9,6 @@ import {
   GlobeIcon,
   PulseIcon,
   ScrollIcon,
-  SidebarSimpleIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react";
 
@@ -26,9 +25,6 @@ type SectionKey = "world" | "agents" | "observers" | "metrics" | "log";
 interface SidebarProps {
   active: SectionKey;
   onSelect: (key: SectionKey) => void;
-  agentCount: number;
-  observerCount: number;
-  turn: number;
   collapsed: boolean;
   onToggle?: () => void;
 }
@@ -53,13 +49,9 @@ const RUN: SectionDef[] = [
 export function Sidebar({
   active,
   onSelect,
-  agentCount,
-  observerCount,
-  turn,
   collapsed,
   onToggle,
 }: SidebarProps) {
-  const turnStr = turn.toString().padStart(5, "0");
   return (
     <aside
       className={cn(
@@ -92,72 +84,9 @@ export function Sidebar({
       </ScrollArea>
 
       <div
-        className={cn(
-          "border-t border-foreground/10 text-[11px]",
-          collapsed ? "px-1.5 py-3 text-center" : "px-3 py-3",
-        )}
-      >
-        {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <span className="block cursor-default font-mono text-[10px] tabular-nums text-muted-foreground">
-                  {turnStr}
-                </span>
-              }
-            />
-            <TooltipContent side="right" sideOffset={8}>
-              Turn {turnStr} · {agentCount.toLocaleString()} agents ·{" "}
-              {observerCount} observers
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <>
-            <Stat label="Turn" value={turnStr} />
-            <Stat label="Agents" value={agentCount.toLocaleString()} />
-            <Stat label="Observers" value={observerCount.toString()} />
-          </>
-        )}
-      </div>
-
-      {onToggle && (
-        <div
-          className={cn(
-            "flex border-t border-foreground/10 py-2",
-            collapsed ? "justify-center px-1.5" : "justify-end px-2",
-          )}
-        >
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <button
-                    type="button"
-                    onClick={onToggle}
-                    aria-label="Expand sidebar"
-                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
-                  >
-                    <SidebarSimpleIcon size={16} />
-                  </button>
-                }
-              />
-              <TooltipContent side="right" sideOffset={8}>
-                Expand sidebar
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <button
-              type="button"
-              onClick={onToggle}
-              aria-label="Collapse sidebar"
-              title="Collapse sidebar"
-              className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
-            >
-              <SidebarSimpleIcon size={16} />
-            </button>
-          )}
-        </div>
-      )}
+        aria-hidden
+        className="h-14 shrink-0 border-t border-foreground/10"
+      />
 
       {onToggle && (
         <button
@@ -262,15 +191,6 @@ function NavGroup({
           return <React.Fragment key={key}>{button}</React.Fragment>;
         })}
       </nav>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between py-0.5">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-mono tabular-nums text-foreground/90">{value}</span>
     </div>
   );
 }

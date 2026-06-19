@@ -8,6 +8,7 @@ import {
 } from "@/components/initial-conditions-dialog";
 import { Sidebar, type SectionKey } from "@/components/sidebar";
 import { SimulationCanvas } from "@/components/simulation-canvas";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Stepper } from "@/components/stepper";
 import { Dialog, DialogPortal } from "@/components/ui/dialog";
@@ -42,6 +43,9 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
     <div className="flex h-screen flex-col">
       <SiteHeader
         running={running}
+        sidebarCollapsed={sidebarCollapsed}
+        activeSection={section}
+        onToggleSidebar={toggleSidebar}
         onRun={openRunDialog}
         onPause={() => setRunning(false)}
       />
@@ -50,14 +54,18 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
         <Sidebar
           active={section}
           onSelect={setSection}
-          agentCount={SCALE_INFO[config.scale].agents}
-          observerCount={config.observers.length}
-          turn={turn}
           collapsed={sidebarCollapsed}
           onToggle={toggleSidebar}
         />
-        <main className="flex flex-1 overflow-hidden">
-          <SimulationCanvas running={running} />
+        <main className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex flex-1 overflow-hidden">
+            <SimulationCanvas running={running} />
+          </div>
+          <SiteFooter
+            turn={turn}
+            agentCount={SCALE_INFO[config.scale].agents}
+            observerCount={config.observers.length}
+          />
         </main>
       </div>
 
