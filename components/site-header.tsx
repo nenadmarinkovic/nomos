@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CaretRightIcon,
   PauseIcon,
@@ -24,7 +25,6 @@ interface SiteHeaderProps {
   sidebarCollapsed: boolean;
   activeSection: SectionKey;
   onToggleSidebar?: () => void;
-  onRun: () => void;
   onPause: () => void;
 }
 
@@ -41,9 +41,9 @@ export function SiteHeader({
   sidebarCollapsed,
   activeSection,
   onToggleSidebar,
-  onRun,
   onPause,
 }: SiteHeaderProps) {
+  const router = useRouter();
   const breadcrumb = SECTION_LABELS[activeSection];
 
   return (
@@ -124,7 +124,7 @@ export function SiteHeader({
           <Button
             variant={running ? "secondary" : "default"}
             size="sm"
-            onClick={running ? onPause : onRun}
+            onClick={running ? onPause : () => router.push("/setup")}
           >
             {running ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />}
             {running ? "Pause" : "Run"}
