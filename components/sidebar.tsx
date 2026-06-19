@@ -14,6 +14,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { CanvasLegend } from "@/components/canvas-legend";
+import { ViewsToggle } from "@/components/views-toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
@@ -85,8 +86,11 @@ export function Sidebar({
       </ScrollArea>
 
       {!collapsed && (
-        <div className="shrink-0 border-t border-foreground/10">
-          <CanvasLegend />
+        <div className="flex shrink-0 flex-col border-t border-foreground/10">
+          <ViewsToggle />
+          <div className="border-t border-foreground/10">
+            <CanvasLegend />
+          </div>
         </div>
       )}
       <div

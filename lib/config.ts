@@ -498,14 +498,14 @@ export const DEFAULT_PHYSICS: WorldPhysics = {
   regrowthRate: 0.1,
   vision: 3,
   lifespan: 60,
-  heterogeneity: 0.15,
+  heterogeneity: 0.4,
 };
 
 export const DEFAULT_CONFIG: SimulationConfig = {
   seed: 0,
   world: {
     scale: "town",
-    equality: 0.2,
+    equality: 0.05,
     landscape: "two_peaks",
     initialSettlement: "scattered",
     reproduction: true,
@@ -513,9 +513,19 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   },
   agents: {
     kind: "epstein_minimal",
-    sophistication: { bounded_rational: 1 },
-    motivation: { material: 1 },
+    sophistication: {
+      minimal: 1,
+      bounded_rational: 1,
+      adaptive: 1,
+      social: 1,
+    },
+    motivation: {
+      material: 1,
+      symbolic: 1,
+      normative: 1,
+      power: 1,
+    },
     topology: "spatial",
   },
-  observers: ["epstein"],
+  observers: ["epstein", "marx", "bourdieu", "durkheim"],
 };

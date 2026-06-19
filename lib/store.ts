@@ -26,6 +26,8 @@ export interface HistoryPoint {
 
 const HISTORY_LIMIT = 240;
 
+export type ViewKey = "gini" | "alive" | "wealth";
+
 interface SimulationState {
   config: SimulationConfig;
   running: boolean;
@@ -36,6 +38,7 @@ interface SimulationState {
   history: HistoryPoint[];
   speed: number;
   canvasSize: { width: number; height: number };
+  views: Record<ViewKey, boolean>;
   startRun: (next?: SimulationConfig) => void;
   resumeRun: () => void;
   pauseRun: () => void;
@@ -43,6 +46,7 @@ interface SimulationState {
   setSpeed: (speed: number) => void;
   updateSnapshot: (snapshot: EngineSnapshot) => void;
   setCanvasSize: (s: { width: number; height: number }) => void;
+  toggleView: (key: ViewKey) => void;
 }
 
 export const useSimulationStore = create<SimulationState>()(
@@ -57,6 +61,7 @@ export const useSimulationStore = create<SimulationState>()(
       history: [],
       speed: 1,
       canvasSize: { width: 0, height: 0 },
+      views: { gini: true, alive: true, wealth: true },
       startRun: (next) =>
         set((s) => ({
           config: { ...(next ?? s.config), seed: newSeed() },
@@ -79,6 +84,8 @@ export const useSimulationStore = create<SimulationState>()(
         }),
       setSpeed: (speed) => set({ speed }),
       setCanvasSize: (canvasSize) => set({ canvasSize }),
+      toggleView: (key) =>
+        set((s) => ({ views: { ...s.views, [key]: !s.views[key] } })),
       updateSnapshot: (snapshot) =>
         set((s) => {
           const next = s.history.slice(
@@ -94,10 +101,13 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 6,
+      version: 7,
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ config: s.config }),
-      migrate: () => ({ config: DEFAULT_CONFIG }),
+      partialize: (s) => ({ config: s.config, views: s.views }),
+      migrate: () => ({
+        config: DEFAULT_CONFIG,
+        views: { gini: true, alive: true, wealth: true },
+      }),
     },
   ),
 );

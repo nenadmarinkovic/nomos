@@ -199,16 +199,27 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
 
 
         {!started && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="max-w-sm text-center">
-              <p className="font-serif text-2xl italic leading-tight text-foreground/90">
-                Empty field.
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Set initial conditions, press Run, and watch what emerges.
-              </p>
+          <>
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/grid.svg"
+                alt=""
+                aria-hidden
+                className="h-full w-full select-none object-cover opacity-80 dark:opacity-55 dark:invert"
+              />
             </div>
-          </div>
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="max-w-sm rounded-md bg-background/70 px-4 py-3 text-center backdrop-blur-sm">
+                <p className="font-serif text-2xl italic leading-tight text-foreground/90">
+                  Empty field.
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Set initial conditions, press Run, and watch what emerges.
+                </p>
+              </div>
+            </div>
+          </>
         )}
 
         <div className="absolute right-3 top-3 flex items-center gap-2 rounded-md border border-border bg-card/80 px-2 py-1 backdrop-blur-sm">
@@ -239,6 +250,7 @@ function clearCanvas(canvas: HTMLCanvasElement | null) {
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
+
 
 const MOTIVATION_COLOR: Record<string, string> = {
   material: "#E63946",

@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -239,8 +238,7 @@ export function SiteHeader({
                 Pause instead.
               </DialogDescription>
             </DialogHeader>
-            <DialogBody className="hidden" />
-            <DialogFooter>
+            <DialogFooter className="border-t-0">
               <Button
                 variant="ghost"
                 size="sm"
