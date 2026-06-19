@@ -18,6 +18,7 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
   const turn = useSimulationStore((s) => s.turn);
   const pauseRun = useSimulationStore((s) => s.pauseRun);
   const resumeRun = useSimulationStore((s) => s.resumeRun);
+  const stopRun = useSimulationStore((s) => s.stopRun);
 
   const paused = started && !running;
 
@@ -41,6 +42,7 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
         onToggleSidebar={toggleSidebar}
         onPause={pauseRun}
         onResume={resumeRun}
+        onStop={stopRun}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -56,7 +58,7 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
           </div>
           <SiteFooter
             turn={turn}
-            agentCount={SCALE_INFO[config.scale].agents}
+            agentCount={SCALE_INFO[config.world.scale].agents}
             observerCount={config.observers.length}
           />
         </main>

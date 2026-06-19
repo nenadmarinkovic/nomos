@@ -3,14 +3,25 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   CaretRightIcon,
   PauseIcon,
   PlayIcon,
   SidebarSimpleIcon,
+  StopIcon,
 } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Tooltip,
@@ -28,6 +39,7 @@ interface SiteHeaderProps {
   onToggleSidebar?: () => void;
   onPause: () => void;
   onResume: () => void;
+  onStop: () => void;
 }
 
 const SECTION_LABELS: Record<SectionKey, { group: string; label: string }> = {
@@ -46,9 +58,11 @@ export function SiteHeader({
   onToggleSidebar,
   onPause,
   onResume,
+  onStop,
 }: SiteHeaderProps) {
   const router = useRouter();
   const breadcrumb = SECTION_LABELS[activeSection];
+  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
 
   const action: "pause" | "resume" | "run" = running
     ? "pause"
@@ -56,10 +70,17 @@ export function SiteHeader({
       ? "resume"
       : "run";
 
+  const showStop = running || paused;
+
   function handleClick() {
     if (action === "pause") onPause();
     else if (action === "resume") onResume();
     else router.push("/setup");
+  }
+
+  function confirmStop() {
+    onStop();
+    setStopConfirmOpen(false);
   }
 
   return (
@@ -137,6 +158,16 @@ export function SiteHeader({
 
         <div className="flex shrink-0 items-center gap-2">
           <ThemeToggle />
+          {showStop && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStopConfirmOpen(true)}
+            >
+              <StopIcon weight="fill" />
+              Stop
+            </Button>
+          )}
           <Button
             variant={action === "pause" ? "secondary" : "default"}
             size="sm"
@@ -154,6 +185,41 @@ export function SiteHeader({
                 : "Run"}
           </Button>
         </div>
+
+        <Dialog open={stopConfirmOpen} onOpenChange={setStopConfirmOpen}>
+          <DialogContent
+            showCloseButton={false}
+            className="sm:max-w-md"
+          >
+            <DialogHeader>
+              <DialogTitle>Stop this simulation?</DialogTitle>
+              <DialogDescription>
+                The current run will end and the turn counter will reset to
+                zero. Your settings are kept — you can begin a new run any
+                time. If you only want to step away for a moment, use
+                Pause instead.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody className="hidden" />
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setStopConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={confirmStop}
+              >
+                <StopIcon weight="fill" />
+                Stop simulation
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </header>
   );

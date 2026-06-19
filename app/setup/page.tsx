@@ -17,21 +17,28 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
+  AgentModel,
   AgentMotivation,
   AgentSophistication,
   DEFAULT_CONFIG,
   InteractionTopology,
   Landscape,
   LANDSCAPE_INFO,
+  LIFESPAN_BUCKETS,
+  METABOLISM_BUCKETS,
   MOTIVATION_INFO,
   OBSERVER_INFO,
   ObserverKey,
+  REGROWTH_BUCKETS,
   REPRODUCTION_HINT,
   SCALE_INFO,
   Scale,
   SOPHISTICATION_INFO,
   TOPOLOGY_INFO,
+  VISION_BUCKETS,
   type SimulationConfig,
+  type WorldConfig,
+  type WorldPhysics,
 } from "@/lib/config";
 import { useSimulationStore } from "@/lib/store";
 
@@ -40,6 +47,10 @@ type StepKey =
   | "equality"
   | "landscape"
   | "reproduction"
+  | "metabolism"
+  | "regrowth"
+  | "vision"
+  | "lifespan"
   | "sophistication"
   | "motivation"
   | "topology"
@@ -79,10 +90,42 @@ const STEPS: readonly StepDef[] = [
   },
   {
     key: "reproduction",
-    question: "Do they have children?",
+    question: "Does wealth pass between generations?",
     framing: REPRODUCTION_HINT,
     theoryHook:
-      "With reproduction off, every agent lives one life and dies — whatever wealth or status they built disappears with them. With it on, children inherit from their parents, so a head start (or a disadvantage) compounds across generations. This is how class becomes durable: the same families stay near the top, the same families stay near the bottom, and the question 'why doesn't anyone move?' becomes legible. Bourdieu's whole project was about this quiet machinery.",
+      "Inheritance is how structure becomes durable. When wealth and traits pass down, a head start (or a disadvantage) compounds across generations — the same families stay near the top, the same families stay near the bottom, and the question 'why doesn't anyone move?' becomes legible. When each life resets, every birth is a clean slate: useful as a thought experiment, but unrealistic for any actual society. Bourdieu's whole project was about the quiet machinery of the first option.",
+  },
+  {
+    key: "metabolism",
+    question: "How fast do they burn through resources?",
+    framing:
+      "Every agent consumes a little each turn just to stay alive. The harder that burn, the tighter the margin between surplus and starvation.",
+    theoryHook:
+      "Metabolism is the heartbeat of any agent-based society. When it's low, almost nobody falls behind and surplus piles up — economies of comfort. When it's high, every turn is a small crisis: people compete for the same patches, the weak drop out, and inequality gets a brutal source even before any rules of trade exist. This single dial decides whether you're modelling abundance or scarcity.",
+  },
+  {
+    key: "regrowth",
+    question: "How quickly does the world replenish?",
+    framing:
+      "Resources don't only get used — they regrow. The speed of that regrowth sets the carrying capacity of the whole society.",
+    theoryHook:
+      "Slow regrowth turns the simulation into a Malthusian world: once exhausted, a region takes a long time to recover, and societies that overshoot collapse. Fast regrowth lifts the ceiling — there's always more, scarcity rarely bites, and the dynamics shift toward distribution and status rather than survival. The contrast between these two regimes is one of the oldest debates in human history, from Malthus to Ostrom.",
+  },
+  {
+    key: "vision",
+    question: "How far can they see?",
+    framing:
+      "Each agent only knows what it can perceive around itself. Vision sets the radius of that local knowledge.",
+    theoryHook:
+      "Vision is the cheapest way to produce inequality from nothing. Epstein showed that with everything else equal, agents who can see further find resources faster, accumulate more, and outcompete the rest. Short vision keeps the world locally knit and parochial: news travels slowly, opportunities go unnoticed. Long vision approaches an idealized market where everyone sees everything — the world economics textbooks usually assume but real societies almost never reach.",
+  },
+  {
+    key: "lifespan",
+    question: "How long do they live?",
+    framing:
+      "Even without reproduction, agents have finite lives. Lifespan decides how quickly the population turns over.",
+    theoryHook:
+      "Short lives mean a society that resets quickly: wealth dissolves with each death, hierarchies don't have time to entrench, and demographic pressure is constant. Long lives let structure accumulate — old agents carry old advantages forward, and the present is shaped by decisions made long ago. The classic insight: societies with very long-lived agents tend to look stable but rigid, while short-lived ones look chaotic but mobile.",
   },
   {
     key: "sophistication",
@@ -90,7 +133,7 @@ const STEPS: readonly StepDef[] = [
     framing:
       "From blind stimulus-response to social imitation. Cognition sets the ceiling on what culture can do.",
     theoryHook:
-      "Agents can be very simple or quite clever. Minimal agents just react — see resource, go to resource. Bounded-rational agents (Herbert Simon's classic insight, and the sociological default) have limited information and pick 'good enough' rather than optimal — like real people most of the time. Adaptive agents learn from past outcomes. Social agents watch each other and copy — and that's where fashion, herd behaviour, and shared culture come from. Smarter agents don't always mean smarter societies.",
+      "Agents can be very simple or quite clever. Minimal agents just react — see resource, go to resource. Bounded-rational agents have limited information and pick 'good enough' rather than optimal — like real people most of the time. Adaptive agents learn from past outcomes. Social agents watch each other and copy — and that's where fashion, herd behaviour, and shared culture come from. Smarter agents don't always mean smarter societies.",
   },
   {
     key: "motivation",
@@ -98,7 +141,7 @@ const STEPS: readonly StepDef[] = [
     framing:
       "What agents try to maximize shapes everything that follows — economy, status games, ritual life.",
     theoryHook:
-      "This is the deepest choice in the model. If agents chase resources, you're running a Marx-like world where material conditions explain the rest. If they chase status and distinction, you're in Bourdieu's territory — the game becomes about taste, recognition, and symbolic capital. If they follow shared norms because belonging matters more than gain, Durkheim's collective conscience does the heavy lifting. Mixed is more realistic, but harder to read: when something emerges, you can't always tell which drive caused it.",
+      "This is the deepest choice in the model. If agents chase resources, you're running a world where material conditions explain the rest. If they chase status and distinction, the game becomes about taste, recognition, and symbolic capital. If they follow shared norms because belonging matters more than gain, collective conscience does the heavy lifting. Mixed is more realistic, but harder to read: when something emerges, you can't always tell which drive caused it.",
   },
   {
     key: "topology",
@@ -145,10 +188,10 @@ const EQUALITY_BUCKETS: ReadonlyArray<{
   },
 ];
 
-function equalityBucketIndex(v: number): number {
+function bucketIndex(buckets: readonly { value: number }[], v: number): number {
   let best = 0;
   let bestDist = Infinity;
-  EQUALITY_BUCKETS.forEach((b, i) => {
+  buckets.forEach((b, i) => {
     const d = Math.abs(b.value - v);
     if (d < bestDist) {
       bestDist = d;
@@ -170,8 +213,19 @@ export default function SetupPage() {
   const isLast = stepIndex === STEPS.length - 1;
   const progress = ((stepIndex + 1) / STEPS.length) * 100;
 
-  function patch(p: Partial<SimulationConfig>) {
-    setDraft((d) => ({ ...d, ...p }));
+  function patchWorld(p: Partial<WorldConfig>) {
+    setDraft((d) => ({ ...d, world: { ...d.world, ...p } }));
+  }
+
+  function patchPhysics(p: Partial<WorldPhysics>) {
+    setDraft((d) => ({
+      ...d,
+      world: { ...d.world, physics: { ...d.world.physics, ...p } },
+    }));
+  }
+
+  function patchAgents(p: Partial<AgentModel>) {
+    setDraft((d) => ({ ...d, agents: { ...d.agents, ...p } }));
   }
 
   function toggleObserver(key: ObserverKey) {
@@ -262,7 +316,9 @@ export default function SetupPage() {
             <StepBody
               step={step.key}
               draft={draft}
-              patch={patch}
+              patchWorld={patchWorld}
+              patchPhysics={patchPhysics}
+              patchAgents={patchAgents}
               toggleObserver={toggleObserver}
             />
           </div>
@@ -277,7 +333,10 @@ export default function SetupPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setDraft(DEFAULT_CONFIG)}
+          onClick={() => {
+            setDraft(DEFAULT_CONFIG);
+            setStepIndex(0);
+          }}
         >
           <ArrowCounterClockwiseIcon weight="regular" />
           Reset
@@ -314,12 +373,16 @@ export default function SetupPage() {
 function StepBody({
   step,
   draft,
-  patch,
+  patchWorld,
+  patchPhysics,
+  patchAgents,
   toggleObserver,
 }: {
   step: StepKey;
   draft: SimulationConfig;
-  patch: (p: Partial<SimulationConfig>) => void;
+  patchWorld: (p: Partial<WorldConfig>) => void;
+  patchPhysics: (p: Partial<WorldPhysics>) => void;
+  patchAgents: (p: Partial<AgentModel>) => void;
   toggleObserver: (k: ObserverKey) => void;
 }) {
   if (step === "scale") {
@@ -330,8 +393,8 @@ function StepBody({
           return (
             <BigChoiceCard
               key={s}
-              active={draft.scale === s}
-              onClick={() => patch({ scale: s })}
+              active={draft.world.scale === s}
+              onClick={() => patchWorld({ scale: s })}
               label={info.label}
               hint={info.hint}
               meta={info.agents.toLocaleString() + " agents"}
@@ -343,14 +406,14 @@ function StepBody({
   }
 
   if (step === "equality") {
-    const active = equalityBucketIndex(draft.equality);
+    const active = bucketIndex(EQUALITY_BUCKETS, draft.world.equality);
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {EQUALITY_BUCKETS.map((b, i) => (
           <BigChoiceCard
             key={b.label}
             active={active === i}
-            onClick={() => patch({ equality: b.value })}
+            onClick={() => patchWorld({ equality: b.value })}
             label={b.label}
             hint={b.hint}
           />
@@ -367,8 +430,8 @@ function StepBody({
           return (
             <BigChoiceCard
               key={l}
-              active={draft.landscape === l}
-              onClick={() => patch({ landscape: l })}
+              active={draft.world.landscape === l}
+              onClick={() => patchWorld({ landscape: l })}
               label={info.label}
               hint={info.hint}
             />
@@ -382,17 +445,91 @@ function StepBody({
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <BigChoiceCard
-          active={!draft.reproduction}
-          onClick={() => patch({ reproduction: false })}
-          label="No — single generation"
-          hint="Agents live one life. Inequality cannot be inherited."
+          active={draft.world.reproduction}
+          onClick={() => patchWorld({ reproduction: true })}
+          label="Yes — children inherit"
+          hint="Wealth, traits, and disadvantage pass down. Class persists across generations."
         />
         <BigChoiceCard
-          active={draft.reproduction}
-          onClick={() => patch({ reproduction: true })}
-          label="Yes — traits pass down"
-          hint="Children inherit wealth and traits. Class persists across generations."
+          active={!draft.world.reproduction}
+          onClick={() => patchWorld({ reproduction: false })}
+          label="No — each life resets"
+          hint="Every agent starts from zero. Inheritance plays no role; mobility is total."
         />
+      </div>
+    );
+  }
+
+  if (step === "metabolism") {
+    const active = bucketIndex(
+      METABOLISM_BUCKETS,
+      draft.world.physics.metabolism,
+    );
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {METABOLISM_BUCKETS.map((b, i) => (
+          <BigChoiceCard
+            key={b.label}
+            active={active === i}
+            onClick={() => patchPhysics({ metabolism: b.value })}
+            label={b.label}
+            hint={b.hint}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (step === "regrowth") {
+    const active = bucketIndex(
+      REGROWTH_BUCKETS,
+      draft.world.physics.regrowthRate,
+    );
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {REGROWTH_BUCKETS.map((b, i) => (
+          <BigChoiceCard
+            key={b.label}
+            active={active === i}
+            onClick={() => patchPhysics({ regrowthRate: b.value })}
+            label={b.label}
+            hint={b.hint}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (step === "vision") {
+    const active = bucketIndex(VISION_BUCKETS, draft.world.physics.vision);
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {VISION_BUCKETS.map((b, i) => (
+          <BigChoiceCard
+            key={b.label}
+            active={active === i}
+            onClick={() => patchPhysics({ vision: b.value })}
+            label={b.label}
+            hint={b.hint}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (step === "lifespan") {
+    const active = bucketIndex(LIFESPAN_BUCKETS, draft.world.physics.lifespan);
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {LIFESPAN_BUCKETS.map((b, i) => (
+          <BigChoiceCard
+            key={b.label}
+            active={active === i}
+            onClick={() => patchPhysics({ lifespan: b.value })}
+            label={b.label}
+            hint={b.hint}
+          />
+        ))}
       </div>
     );
   }
@@ -406,8 +543,8 @@ function StepBody({
             return (
               <BigChoiceCard
                 key={s}
-                active={draft.sophistication === s}
-                onClick={() => patch({ sophistication: s })}
+                active={draft.agents.sophistication === s}
+                onClick={() => patchAgents({ sophistication: s })}
                 label={info.label}
                 hint={info.hint}
               />
@@ -426,8 +563,8 @@ function StepBody({
           return (
             <BigChoiceCard
               key={m}
-              active={draft.motivation === m}
-              onClick={() => patch({ motivation: m })}
+              active={draft.agents.motivation === m}
+              onClick={() => patchAgents({ motivation: m })}
               label={info.label}
               hint={info.hint}
             />
@@ -445,8 +582,8 @@ function StepBody({
           return (
             <BigChoiceCard
               key={t}
-              active={draft.topology === t}
-              onClick={() => patch({ topology: t })}
+              active={draft.agents.topology === t}
+              onClick={() => patchAgents({ topology: t })}
               label={info.label}
               hint={info.hint}
             />
