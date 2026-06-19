@@ -8,16 +8,39 @@ import {
   newSeed,
   type SimulationConfig,
 } from "@/lib/config";
+import type { EngineSnapshot } from "@/lib/engine";
+
+const EMPTY_SNAPSHOT: EngineSnapshot = {
+  turn: 0,
+  alive: 0,
+  gini: 0,
+  totalWealth: 0,
+  wealthBins: [0, 0, 0, 0, 0, 0],
+};
+
+export interface HistoryPoint {
+  turn: number;
+  alive: number;
+  gini: number;
+}
+
+const HISTORY_LIMIT = 240;
 
 interface SimulationState {
   config: SimulationConfig;
   running: boolean;
   started: boolean;
   turn: number;
+  runId: number;
+  snapshot: EngineSnapshot;
+  history: HistoryPoint[];
+  speed: number;
   startRun: (next?: SimulationConfig) => void;
   resumeRun: () => void;
   pauseRun: () => void;
   stopRun: () => void;
+  setSpeed: (speed: number) => void;
+  updateSnapshot: (snapshot: EngineSnapshot) => void;
 }
 
 export const useSimulationStore = create<SimulationState>()(
@@ -27,16 +50,43 @@ export const useSimulationStore = create<SimulationState>()(
       running: false,
       started: false,
       turn: 0,
+      runId: 0,
+      snapshot: EMPTY_SNAPSHOT,
+      history: [],
+      speed: 1,
       startRun: (next) =>
         set((s) => ({
           config: { ...(next ?? s.config), seed: newSeed() },
           running: true,
           started: true,
           turn: 0,
+          runId: s.runId + 1,
+          snapshot: EMPTY_SNAPSHOT,
+          history: [],
         })),
       resumeRun: () => set({ running: true }),
       pauseRun: () => set({ running: false }),
-      stopRun: () => set({ running: false, started: false, turn: 0 }),
+      stopRun: () =>
+        set({
+          running: false,
+          started: false,
+          turn: 0,
+          snapshot: EMPTY_SNAPSHOT,
+          history: [],
+        }),
+      setSpeed: (speed) => set({ speed }),
+      updateSnapshot: (snapshot) =>
+        set((s) => {
+          const next = s.history.slice(
+            Math.max(0, s.history.length - HISTORY_LIMIT + 1),
+          );
+          next.push({
+            turn: snapshot.turn,
+            alive: snapshot.alive,
+            gini: snapshot.gini,
+          });
+          return { snapshot, turn: snapshot.turn, history: next };
+        }),
     }),
     {
       name: "nomos-simulation",
