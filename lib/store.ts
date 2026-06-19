@@ -29,7 +29,19 @@ export interface HistoryPoint {
 const HISTORY_LIMIT = 240;
 const CHRONICLE_LIMIT = 80;
 
-export type ViewKey = "gini" | "alive" | "wealth";
+export type ViewKey = "gini" | "alive" | "wealth" | "narrator";
+
+export interface WindowPosition {
+  x: number;
+  y: number;
+}
+
+export const DEFAULT_WINDOW_POSITIONS: Record<ViewKey, WindowPosition> = {
+  gini: { x: 20, y: 20 },
+  alive: { x: 20, y: 230 },
+  wealth: { x: 20, y: 440 },
+  narrator: { x: 300, y: 20 },
+};
 
 export type NarrationStatus = "pending" | "done" | "error";
 
@@ -58,6 +70,7 @@ interface SimulationState {
   speed: number;
   canvasSize: { width: number; height: number };
   views: Record<ViewKey, boolean>;
+  windowPositions: Record<ViewKey, WindowPosition>;
   chronicle: ChronicleEntry[];
   startRun: (next?: SimulationConfig) => void;
   resumeRun: () => void;
@@ -67,6 +80,8 @@ interface SimulationState {
   updateSnapshot: (snapshot: EngineSnapshot) => void;
   setCanvasSize: (s: { width: number; height: number }) => void;
   toggleView: (key: ViewKey) => void;
+  moveWindow: (key: ViewKey, position: WindowPosition) => void;
+  resetWindows: () => void;
   openNarrations: (event: SignificantEvent, observers: ObserverKey[]) => void;
   resolveNarration: (key: string, text: string) => void;
   failNarration: (key: string, error: string) => void;
@@ -84,7 +99,8 @@ export const useSimulationStore = create<SimulationState>()(
       history: [],
       speed: 1,
       canvasSize: { width: 0, height: 0 },
-      views: { gini: true, alive: true, wealth: true },
+      views: { gini: true, alive: true, wealth: true, narrator: true },
+      windowPositions: DEFAULT_WINDOW_POSITIONS,
       chronicle: [],
       startRun: (next) =>
         set((s) => ({
@@ -112,6 +128,12 @@ export const useSimulationStore = create<SimulationState>()(
       setCanvasSize: (canvasSize) => set({ canvasSize }),
       toggleView: (key) =>
         set((s) => ({ views: { ...s.views, [key]: !s.views[key] } })),
+      moveWindow: (key, position) =>
+        set((s) => ({
+          windowPositions: { ...s.windowPositions, [key]: position },
+        })),
+      resetWindows: () =>
+        set({ windowPositions: DEFAULT_WINDOW_POSITIONS }),
       updateSnapshot: (snapshot) =>
         set((s) => {
           const next = s.history.slice(
@@ -162,12 +184,17 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 7,
+      version: 8,
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ config: s.config, views: s.views }),
+      partialize: (s) => ({
+        config: s.config,
+        views: s.views,
+        windowPositions: s.windowPositions,
+      }),
       migrate: () => ({
         config: DEFAULT_CONFIG,
-        views: { gini: true, alive: true, wealth: true },
+        views: { gini: true, alive: true, wealth: true, narrator: true },
+        windowPositions: DEFAULT_WINDOW_POSITIONS,
       }),
     },
   ),
