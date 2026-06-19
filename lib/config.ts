@@ -5,13 +5,19 @@ export type Equality = number;
 
 export type Landscape = "two_peaks" | "centre" | "scattered" | "flat";
 
+export type InitialSettlement =
+  | "scattered"
+  | "clustered"
+  | "single"
+  | "segregated";
+
 export type AgentSophistication =
   | "minimal"
   | "bounded_rational"
   | "adaptive"
   | "social";
 
-export type AgentMotivation = "material" | "symbolic" | "normative" | "mixed";
+export type AgentMotivation = "material" | "symbolic" | "normative";
 
 export type InteractionTopology =
   | "spatial"
@@ -45,20 +51,23 @@ export interface WorldPhysics {
   vision: number;
   /** Maximum age in turns before an agent dies. */
   lifespan: number;
+  /** Per-agent spread around metabolism / vision / lifespan means. 0 = identical, 1 = wide. */
+  heterogeneity: number;
 }
 
 export interface WorldConfig {
   scale: Scale;
   equality: Equality;
   landscape: Landscape;
+  initialSettlement: InitialSettlement;
   reproduction: boolean;
   physics: WorldPhysics;
 }
 
 export interface AgentModel {
   kind: AgentModelKind;
-  sophistication: AgentSophistication;
-  motivation: AgentMotivation;
+  sophistication: AgentSophistication[];
+  motivation: AgentMotivation[];
   topology: InteractionTopology;
 }
 
@@ -126,6 +135,28 @@ export const LANDSCAPE_INFO: Record<
   },
 };
 
+export const SETTLEMENT_INFO: Record<
+  InitialSettlement,
+  { label: string; hint: string }
+> = {
+  scattered: {
+    label: "Scattered",
+    hint: "Every agent picks a random spot. The starting distribution is uniform.",
+  },
+  clustered: {
+    label: "Clustered",
+    hint: "A few small groups in different locations. The world starts already grainy.",
+  },
+  single: {
+    label: "One settlement",
+    hint: "Everyone begins together in one place. Migration must happen for the world to spread.",
+  },
+  segregated: {
+    label: "Segregated",
+    hint: "Groups are pre-separated by wealth band. Tests whether sorted worlds stay sorted.",
+  },
+};
+
 export const SOPHISTICATION_INFO: Record<
   AgentSophistication,
   { label: string; hint: string }
@@ -163,10 +194,6 @@ export const MOTIVATION_INFO: Record<
   normative: {
     label: "Normative",
     hint: "Belonging and ritual conformity guide action.",
-  },
-  mixed: {
-    label: "Mixed",
-    hint: "Weighted blend of all three. Realistic but harder to interpret.",
   },
 };
 
@@ -267,6 +294,29 @@ export const VISION_BUCKETS: readonly PhysicsBucket[] = [
     value: 12,
     label: "Across the world",
     hint: "Effectively global perception. Information is free.",
+  },
+];
+
+export const HETEROGENEITY_BUCKETS: readonly PhysicsBucket[] = [
+  {
+    value: 0,
+    label: "Identical",
+    hint: "Every agent shares the same vision, metabolism, and lifespan. A perfectly uniform population.",
+  },
+  {
+    value: 0.15,
+    label: "Slight variation",
+    hint: "Small random spread around each mean. Realistic without dramatic outliers.",
+  },
+  {
+    value: 0.4,
+    label: "Wide spread",
+    hint: "Significant differences between agents. Some see further, some need more, some live longer.",
+  },
+  {
+    value: 0.7,
+    label: "Extreme variation",
+    hint: "Strong dispersion. The population mixes very capable and very limited agents.",
   },
 ];
 
@@ -418,6 +468,7 @@ export const DEFAULT_PHYSICS: WorldPhysics = {
   regrowthRate: 0.1,
   vision: 3,
   lifespan: 60,
+  heterogeneity: 0.15,
 };
 
 export const DEFAULT_CONFIG: SimulationConfig = {
@@ -426,13 +477,14 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     scale: "town",
     equality: 0.2,
     landscape: "two_peaks",
+    initialSettlement: "scattered",
     reproduction: true,
     physics: DEFAULT_PHYSICS,
   },
   agents: {
     kind: "epstein_minimal",
-    sophistication: "bounded_rational",
-    motivation: "material",
+    sophistication: ["bounded_rational"],
+    motivation: ["material"],
     topology: "spatial",
   },
   observers: ["epstein"],
