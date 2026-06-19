@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 
-import { InitialConditionsDialog } from "@/components/initial-conditions-dialog";
+import {
+  InitialConditionsDialog,
+  STEPS,
+} from "@/components/initial-conditions-dialog";
 import { Sidebar, type SectionKey } from "@/components/sidebar";
 import { SimulationCanvas } from "@/components/simulation-canvas";
 import { SiteHeader } from "@/components/site-header";
-import {
-  DEFAULT_CONFIG,
-  SCALE_INFO,
-  SimulationConfig,
-} from "@/lib/config";
+import { Stepper } from "@/components/stepper";
+import { Dialog, DialogPortal } from "@/components/ui/dialog";
+import { DEFAULT_CONFIG, SCALE_INFO, SimulationConfig } from "@/lib/config";
 
 const SIDEBAR_COOKIE = "sidebar-collapsed";
 
@@ -21,6 +22,8 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
   const [section, setSection] = useState<SectionKey>("world");
   const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultCollapsed);
+  const [dialogStep, setDialogStep] = useState(0);
+  const [dialogMaxReached, setDialogMaxReached] = useState(0);
 
   const toggleSidebar = () =>
     setSidebarCollapsed((v) => {
@@ -29,12 +32,17 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
       return next;
     });
 
+  const openRunDialog = () => {
+    setDialogStep(0);
+    setDialogMaxReached(0);
+    setRunDialogOpen(true);
+  };
+
   return (
     <div className="flex h-screen flex-col">
       <SiteHeader
         running={running}
-        turn={turn}
-        onRun={() => setRunDialogOpen(true)}
+        onRun={openRunDialog}
         onPause={() => setRunning(false)}
       />
 
@@ -44,6 +52,7 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
           onSelect={setSection}
           agentCount={SCALE_INFO[config.scale].agents}
           observerCount={config.observers.length}
+          turn={turn}
           collapsed={sidebarCollapsed}
           onToggle={toggleSidebar}
         />
@@ -52,16 +61,39 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
         </main>
       </div>
 
-      <InitialConditionsDialog
-        open={runDialogOpen}
-        onOpenChange={setRunDialogOpen}
-        config={config}
-        onRun={(next) => {
-          setConfig(next);
-          setTurn(0);
-          setRunning(true);
-        }}
-      />
+      <Dialog open={runDialogOpen} onOpenChange={setRunDialogOpen}>
+        <DialogPortal>
+          <div
+            data-stepper-portal
+            className="pointer-events-none fixed inset-x-0 top-4 z-[60] flex justify-center sm:top-6"
+          >
+            <div className="pointer-events-auto w-[min(96vw,40rem)] rounded-2xl border border-foreground/10 bg-card/95 shadow-xl backdrop-blur-md">
+              <Stepper
+                steps={STEPS}
+                step={dialogStep}
+                maxReached={dialogMaxReached}
+                onSelect={(i) => {
+                  if (i <= dialogMaxReached) setDialogStep(i);
+                }}
+              />
+            </div>
+          </div>
+        </DialogPortal>
+        <InitialConditionsDialog
+          open={runDialogOpen}
+          onClose={() => setRunDialogOpen(false)}
+          config={config}
+          onRun={(next) => {
+            setConfig(next);
+            setTurn(0);
+            setRunning(true);
+          }}
+          step={dialogStep}
+          maxReached={dialogMaxReached}
+          onStepChange={setDialogStep}
+          onMaxReachedChange={setDialogMaxReached}
+        />
+      </Dialog>
     </div>
   );
 }

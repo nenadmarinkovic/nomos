@@ -1,37 +1,32 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { PauseIcon, PlayIcon } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 interface SiteHeaderProps {
   running: boolean;
-  turn: number;
   onRun: () => void;
   onPause: () => void;
 }
 
-export function SiteHeader({
-  running,
-  turn,
-  onRun,
-  onPause,
-}: SiteHeaderProps) {
+export function SiteHeader({ running, onRun, onPause }: SiteHeaderProps) {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-foreground/10 bg-background px-4">
       <div className="flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="relative font-sans top-px text-lg font-bold leading-none tracking-tight text-foreground">
-            Nomos
-          </span>
+        <Link href="/" aria-label="Nomos" className="flex items-center">
+          <Image
+            src="/logo.svg"
+            alt="Nomos"
+            width={38}
+            height={35}
+            priority
+            className="h-12 w-auto dark:invert"
+          />
         </Link>
-        <Separator orientation="vertical" className="!h-4" />
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">
-          turn {turn.toString().padStart(5, "0")}
-        </span>
       </div>
 
       <div className="flex items-center gap-2">

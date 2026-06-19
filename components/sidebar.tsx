@@ -28,6 +28,7 @@ interface SidebarProps {
   onSelect: (key: SectionKey) => void;
   agentCount: number;
   observerCount: number;
+  turn: number;
   collapsed: boolean;
   onToggle?: () => void;
 }
@@ -54,9 +55,11 @@ export function Sidebar({
   onSelect,
   agentCount,
   observerCount,
+  turn,
   collapsed,
   onToggle,
 }: SidebarProps) {
+  const turnStr = turn.toString().padStart(5, "0");
   return (
     <aside
       className={cn(
@@ -88,12 +91,34 @@ export function Sidebar({
         </div>
       </ScrollArea>
 
-      {!collapsed && (
-        <div className="border-t border-foreground/10 px-3 py-3 text-[11px]">
-          <Stat label="Agents" value={agentCount.toLocaleString()} />
-          <Stat label="Observers" value={observerCount.toString()} />
-        </div>
-      )}
+      <div
+        className={cn(
+          "border-t border-foreground/10 text-[11px]",
+          collapsed ? "px-1.5 py-3 text-center" : "px-3 py-3",
+        )}
+      >
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="block cursor-default font-mono text-[10px] tabular-nums text-muted-foreground">
+                  {turnStr}
+                </span>
+              }
+            />
+            <TooltipContent side="right" sideOffset={8}>
+              Turn {turnStr} · {agentCount.toLocaleString()} agents ·{" "}
+              {observerCount} observers
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <>
+            <Stat label="Turn" value={turnStr} />
+            <Stat label="Agents" value={agentCount.toLocaleString()} />
+            <Stat label="Observers" value={observerCount.toString()} />
+          </>
+        )}
+      </div>
 
       {onToggle && (
         <div
@@ -191,22 +216,13 @@ function NavGroup({
                   ? "bg-foreground/[0.06] text-foreground"
                   : "text-foreground/65 hover:bg-foreground/[0.03] hover:text-foreground",
                 collapsed
-                  ? "h-8 justify-center"
-                  : "justify-between gap-2.5 px-2.5 py-1.5",
+                  ? "h-10 justify-center"
+                  : "justify-between gap-2.5 px-2.5 py-2",
               )}
             >
-              {isActive && (
-                <span
-                  aria-hidden
-                  className={cn(
-                    "absolute top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-brand",
-                    collapsed ? "-left-1.5" : "-left-2",
-                  )}
-                />
-              )}
               <div className="flex items-center gap-2.5">
                 <Icon
-                  size={14}
+                  size={18}
                   weight="regular"
                   className={cn(
                     "shrink-0 transition-colors",
