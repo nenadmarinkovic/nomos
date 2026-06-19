@@ -15,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
@@ -22,6 +23,7 @@ import {
   AgentMotivation,
   AgentSophistication,
   DEFAULT_CONFIG,
+  describeMix,
   equalityBucket,
   HETEROGENEITY_BUCKETS,
   InitialSettlement,
@@ -42,6 +44,7 @@ import {
   TOPOLOGY_INFO,
   VISION_BUCKETS,
   type SimulationConfig,
+  type WeightedSelection,
   type WorldConfig,
   type WorldPhysics,
 } from "@/lib/config";
@@ -163,17 +166,17 @@ const STEPS: readonly StepDef[] = [
     key: "motivation",
     question: "What do they want?",
     framing:
-      "What agents try to maximize shapes everything that follows — economy, status games, ritual life. Pick more than one if you want different drives to coexist.",
+      "What agents try to maximize shapes everything that follows — economy, status games, ritual life, authority. Pick more than one if you want different drives to coexist.",
     theoryHook:
-      "This is the deepest choice in the model. If agents chase resources, you're running a world where material conditions explain the rest. If they chase status and distinction, the game becomes about taste, recognition, and symbolic capital. If they follow shared norms because belonging matters more than gain, collective conscience does the heavy lifting. Pick more than one and the population splits between drives — closer to real societies, where some chase money, others chase honour, others just follow the room. When something emerges in a mixed population, the interesting question becomes: which drive produced it?",
+      "This is the deepest choice in the model, and the four options track four classical positions. Material agents chase resources — Marx's productive subject. Symbolic ones chase status and distinction — Bourdieu's capital game. Normative ones chase belonging and conformity — Durkheim's collective conscience. Power-seeking ones chase authority and control over others — Weber's iron cage and the question of legitimate domination. Pick more than one and the population splits between drives — closer to real societies, where some chase money, others chase honour, others just follow the room, and some quietly try to rule it. When something emerges in a mixed population, the interesting question becomes: which drive produced it?",
   },
   {
     key: "topology",
-    question: "Who can talk to whom?",
+    question: "Who can talk to whom — at the start?",
     framing:
-      "The social graph is the silent infrastructure. It decides how news, norms, trade, and disease spread.",
+      "The initial social graph: the structure at turn one. Whether hierarchies grow on top of it is for the simulation to decide.",
     theoryHook:
-      "The shape of social connection decides what reaches whom. With spatial neighbours, geography is destiny — news and gossip travel only as fast as people walk. Random mixing means anyone might meet anyone (almost never true in real life, but useful as a baseline). Persistent networks mean influence flows through friends-of-friends, so trust and information move along stable paths. Hierarchy means brokers and gatekeepers — bosses, priests, party officials — decide who hears what. Same agents, very different societies.",
+      "The shape of social connection at the start decides what reaches whom. With spatial neighbours, geography is destiny — news and gossip travel only as fast as people walk. Random mixing means anyone might meet anyone (almost never true in real life, but useful as a baseline). Persistent networks mean influence flows through friends-of-friends, so trust and information move along stable paths. You'll notice 'hierarchy' isn't on this menu — that's deliberate. A generative model should let hierarchies *emerge* from local interaction, not declare them at turn zero. If brokers and gatekeepers appear later in the run, that's the simulation telling you something.",
   },
   {
     key: "observers",
@@ -299,9 +302,10 @@ export default function SetupPage() {
 
   const canAdvance = (() => {
     if (step.key === "observers") return draft.observers.length > 0;
-    if (step.key === "motivation") return draft.agents.motivation.length > 0;
+    if (step.key === "motivation")
+      return Object.keys(draft.agents.motivation).length > 0;
     if (step.key === "sophistication")
-      return draft.agents.sophistication.length > 0;
+      return Object.keys(draft.agents.sophistication).length > 0;
     return true;
   })();
 
@@ -629,45 +633,31 @@ function StepBody({
   }
 
   if (step === "sophistication") {
-    const selected = draft.agents.sophistication;
     return (
-      <MultiPickGrid
-        selectedCount={selected.length}
+      <WeightedPickGrid<AgentSophistication>
+        weights={draft.agents.sophistication}
         options={(Object.keys(SOPHISTICATION_INFO) as AgentSophistication[]).map(
           (s) => ({
             key: s,
-            active: selected.includes(s),
             label: SOPHISTICATION_INFO[s].label,
             hint: SOPHISTICATION_INFO[s].hint,
-            onToggle: () => {
-              const next = selected.includes(s)
-                ? selected.filter((x) => x !== s)
-                : [...selected, s];
-              patchAgents({ sophistication: next });
-            },
           }),
         )}
+        onChange={(next) => patchAgents({ sophistication: next })}
       />
     );
   }
 
   if (step === "motivation") {
-    const selected = draft.agents.motivation;
     return (
-      <MultiPickGrid
-        selectedCount={selected.length}
+      <WeightedPickGrid<AgentMotivation>
+        weights={draft.agents.motivation}
         options={(Object.keys(MOTIVATION_INFO) as AgentMotivation[]).map((m) => ({
           key: m,
-          active: selected.includes(m),
           label: MOTIVATION_INFO[m].label,
           hint: MOTIVATION_INFO[m].hint,
-          onToggle: () => {
-            const next = selected.includes(m)
-              ? selected.filter((x) => x !== m)
-              : [...selected, m];
-            patchAgents({ motivation: next });
-          },
         }))}
+        onChange={(next) => patchAgents({ motivation: next })}
       />
     );
   }
@@ -755,40 +745,98 @@ function BigChoiceCard({
   );
 }
 
-function MultiPickGrid({
+function WeightedPickGrid<K extends string>({
+  weights,
   options,
-  selectedCount,
+  onChange,
 }: {
-  options: {
-    key: string;
-    active: boolean;
-    label: string;
-    hint: string;
-    onToggle: () => void;
-  }[];
-  selectedCount: number;
+  weights: WeightedSelection<K>;
+  options: { key: K; label: string; hint: string }[];
+  onChange: (next: WeightedSelection<K>) => void;
 }) {
+  const selected = options.filter((o) => weights[o.key] !== undefined);
+  const total = selected.reduce(
+    (sum, o) => sum + (weights[o.key] as number),
+    0,
+  );
+
+  function toggle(k: K) {
+    const next = { ...weights };
+    if (next[k] !== undefined) delete next[k];
+    else next[k] = 1;
+    onChange(next);
+  }
+
+  function setWeight(k: K, w: number) {
+    onChange({ ...weights, [k]: w });
+  }
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-          Pick one or more
-        </span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-          {selectedCount} selected
-        </span>
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            Pick one or more
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            {selected.length} selected
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {options.map((o) => (
+            <BigChoiceCard
+              key={o.key}
+              active={weights[o.key] !== undefined}
+              onClick={() => toggle(o.key)}
+              label={o.label}
+              hint={o.hint}
+            />
+          ))}
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {options.map((o) => (
-          <BigChoiceCard
-            key={o.key}
-            active={o.active}
-            onClick={o.onToggle}
-            label={o.label}
-            hint={o.hint}
-          />
-        ))}
-      </div>
+
+      {selected.length >= 2 && (
+        <div className="space-y-3 rounded-lg border border-foreground/10 bg-card/40 px-4 py-3.5">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Mix
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+              Share of population
+            </span>
+          </div>
+          <div className="space-y-2.5">
+            {selected.map((o) => {
+              const w = (weights[o.key] as number) ?? 1;
+              const pct =
+                total > 0 ? Math.round((w / total) * 100) : 0;
+              return (
+                <div
+                  key={o.key}
+                  className="grid grid-cols-[7rem_1fr_2.5rem] items-center gap-3"
+                >
+                  <span className="truncate font-sans text-[13px] font-medium text-foreground">
+                    {o.label}
+                  </span>
+                  <Slider
+                    value={[w]}
+                    min={1}
+                    max={10}
+                    step={1}
+                    onValueChange={(v) => {
+                      const next = Array.isArray(v) ? v[0] : v;
+                      if (typeof next === "number") setWeight(o.key, next);
+                    }}
+                  />
+                  <span className="text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+                    {pct}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -954,24 +1002,18 @@ function SummaryReview({
       <SummarySection title="Agents">
         <SummaryRow
           label="Cognition"
-          value={
-            draft.agents.sophistication.length === 0
-              ? "None"
-              : draft.agents.sophistication
-                  .map((s) => SOPHISTICATION_INFO[s].label)
-                  .join(" · ")
-          }
+          value={describeMix(
+            draft.agents.sophistication,
+            (k) => SOPHISTICATION_INFO[k].label,
+          )}
           onEdit={() => jumpToStep("sophistication")}
         />
         <SummaryRow
           label="Motivation"
-          value={
-            draft.agents.motivation.length === 0
-              ? "None"
-              : draft.agents.motivation
-                  .map((m) => MOTIVATION_INFO[m].label)
-                  .join(" · ")
-          }
+          value={describeMix(
+            draft.agents.motivation,
+            (k) => MOTIVATION_INFO[k].label,
+          )}
           onEdit={() => jumpToStep("motivation")}
         />
         <SummaryRow

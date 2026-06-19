@@ -17,13 +17,9 @@ export type AgentSophistication =
   | "adaptive"
   | "social";
 
-export type AgentMotivation = "material" | "symbolic" | "normative";
+export type AgentMotivation = "material" | "symbolic" | "normative" | "power";
 
-export type InteractionTopology =
-  | "spatial"
-  | "random"
-  | "network"
-  | "hierarchical";
+export type InteractionTopology = "spatial" | "random" | "network";
 
 /** Discriminant for agent rule sets. New models slot in here. */
 export type AgentModelKind = "epstein_minimal";
@@ -64,11 +60,45 @@ export interface WorldConfig {
   physics: WorldPhysics;
 }
 
+export type WeightedSelection<K extends string> = Partial<Record<K, number>>;
+
 export interface AgentModel {
   kind: AgentModelKind;
-  sophistication: AgentSophistication[];
-  motivation: AgentMotivation[];
+  sophistication: WeightedSelection<AgentSophistication>;
+  motivation: WeightedSelection<AgentMotivation>;
   topology: InteractionTopology;
+}
+
+export function normalizeWeights<K extends string>(
+  weights: WeightedSelection<K>,
+): Record<string, number> {
+  let total = 0;
+  for (const w of Object.values(weights) as (number | undefined)[]) {
+    if (w !== undefined) total += w;
+  }
+  if (total <= 0) return {};
+  const out: Record<string, number> = {};
+  for (const [k, w] of Object.entries(weights) as [string, number | undefined][]) {
+    if (w === undefined) continue;
+    out[k] = w / total;
+  }
+  return out;
+}
+
+export function describeMix<K extends string>(
+  weights: WeightedSelection<K>,
+  labelOf: (k: K) => string,
+): string {
+  const entries = Object.entries(weights).filter(([, w]) => w !== undefined) as [
+    K,
+    number,
+  ][];
+  if (entries.length === 0) return "None";
+  if (entries.length === 1) return labelOf(entries[0][0]);
+  const total = entries.reduce((s, [, w]) => s + w, 0);
+  return entries
+    .map(([k, w]) => `${labelOf(k)} ${Math.round((w / total) * 100)}%`)
+    .join(" · ");
 }
 
 export interface SimulationConfig {
@@ -195,6 +225,10 @@ export const MOTIVATION_INFO: Record<
     label: "Normative",
     hint: "Belonging and ritual conformity guide action.",
   },
+  power: {
+    label: "Power",
+    hint: "Authority and control over others. The drive to lead, command, and be obeyed.",
+  },
 };
 
 export const TOPOLOGY_INFO: Record<
@@ -212,10 +246,6 @@ export const TOPOLOGY_INFO: Record<
   network: {
     label: "Network",
     hint: "Persistent ties. Friends of friends carry influence.",
-  },
-  hierarchical: {
-    label: "Hierarchical",
-    hint: "Layered access through brokers and gatekeepers.",
   },
 };
 
@@ -483,8 +513,8 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   },
   agents: {
     kind: "epstein_minimal",
-    sophistication: ["bounded_rational"],
-    motivation: ["material"],
+    sophistication: { bounded_rational: 1 },
+    motivation: { material: 1 },
     topology: "spatial",
   },
   observers: ["epstein"],
