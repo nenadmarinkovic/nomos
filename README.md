@@ -36,6 +36,8 @@ A society simulation where agents follow simple rules and AI theorists observe w
 
 - Mistral API (`mistral-small`) for per-theorist narration on significant events
 - One Mistral call per active observer per significant event — not per tick
+- The browser detects significant events (foundings, inequality surges, crashes, collapses) and posts them to `app/api/observe`, which builds a per-theorist prompt and calls Mistral. Readings stream into the **Chronicle** panel (Observers / Chronicle in the sidebar).
+- Without a `MISTRAL_API_KEY` the simulation still runs; the observers simply stay silent.
 
 **Infrastructure**
 
@@ -46,6 +48,7 @@ A society simulation where agents follow simple rules and AI theorists observe w
 
 ```bash
 npm install
+cp .env.example .env.local   # add your MISTRAL_API_KEY to enable observers
 npm run dev
 ```
 
