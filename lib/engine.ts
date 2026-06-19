@@ -116,7 +116,7 @@ export class Engine {
   private actAgent(a: Agent): void {
     let bestX = a.x;
     let bestY = a.y;
-    let bestVal = this.cells[a.y * this.width + a.x];
+    let bestScore = this.scoreCell(a, a.x, a.y);
     let bestDist = 0;
 
     for (let d = 1; d <= a.vision; d++) {
@@ -130,12 +130,12 @@ export class Engine {
         if (cx < 0 || cy < 0 || cx >= this.width || cy >= this.height) continue;
         const idx = cy * this.width + cx;
         if (this.occupants[idx] !== -1 && this.occupants[idx] !== a.id) continue;
-        const v = this.cells[idx];
+        const score = this.scoreCell(a, cx, cy);
         if (
-          v > bestVal ||
-          (v === bestVal && bestDist > 0 && d < bestDist)
+          score > bestScore ||
+          (score === bestScore && bestDist > 0 && d < bestDist)
         ) {
-          bestVal = v;
+          bestScore = score;
           bestX = cx;
           bestY = cy;
           bestDist = d;
@@ -159,6 +159,43 @@ export class Engine {
 
     if (a.wealth <= 0 || a.age >= a.maxAge) {
       this.killAgent(a);
+    }
+  }
+
+  private scoreCell(a: Agent, x: number, y: number): number {
+    const resources = this.cells[y * this.width + x];
+    if (a.motivation === "material") return resources;
+
+    let count = 0;
+    let totalWealth = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      const ny = y + dy;
+      if (ny < 0 || ny >= this.height) continue;
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        if (nx < 0 || nx >= this.width) continue;
+        const occ = this.occupants[ny * this.width + nx];
+        if (occ === -1 || occ === a.id) continue;
+        const other = this.agents[occ];
+        if (!other.alive) continue;
+        count++;
+        totalWealth += other.wealth;
+      }
+    }
+    const avgWealth = count > 0 ? totalWealth / count : 0;
+
+    switch (a.motivation) {
+      case "symbolic":
+        return resources + avgWealth * 0.08;
+      case "normative":
+        return resources + count * 0.6;
+      case "power":
+        return count > 0 && a.wealth > avgWealth
+          ? resources + count * 0.7
+          : resources;
+      default:
+        return resources;
     }
   }
 
