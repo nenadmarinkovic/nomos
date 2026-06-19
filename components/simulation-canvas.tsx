@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  DndContext,
+  PointerSensor,
+  useDraggable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import { useEffect, useRef, useState } from "react";
 import { XIcon } from "@phosphor-icons/react";
 
@@ -21,8 +29,20 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const lastTickRef = useRef<number>(0);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [inspectorPos, setInspectorPos] = useState({ x: 12, y: 12 });
   const selectedIdRef = useRef<number | null>(null);
   const hoveredIdRef = useRef<number | null>(null);
+
+  const inspectorSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
+
+  function handleInspectorDragEnd(e: DragEndEvent) {
+    setInspectorPos((p) => ({
+      x: Math.max(0, p.x + e.delta.x),
+      y: Math.max(0, p.y + e.delta.y),
+    }));
+  }
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
@@ -190,36 +210,67 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         />
 
         {started && selectedId !== null && (
-          <InspectorOverlay
-            engineRef={engineRef}
-            selectedId={selectedId}
-            onClose={() => setSelectedId(null)}
-          />
+          <DndContext
+            sensors={inspectorSensors}
+            onDragEnd={handleInspectorDragEnd}
+          >
+            <InspectorOverlay
+              engineRef={engineRef}
+              selectedId={selectedId}
+              position={inspectorPos}
+              onClose={() => setSelectedId(null)}
+            />
+          </DndContext>
         )}
 
 
         {!started && (
-          <>
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/grid.svg"
-                alt=""
-                aria-hidden
-                className="h-full w-full select-none object-cover opacity-80 dark:opacity-55 dark:invert"
-              />
+          <div className="pointer-events-auto absolute inset-0 overflow-y-auto bg-background">
+            <div className="mx-auto flex min-h-full max-w-2xl flex-col justify-center px-6 py-12">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                A generative society simulation
+              </p>
+              <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+                Build a society from <em>simple rules</em> and watch what it
+                becomes.
+              </h1>
+              <p className="mt-5 font-serif text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
+                Nomos doesn&rsquo;t program societies — it grows them. You set
+                a few starting conditions; agents follow simple rules; whatever
+                happens next is what the conditions produced. Inequality,
+                settlements, classes, conflict: never written into the engine,
+                always emerging from the bottom up.
+              </p>
+
+              <ol className="mt-10 space-y-5">
+                <Step
+                  n="01"
+                  title="Set the conditions"
+                  body="How many people. How equal they start. What kind of land. What they want — resources (Marx), status (Bourdieu), belonging (Durkheim), or power (Weber). What kind of minds they have — Herbert Simon&rsquo;s bounded rationality, learners, or imitators."
+                />
+                <Step
+                  n="02"
+                  title="Press Run"
+                  body="Agents move, harvest, pay metabolism, age, die, and — if you turned inheritance on — leave their wealth to children. The same Sugarscape rule Joshua Epstein wrote in 1996, run in your browser."
+                />
+                <Step
+                  n="03"
+                  title="Watch what emerges"
+                  body="Wealth concentrates. Clusters form on the resource peaks. The poor migrate or starve. The Gini coefficient climbs in real time. You didn&rsquo;t script any of it — it grew from what you set."
+                />
+                <Step
+                  n="04"
+                  title="Hear the theorists"
+                  body="AI observers read the same run through different lenses — Marx, Durkheim, Bourdieu, Weber, Ibn Khaldun, Turchin, Flack — and narrate what they see in their own vocabulary. Same emergence, multiple readings, side by side."
+                />
+              </ol>
+
+              <p className="mt-10 font-serif text-[15px] italic leading-relaxed text-muted-foreground">
+                Epstein&rsquo;s principle: <em>if you didn&rsquo;t grow it, you
+                didn&rsquo;t explain it</em>. Press Run to begin.
+              </p>
             </div>
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="max-w-sm rounded-md bg-background/70 px-4 py-3 text-center backdrop-blur-sm">
-                <p className="font-serif text-2xl italic leading-tight text-foreground/90">
-                  Empty field.
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Set initial conditions, press Run, and watch what emerges.
-                </p>
-              </div>
-            </div>
-          </>
+          </div>
         )}
 
         <div className="absolute right-3 top-3 flex items-center gap-2 rounded-md border border-border bg-card/80 px-2 py-1 backdrop-blur-sm">
@@ -241,6 +292,33 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
 
       </div>
     </div>
+  );
+}
+
+function Step({
+  n,
+  title,
+  body,
+}: {
+  n: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <li className="grid grid-cols-[2.5rem_1fr] gap-4">
+      <span className="pt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        {n}
+      </span>
+      <div>
+        <div className="font-serif text-lg leading-tight text-foreground">
+          {title}
+        </div>
+        <p
+          className="mt-1.5 font-sans text-[13px] leading-relaxed text-foreground/75 sm:text-sm"
+          dangerouslySetInnerHTML={{ __html: body }}
+        />
+      </div>
+    </li>
   );
 }
 
@@ -437,12 +515,16 @@ interface AgentSnapshot {
 function InspectorOverlay({
   engineRef,
   selectedId,
+  position,
   onClose,
 }: {
   engineRef: React.RefObject<Engine | null>;
   selectedId: number;
+  position: { x: number; y: number };
   onClose: () => void;
 }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: "inspector" });
   const turn = useSimulationStore((s) => s.turn);
   const [snap, setSnap] = useState<AgentSnapshot | null>(null);
 
@@ -474,28 +556,47 @@ function InspectorOverlay({
 
   if (!snap) return null;
 
+  const x = position.x + (transform?.x ?? 0);
+  const y = position.y + (transform?.y ?? 0);
+
   return (
-    <div className="pointer-events-auto absolute left-3 top-3 w-64 rounded-md border border-foreground/15 bg-card/95 p-3 font-sans text-foreground shadow-xl backdrop-blur-md">
-      <div className="flex items-baseline justify-between">
+    <div
+      ref={setNodeRef}
+      style={{ transform: `translate3d(${x}px, ${y}px, 0)` }}
+      className={cn(
+        "pointer-events-auto absolute left-0 top-0 w-64 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground shadow-xl backdrop-blur-md",
+        isDragging && "shadow-2xl",
+      )}
+    >
+      <div
+        {...listeners}
+        {...attributes}
+        className={cn(
+          "flex items-center justify-between gap-2 border-b border-foreground/10 px-3 py-2",
+          isDragging ? "cursor-grabbing" : "cursor-grab",
+        )}
+      >
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           Agent #{snap.id}
         </span>
         <button
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={onClose}
           aria-label="Close inspector"
-          className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
         >
           <XIcon size={12} weight="bold" />
         </button>
       </div>
+      <div className="px-3 py-3">
 
       {!snap.alive ? (
-        <p className="mt-2 font-serif text-[13px] italic text-foreground/70">
+        <p className="font-serif text-[13px] italic text-foreground/70">
           Deceased.
         </p>
       ) : (
-        <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
           <InspectorRow label="Motivation" value={snap.motivation} />
           <InspectorRow label="Wealth" value={snap.wealth.toFixed(1)} />
           <InspectorRow label="Position" value={`${snap.x}, ${snap.y}`} />
@@ -514,6 +615,7 @@ function InspectorOverlay({
           />
         </dl>
       )}
+      </div>
     </div>
   );
 }
