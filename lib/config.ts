@@ -1,6 +1,7 @@
 export type Scale = "village" | "town" | "city";
 
-export type Equality = "equal" | "slight" | "stratified" | "extreme";
+/** Starting wealth concentration: 0 = perfectly equal, 1 = power-law extreme. */
+export type Equality = number;
 
 export type Landscape = "two_peaks" | "centre" | "scattered" | "flat";
 
@@ -9,6 +10,8 @@ export type AgentSophistication =
   | "bounded_rational"
   | "adaptive"
   | "social";
+
+export type AgentMotivation = "material" | "symbolic" | "normative" | "mixed";
 
 export type InteractionTopology =
   | "spatial"
@@ -36,36 +39,46 @@ export interface SimulationConfig {
   landscape: Landscape;
   reproduction: boolean;
   sophistication: AgentSophistication;
+  motivation: AgentMotivation;
   topology: InteractionTopology;
   observers: ObserverKey[];
 }
 
-export const SCALE_INFO: Record<Scale, { label: string; agents: number; hint: string }> = {
+export const SCALE_INFO: Record<
+  Scale,
+  { label: string; agents: number; hint: string }
+> = {
   village: { label: "Village", agents: 500, hint: "Individual lives visible" },
   town: { label: "Town", agents: 5000, hint: "Institutions crystallize" },
   city: { label: "City", agents: 50000, hint: "Civilizations rise and fall" },
 };
 
-export const EQUALITY_INFO: Record<Equality, { label: string; hint: string }> = {
-  equal: {
-    label: "Equal",
-    hint: "Everyone starts with identical resources. Any divergence is endogenous.",
-  },
-  slight: {
-    label: "Slight noise",
-    hint: "Tiny random variation. Tests whether small accidents amplify.",
-  },
-  stratified: {
-    label: "Stratified",
-    hint: "Wealth bands already exist. Inheritance and class matter from turn one.",
-  },
-  extreme: {
+export function equalityBucket(v: Equality): { label: string; hint: string } {
+  if (v < 0.1)
+    return {
+      label: "Egalitarian",
+      hint: "Everyone starts with identical resources. Any divergence is endogenous.",
+    };
+  if (v < 0.4)
+    return {
+      label: "Slight noise",
+      hint: "Tiny random variation. Tests whether small accidents amplify.",
+    };
+  if (v < 0.75)
+    return {
+      label: "Stratified",
+      hint: "Wealth bands already exist. Inheritance and class matter from turn one.",
+    };
+  return {
     label: "Extreme",
     hint: "Few rich, many poor. Power-law distribution from the start.",
-  },
-};
+  };
+}
 
-export const LANDSCAPE_INFO: Record<Landscape, { label: string; hint: string }> = {
+export const LANDSCAPE_INFO: Record<
+  Landscape,
+  { label: string; hint: string }
+> = {
   two_peaks: {
     label: "Two peaks",
     hint: "Two abundant zones. Migration, trade, and conflict likely.",
@@ -103,6 +116,28 @@ export const SOPHISTICATION_INFO: Record<
   social: {
     label: "Social",
     hint: "Imitate, signal, and gossip. Behaviour spreads through ties.",
+  },
+};
+
+export const MOTIVATION_INFO: Record<
+  AgentMotivation,
+  { label: string; hint: string }
+> = {
+  material: {
+    label: "Material",
+    hint: "Resources and labour come first. Marx's productive subject.",
+  },
+  symbolic: {
+    label: "Symbolic",
+    hint: "Status, taste, and distinction drive choices. Bourdieu's capital game.",
+  },
+  normative: {
+    label: "Normative",
+    hint: "Belonging and ritual conformity guide action. Durkheim's collective conscience.",
+  },
+  mixed: {
+    label: "Mixed",
+    hint: "Weighted blend of all three. Realistic but harder to interpret.",
   },
 };
 
@@ -253,10 +288,11 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
 
 export const DEFAULT_CONFIG: SimulationConfig = {
   scale: "town",
-  equality: "slight",
+  equality: 0.2,
   landscape: "two_peaks",
   reproduction: false,
   sophistication: "bounded_rational",
+  motivation: "material",
   topology: "spatial",
   observers: ["epstein"],
 };

@@ -4,15 +4,11 @@ import { useEffect, useState } from "react";
 import {
   ArrowCounterClockwiseIcon,
   CheckIcon,
-  EyeIcon,
-  GlobeIcon,
   InfoIcon,
   PlayIcon,
-  UsersThreeIcon,
 } from "@phosphor-icons/react";
 
 import {
-  Dialog,
   DialogBody,
   DialogContent,
   DialogDescription,
@@ -28,15 +24,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { type Step } from "@/components/stepper";
 import { cn } from "@/lib/utils";
 import {
+  AgentMotivation,
   AgentSophistication,
   DEFAULT_CONFIG,
-  Equality,
-  EQUALITY_INFO,
+  equalityBucket,
   InteractionTopology,
   Landscape,
   LANDSCAPE_INFO,
+  MOTIVATION_INFO,
   OBSERVER_INFO,
   ObserverKey,
   REPRODUCTION_HINT,
@@ -47,57 +45,53 @@ import {
   TOPOLOGY_INFO,
 } from "@/lib/config";
 
-interface InitialConditionsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  config: SimulationConfig;
-  onRun: (config: SimulationConfig) => void;
-}
+export type StepKey = "world" | "agents" | "observers";
 
-type StepKey = "world" | "agents" | "observers";
-
-const STEPS: {
-  key: StepKey;
-  label: string;
-  description: string;
-  icon: typeof GlobeIcon;
-}[] = [
+export const STEPS: readonly (Step & { key: StepKey })[] = [
   {
     key: "world",
     label: "World",
     description: "Population, environment, demography.",
-    icon: GlobeIcon,
   },
   {
     key: "agents",
     label: "Agents",
     description: "Motivation and interaction.",
-    icon: UsersThreeIcon,
   },
   {
     key: "observers",
     label: "Observers",
     description: "AI theorists watching what emerges.",
-    icon: EyeIcon,
   },
 ];
 
+interface InitialConditionsDialogProps {
+  open: boolean;
+  onClose: () => void;
+  config: SimulationConfig;
+  onRun: (config: SimulationConfig) => void;
+  step: number;
+  maxReached: number;
+  onStepChange: (step: number) => void;
+  onMaxReachedChange: (max: number) => void;
+}
+
 export function InitialConditionsDialog({
   open,
-  onOpenChange,
+  onClose,
   config,
   onRun,
+  step,
+  maxReached,
+  onStepChange,
+  onMaxReachedChange,
 }: InitialConditionsDialogProps) {
   const [draft, setDraft] = useState<SimulationConfig>(config);
-  const [step, setStep] = useState(0);
-  const [maxReached, setMaxReached] = useState(0);
 
   useEffect(() => {
     if (!open) return;
     /* eslint-disable react-hooks/set-state-in-effect */
     setDraft(config);
-    setStep(0);
-    setMaxReached(0);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, config]);
 
@@ -110,192 +104,195 @@ export function InitialConditionsDialog({
     }));
   }
 
-  function goToStep(i: number) {
-    if (i !== step && i <= maxReached) setStep(i);
-  }
-
   const isLast = step === STEPS.length - 1;
   const current = STEPS[step];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:h-[min(98vh,52rem)] sm:w-[min(96vw,56rem)] sm:max-w-[56rem]">
-        <DialogHeader>
-          <DialogTitle className="font-serif text-xl italic">
-            Initial conditions
-          </DialogTitle>
-          <DialogDescription>
-            Set what kind of world this society starts in, then run the
-            simulation.
-          </DialogDescription>
-        </DialogHeader>
+    <DialogContent
+      className="top-[calc(50%+3rem)] max-h-[calc(100vh-9rem)] sm:max-h-[calc(100vh-11rem)] sm:w-[min(96vw,56rem)] sm:max-w-[56rem]"
+      onPointerDownOutside={(e) => {
+        if ((e.target as Element | null)?.closest("[data-stepper-portal]")) {
+          e.preventDefault();
+        }
+      }}
+      onInteractOutside={(e) => {
+        if ((e.target as Element | null)?.closest("[data-stepper-portal]")) {
+          e.preventDefault();
+        }
+      }}
+    >
+      <DialogHeader>
+        <DialogTitle className="text-lg font-medium tracking-tight">
+          Initial conditions
+        </DialogTitle>
+        <DialogDescription>
+          Set what kind of world this society starts in, then run the
+          simulation.
+        </DialogDescription>
+      </DialogHeader>
 
-        <Stepper step={step} maxReached={maxReached} onSelect={goToStep} />
+      <DialogBody>
+        {current.key === "world" && (
+          <div className="space-y-7">
+            <Field
+              label="Scale"
+              hint="How many agents the society starts with. Larger scales surface emergent dynamics but take longer to compute."
+            >
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {(Object.keys(SCALE_INFO) as Scale[]).map((s) => {
+                  const info = SCALE_INFO[s];
+                  return (
+                    <ChoiceCard
+                      key={s}
+                      active={draft.scale === s}
+                      onClick={() => setDraft((d) => ({ ...d, scale: s }))}
+                      label={info.label}
+                      hint={info.hint}
+                      meta={info.agents.toLocaleString()}
+                    />
+                  );
+                })}
+              </div>
+            </Field>
 
-        <DialogBody>
-          <div className="mb-5 flex items-center gap-2">
-            <current.icon
-              size={14}
-              weight="regular"
-              className="shrink-0 text-foreground/60"
-            />
-            <h3 className="font-serif text-base italic leading-none text-foreground">
-              {current.label}
-            </h3>
-            <span className="text-[11px] leading-snug text-muted-foreground">
-              · {current.description}
-            </span>
-            {current.key === "observers" && (
-              <span className="ml-auto font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <Field
+              label="Starting equality"
+              hint="The initial distribution of wealth and capital across agents."
+            >
+              <EqualitySlider
+                value={draft.equality}
+                onChange={(v) => setDraft((d) => ({ ...d, equality: v }))}
+              />
+            </Field>
+
+            <Field
+              label="Resource landscape"
+              hint="The spatial layout of resources — shapes where agents settle and where conflict concentrates."
+            >
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(Object.keys(LANDSCAPE_INFO) as Landscape[]).map((l) => {
+                  const info = LANDSCAPE_INFO[l];
+                  return (
+                    <ChoiceCard
+                      key={l}
+                      active={draft.landscape === l}
+                      onClick={() =>
+                        setDraft((d) => ({ ...d, landscape: l }))
+                      }
+                      label={info.label}
+                      hint={info.hint}
+                      compact
+                    />
+                  );
+                })}
+              </div>
+            </Field>
+
+            <Field label="Reproduction" hint={REPRODUCTION_HINT}>
+              <div className="grid grid-cols-2 gap-2">
+                <ChoiceCard
+                  active={!draft.reproduction}
+                  onClick={() =>
+                    setDraft((d) => ({ ...d, reproduction: false }))
+                  }
+                  label="Off"
+                  hint="Single-generation lives."
+                  compact
+                />
+                <ChoiceCard
+                  active={draft.reproduction}
+                  onClick={() =>
+                    setDraft((d) => ({ ...d, reproduction: true }))
+                  }
+                  label="On"
+                  hint="Traits pass down."
+                  compact
+                />
+              </div>
+            </Field>
+          </div>
+        )}
+
+        {current.key === "agents" && (
+          <div className="space-y-7">
+            <Field
+              label="Sophistication"
+              hint="How agents make decisions — from blind reactions to social mimicry."
+            >
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(
+                  Object.keys(SOPHISTICATION_INFO) as AgentSophistication[]
+                ).map((s) => {
+                  const info = SOPHISTICATION_INFO[s];
+                  return (
+                    <ChoiceCard
+                      key={s}
+                      active={draft.sophistication === s}
+                      onClick={() =>
+                        setDraft((d) => ({ ...d, sophistication: s }))
+                      }
+                      label={info.label}
+                      hint={info.hint}
+                    />
+                  );
+                })}
+              </div>
+            </Field>
+
+            <Field
+              label="Motivation"
+              hint="What agents try to maximize — the drive behind every choice."
+            >
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(Object.keys(MOTIVATION_INFO) as AgentMotivation[]).map((m) => {
+                  const info = MOTIVATION_INFO[m];
+                  return (
+                    <ChoiceCard
+                      key={m}
+                      active={draft.motivation === m}
+                      onClick={() =>
+                        setDraft((d) => ({ ...d, motivation: m }))
+                      }
+                      label={info.label}
+                      hint={info.hint}
+                    />
+                  );
+                })}
+              </div>
+            </Field>
+
+            <Field
+              label="Interaction topology"
+              hint="Who can talk to whom — the structure of the social graph."
+            >
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(Object.keys(TOPOLOGY_INFO) as InteractionTopology[]).map(
+                  (t) => {
+                    const info = TOPOLOGY_INFO[t];
+                    return (
+                      <ChoiceCard
+                        key={t}
+                        active={draft.topology === t}
+                        onClick={() => setDraft((d) => ({ ...d, topology: t }))}
+                        label={info.label}
+                        hint={info.hint}
+                      />
+                    );
+                  },
+                )}
+              </div>
+            </Field>
+          </div>
+        )}
+
+        {current.key === "observers" && (
+          <div className="space-y-3">
+            <div className="flex justify-end">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 {draft.observers.length} selected
               </span>
-            )}
-          </div>
-
-          {current.key === "world" && (
-            <div className="space-y-5">
-              <Field
-                label="Scale"
-                hint="How many agents the society starts with. Larger scales surface emergent dynamics but take longer to compute."
-              >
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  {(Object.keys(SCALE_INFO) as Scale[]).map((s) => {
-                    const info = SCALE_INFO[s];
-                    return (
-                      <ChoiceCard
-                        key={s}
-                        active={draft.scale === s}
-                        onClick={() => setDraft((d) => ({ ...d, scale: s }))}
-                        label={info.label}
-                        hint={info.hint}
-                        meta={info.agents.toLocaleString()}
-                      />
-                    );
-                  })}
-                </div>
-              </Field>
-
-              <Field
-                label="Starting equality"
-                hint="The initial distribution of wealth and capital across agents."
-              >
-                <StepSlider
-                  value={draft.equality}
-                  onChange={(v) => setDraft((d) => ({ ...d, equality: v }))}
-                  options={(Object.keys(EQUALITY_INFO) as Equality[]).map(
-                    (e) => ({
-                      value: e,
-                      label: EQUALITY_INFO[e].label,
-                      hint: EQUALITY_INFO[e].hint,
-                    }),
-                  )}
-                />
-              </Field>
-
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_auto]">
-                <Field
-                  label="Resource landscape"
-                  hint="The spatial layout of resources — shapes where agents settle and where conflict concentrates."
-                >
-                  <div className="grid grid-cols-2 gap-2">
-                    {(Object.keys(LANDSCAPE_INFO) as Landscape[]).map((l) => {
-                      const info = LANDSCAPE_INFO[l];
-                      return (
-                        <ChoiceCard
-                          key={l}
-                          active={draft.landscape === l}
-                          onClick={() =>
-                            setDraft((d) => ({ ...d, landscape: l }))
-                          }
-                          label={info.label}
-                          hint={info.hint}
-                          compact
-                        />
-                      );
-                    })}
-                  </div>
-                </Field>
-
-                <Field label="Reproduction" hint={REPRODUCTION_HINT}>
-                  <div className="grid grid-cols-2 gap-2 sm:w-[16rem]">
-                    <ChoiceCard
-                      active={!draft.reproduction}
-                      onClick={() =>
-                        setDraft((d) => ({ ...d, reproduction: false }))
-                      }
-                      label="Off"
-                      hint="Single-generation lives."
-                      compact
-                    />
-                    <ChoiceCard
-                      active={draft.reproduction}
-                      onClick={() =>
-                        setDraft((d) => ({ ...d, reproduction: true }))
-                      }
-                      label="On"
-                      hint="Traits pass down."
-                      compact
-                    />
-                  </div>
-                </Field>
-              </div>
             </div>
-          )}
-
-          {current.key === "agents" && (
-            <div className="space-y-8">
-              <Field
-                label="Sophistication"
-                hint="How agents make decisions — from blind reactions to social mimicry."
-              >
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {(
-                    Object.keys(SOPHISTICATION_INFO) as AgentSophistication[]
-                  ).map((s) => {
-                    const info = SOPHISTICATION_INFO[s];
-                    return (
-                      <ChoiceCard
-                        key={s}
-                        active={draft.sophistication === s}
-                        onClick={() =>
-                          setDraft((d) => ({ ...d, sophistication: s }))
-                        }
-                        label={info.label}
-                        hint={info.hint}
-                      />
-                    );
-                  })}
-                </div>
-              </Field>
-
-              <Field
-                label="Interaction topology"
-                hint="Who can talk to whom — the structure of the social graph."
-              >
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {(Object.keys(TOPOLOGY_INFO) as InteractionTopology[]).map(
-                    (t) => {
-                      const info = TOPOLOGY_INFO[t];
-                      return (
-                        <ChoiceCard
-                          key={t}
-                          active={draft.topology === t}
-                          onClick={() =>
-                            setDraft((d) => ({ ...d, topology: t }))
-                          }
-                          label={info.label}
-                          hint={info.hint}
-                        />
-                      );
-                    },
-                  )}
-                </div>
-              </Field>
-            </div>
-          )}
-
-          {current.key === "observers" && (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {(Object.keys(OBSERVER_INFO) as ObserverKey[]).map((key) => {
                 const info = OBSERVER_INFO[key];
                 const active = draft.observers.includes(key);
@@ -308,8 +305,8 @@ export function InitialConditionsDialog({
                     className={cn(
                       "group flex h-full cursor-pointer flex-col gap-1.5 rounded-md border px-3.5 py-3 text-left transition-colors",
                       active
-                        ? "border-foreground/30 bg-foreground/[0.04]"
-                        : "border-foreground/10 bg-card hover:border-foreground/20 hover:bg-foreground/[0.025]",
+                        ? "border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/60"
+                        : "border-foreground/10 bg-card hover:border-zinc-200 hover:bg-zinc-50 dark:hover:border-zinc-800 dark:hover:bg-zinc-900/30",
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -364,170 +361,52 @@ export function InitialConditionsDialog({
                 );
               })}
             </div>
-          )}
-        </DialogBody>
+          </div>
+        )}
+      </DialogBody>
 
-        <DialogFooter>
+      <DialogFooter>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setDraft(DEFAULT_CONFIG)}
+        >
+          <ArrowCounterClockwiseIcon weight="regular" />
+          Reset
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onStepChange(Math.max(0, step - 1))}
+          disabled={step === 0}
+        >
+          Back
+        </Button>
+        {isLast ? (
           <Button
-            variant="ghost"
             size="sm"
-            onClick={() => setDraft(DEFAULT_CONFIG)}
+            onClick={() => {
+              onRun(draft);
+              onClose();
+            }}
           >
-            <ArrowCounterClockwiseIcon weight="regular" />
-            Reset
+            <PlayIcon weight="fill" />
+            Run
           </Button>
+        ) : (
           <Button
-            variant="outline"
             size="sm"
-            onClick={() => setStep((s) => Math.max(0, s - 1))}
-            disabled={step === 0}
+            onClick={() => {
+              const next = Math.min(STEPS.length - 1, step + 1);
+              onStepChange(next);
+              if (next > maxReached) onMaxReachedChange(next);
+            }}
           >
-            Back
+            Next
           </Button>
-          {isLast ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                onRun(draft);
-                onOpenChange(false);
-              }}
-            >
-              <PlayIcon weight="fill" />
-              Run
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              onClick={() => {
-                const next = Math.min(STEPS.length - 1, step + 1);
-                setStep(next);
-                setMaxReached((m) => Math.max(m, next));
-              }}
-            >
-              Next
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Stepper({
-  step,
-  maxReached,
-  onSelect,
-}: {
-  step: number;
-  maxReached: number;
-  onSelect: (i: number) => void;
-}) {
-  return (
-    <div className="shrink-0 px-5 pb-1 pt-5 sm:px-6 sm:pb-2 sm:pt-6">
-      <div className="relative">
-        <div
-          className="absolute h-px bg-foreground/10"
-          style={{ top: 18, left: "16.6667%", right: "16.6667%" }}
-        />
-        <div
-          className="absolute h-[2px] bg-foreground"
-          style={{
-            top: 17.5,
-            left: "16.6667%",
-            width: `${(step / (STEPS.length - 1)) * 66.6667}%`,
-            transition: "width 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
-          }}
-        />
-        <div className="grid grid-cols-3">
-          {STEPS.map((s, i) => {
-            const isCurrent = i === step;
-            const isComplete = i < step;
-            const isReachable = i <= maxReached;
-            const isFuture = !isReachable && !isCurrent;
-            return (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => onSelect(i)}
-                className={cn(
-                  "group flex flex-col items-center border-0 bg-transparent p-0 text-center",
-                  isCurrent
-                    ? "cursor-default"
-                    : isReachable
-                      ? "cursor-pointer"
-                      : "cursor-default",
-                )}
-              >
-                <div
-                  className={cn(
-                    "mb-3 transition-transform duration-300 ease-out",
-                    isReachable && !isCurrent && "group-hover:scale-110",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "relative z-10 flex size-9 items-center justify-center rounded-full border-2 bg-card ring-offset-0 transition-[border-color,background-color,color,transform,box-shadow] duration-400",
-                      (isCurrent || isComplete) &&
-                        "border-foreground bg-foreground",
-                      !isCurrent && !isComplete && "border-foreground/15",
-                      isCurrent && "ring-4 ring-foreground/10",
-                    )}
-                    style={{
-                      transitionTimingFunction:
-                        "cubic-bezier(0.34, 1.56, 0.64, 1)",
-                      transform: isFuture ? "scale(0.85)" : "scale(1)",
-                    }}
-                  >
-                    {isComplete ? (
-                      <CheckIcon
-                        size={13}
-                        weight="bold"
-                        className="text-background"
-                      />
-                    ) : (
-                      <span
-                        className={cn(
-                          "font-mono text-[11px] font-medium tabular-nums",
-                          isCurrent
-                            ? "text-background"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div
-                  className={cn(
-                    "font-serif text-sm italic leading-none",
-                    isCurrent || isComplete
-                      ? "text-foreground"
-                      : isReachable
-                        ? "text-muted-foreground"
-                        : "text-muted-foreground/50",
-                  )}
-                >
-                  {s.label}
-                </div>
-                <div
-                  className={cn(
-                    "mt-1 hidden max-w-[180px] text-[11px] leading-snug sm:block",
-                    isCurrent
-                      ? "text-muted-foreground"
-                      : isComplete
-                        ? "text-muted-foreground/70"
-                        : "text-muted-foreground/40",
-                  )}
-                >
-                  {s.description}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+        )}
+      </DialogFooter>
+    </DialogContent>
   );
 }
 
@@ -592,23 +471,24 @@ function ChoiceCard({
       aria-pressed={active}
       aria-label={label}
       className={cn(
-        "group relative flex cursor-pointer flex-col gap-1 rounded-md border text-left transition-colors",
-        compact ? "px-3 py-2" : "gap-1.5 px-3.5 py-3",
+        "group relative flex w-full cursor-pointer flex-col gap-1.5 rounded-md border text-left transition-colors",
+        compact ? "px-3 py-2.5" : "px-3.5 py-3",
         active
-          ? "border-foreground/30 bg-foreground/[0.04]"
-          : "border-foreground/10 bg-card hover:border-foreground/20 hover:bg-foreground/[0.025]",
+          ? "border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/60"
+          : "border-foreground/10 bg-card hover:border-zinc-200 hover:bg-zinc-50 dark:hover:border-zinc-800 dark:hover:bg-zinc-900/30",
       )}
     >
       <div className="flex items-center justify-between gap-2">
         <span
           className={cn(
-            "font-medium leading-tight",
+            "truncate font-medium leading-tight",
             compact ? "text-[13px]" : "text-sm",
+            active ? "text-foreground" : "text-foreground/90",
           )}
         >
           {label}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {meta && (
             <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
               {meta}
@@ -616,7 +496,7 @@ function ChoiceCard({
           )}
           <span
             className={cn(
-              "flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+              "flex size-4 items-center justify-center rounded-full border transition-colors",
               active
                 ? "border-foreground bg-foreground text-background"
                 : "border-foreground/15 bg-card",
@@ -629,7 +509,7 @@ function ChoiceCard({
       <p
         className={cn(
           "leading-snug text-muted-foreground",
-          compact ? "text-[10.5px]" : "text-[11px]",
+          compact ? "text-[11px]" : "text-[12px]",
         )}
       >
         {hint}
@@ -638,55 +518,44 @@ function ChoiceCard({
   );
 }
 
-function StepSlider<T extends string>({
+function EqualitySlider({
   value,
   onChange,
-  options,
 }: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { value: T; label: string; hint: string }[];
+  value: number;
+  onChange: (v: number) => void;
 }) {
-  const index = Math.max(
-    0,
-    options.findIndex((o) => o.value === value),
-  );
-  const current = options[index];
+  const pct = Math.round(value * 100);
+  const bucket = equalityBucket(value);
 
   return (
-    <div className="space-y-3 rounded-md border border-foreground/10 bg-card px-4 pb-3 pt-3.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-sm font-medium">{current.label}</span>
-        <span className="text-[11px] leading-snug text-muted-foreground">
-          {current.hint}
-        </span>
-      </div>
+    <div className="space-y-3 pt-1">
       <Slider
-        value={[index]}
+        value={[pct]}
         min={0}
-        max={options.length - 1}
+        max={100}
         step={1}
         onValueChange={(v) => {
-          const idx = Array.isArray(v) ? v[0] : v;
-          onChange(options[idx as number].value);
+          const next = Array.isArray(v) ? v[0] : v;
+          onChange((next as number) / 100);
         }}
       />
-      <div className="flex justify-between gap-2 text-[10px] uppercase tracking-[0.12em]">
-        {options.map((o, i) => (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onChange(o.value)}
-            className={cn(
-              "cursor-pointer transition-colors",
-              i === index
-                ? "text-foreground"
-                : "text-muted-foreground/60 hover:text-foreground/80",
-            )}
-          >
-            {o.label}
-          </button>
-        ))}
+      <div className="flex justify-between text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
+        <span>Equal</span>
+        <span>Extreme</span>
+      </div>
+      <div className="flex items-baseline justify-between gap-3 pt-1">
+        <div>
+          <span className="text-sm font-medium text-foreground">
+            {bucket.label}
+          </span>
+          <span className="ml-2 font-mono text-[11px] tabular-nums text-muted-foreground">
+            {pct}%
+          </span>
+        </div>
+        <p className="max-w-[28rem] text-right text-[11px] leading-snug text-muted-foreground">
+          {bucket.hint}
+        </p>
       </div>
     </div>
   );
