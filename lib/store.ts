@@ -35,12 +35,14 @@ interface SimulationState {
   snapshot: EngineSnapshot;
   history: HistoryPoint[];
   speed: number;
+  canvasSize: { width: number; height: number };
   startRun: (next?: SimulationConfig) => void;
   resumeRun: () => void;
   pauseRun: () => void;
   stopRun: () => void;
   setSpeed: (speed: number) => void;
   updateSnapshot: (snapshot: EngineSnapshot) => void;
+  setCanvasSize: (s: { width: number; height: number }) => void;
 }
 
 export const useSimulationStore = create<SimulationState>()(
@@ -54,6 +56,7 @@ export const useSimulationStore = create<SimulationState>()(
       snapshot: EMPTY_SNAPSHOT,
       history: [],
       speed: 1,
+      canvasSize: { width: 0, height: 0 },
       startRun: (next) =>
         set((s) => ({
           config: { ...(next ?? s.config), seed: newSeed() },
@@ -75,6 +78,7 @@ export const useSimulationStore = create<SimulationState>()(
           history: [],
         }),
       setSpeed: (speed) => set({ speed }),
+      setCanvasSize: (canvasSize) => set({ canvasSize }),
       updateSnapshot: (snapshot) =>
         set((s) => {
           const next = s.history.slice(

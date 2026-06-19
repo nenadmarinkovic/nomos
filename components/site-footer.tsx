@@ -1,5 +1,7 @@
 "use client";
 
+import { useSimulationStore } from "@/lib/store";
+
 interface SiteFooterProps {
   turn: number;
   agentCount: number;
@@ -17,6 +19,8 @@ export function SiteFooter({
   observerCount,
   started,
 }: SiteFooterProps) {
+  const canvasSize = useSimulationStore((s) => s.canvasSize);
+
   return (
     <footer className="flex h-14 shrink-0 items-center justify-between border-t border-foreground/10 bg-background px-4">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground">
@@ -31,6 +35,10 @@ export function SiteFooter({
         />
         <Stat label="Gini" value={started ? gini.toFixed(3) : "—"} />
         <Stat label="Observers" value={observerCount.toString()} />
+      </div>
+
+      <div className="font-mono text-[10px] tabular-nums text-muted-foreground/70">
+        {canvasSize.width} × {canvasSize.height}
       </div>
     </footer>
   );
