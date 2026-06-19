@@ -8,6 +8,7 @@ import {
   ArrowCounterClockwiseIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
+  CaretRightIcon,
   CheckIcon,
   PlayIcon,
   XIcon,
@@ -21,6 +22,9 @@ import {
   AgentMotivation,
   AgentSophistication,
   DEFAULT_CONFIG,
+  equalityBucket,
+  HETEROGENEITY_BUCKETS,
+  InitialSettlement,
   InteractionTopology,
   Landscape,
   LANDSCAPE_INFO,
@@ -33,6 +37,7 @@ import {
   REPRODUCTION_HINT,
   SCALE_INFO,
   Scale,
+  SETTLEMENT_INFO,
   SOPHISTICATION_INFO,
   TOPOLOGY_INFO,
   VISION_BUCKETS,
@@ -46,15 +51,18 @@ type StepKey =
   | "scale"
   | "equality"
   | "landscape"
+  | "settlement"
   | "reproduction"
   | "metabolism"
   | "regrowth"
   | "vision"
   | "lifespan"
+  | "heterogeneity"
   | "sophistication"
   | "motivation"
   | "topology"
-  | "observers";
+  | "observers"
+  | "summary";
 
 interface StepDef {
   key: StepKey;
@@ -87,6 +95,14 @@ const STEPS: readonly StepDef[] = [
       "Geography decides where people gather, what they fight over, and which routes carry trade or migration.",
     theoryHook:
       "Resources have a shape, and that shape shapes everything. Two abundant zones means people cluster around each and likely meet — to trade in good times, to fight in bad. A single rich centre acts like a magnet: population pulls inward, leaving a periphery (the classic story of urbanization). Scattered patches scatter the society too — many small settlements, more local economies, slower spread of ideas. Flat means geography has no opinion: whatever happens is purely social.",
+  },
+  {
+    key: "settlement",
+    question: "Where do they start out?",
+    framing:
+      "At the very first turn, the world has to be populated somehow. Whether people are scattered, gathered into a few groups, already in one place, or pre-sorted by wealth — the starting pattern shapes what can emerge.",
+    theoryHook:
+      "The initial pattern of where people are is one of the quietest but most consequential choices. With a scattered start, distinctive clusters have to form through behaviour — that's the real test of whether neighbourhoods and tribes are emergent. With a clustered start, you skip ahead: 'people-near-each-other-look-alike' is already given. A single settlement forces migration into the story. A segregated start asks Schelling's question in reverse: once sorted, does a society stay sorted, or does mixing reassert itself?",
   },
   {
     key: "reproduction",
@@ -128,20 +144,28 @@ const STEPS: readonly StepDef[] = [
       "Short lives mean a society that resets quickly: wealth dissolves with each death, hierarchies don't have time to entrench, and demographic pressure is constant. Long lives let structure accumulate — old agents carry old advantages forward, and the present is shaped by decisions made long ago. The classic insight: societies with very long-lived agents tend to look stable but rigid, while short-lived ones look chaotic but mobile.",
   },
   {
+    key: "heterogeneity",
+    question: "Are all agents identical, or do they vary?",
+    framing:
+      "Decide whether everyone shares the same vision, metabolism, and lifespan — or whether each agent draws their own values from a spread.",
+    theoryHook:
+      "This is Epstein's most-cited result. With everything else equal — same starting wealth, same landscape — a population where vision varies even slightly will still produce dramatic inequality. The agents who happen to see further find resources faster, and the gap compounds. A perfectly uniform population is a useful baseline, but it isn't really a society: real populations differ, and those differences are often the silent engine behind macro patterns. The wider the spread, the more outcomes look like the world we know.",
+  },
+  {
     key: "sophistication",
     question: "How do they think?",
     framing:
-      "From blind stimulus-response to social imitation. Cognition sets the ceiling on what culture can do.",
+      "From blind stimulus-response to social imitation. Cognition sets the ceiling on what culture can do. Pick more than one — real populations mix cognitive types.",
     theoryHook:
-      "Agents can be very simple or quite clever. Minimal agents just react — see resource, go to resource. Bounded-rational agents have limited information and pick 'good enough' rather than optimal — like real people most of the time. Adaptive agents learn from past outcomes. Social agents watch each other and copy — and that's where fashion, herd behaviour, and shared culture come from. Smarter agents don't always mean smarter societies.",
+      "Agents can be very simple or quite clever, and real populations are never one or the other. Minimal agents just react — see resource, go to resource. Bounded-rational ones have limited information and pick 'good enough' rather than optimal. Adaptive agents learn from past outcomes. Social agents watch each other and copy — and that's where fashion, herd behaviour, and shared culture come from. Pick more than one and the population becomes a mix: some imitators alongside some learners alongside some satisficers, which is what Doyne Farmer argues real societies actually look like. Homogeneous populations almost never behave like real ones.",
   },
   {
     key: "motivation",
     question: "What do they want?",
     framing:
-      "What agents try to maximize shapes everything that follows — economy, status games, ritual life.",
+      "What agents try to maximize shapes everything that follows — economy, status games, ritual life. Pick more than one if you want different drives to coexist.",
     theoryHook:
-      "This is the deepest choice in the model. If agents chase resources, you're running a world where material conditions explain the rest. If they chase status and distinction, the game becomes about taste, recognition, and symbolic capital. If they follow shared norms because belonging matters more than gain, collective conscience does the heavy lifting. Mixed is more realistic, but harder to read: when something emerges, you can't always tell which drive caused it.",
+      "This is the deepest choice in the model. If agents chase resources, you're running a world where material conditions explain the rest. If they chase status and distinction, the game becomes about taste, recognition, and symbolic capital. If they follow shared norms because belonging matters more than gain, collective conscience does the heavy lifting. Pick more than one and the population splits between drives — closer to real societies, where some chase money, others chase honour, others just follow the room. When something emerges in a mixed population, the interesting question becomes: which drive produced it?",
   },
   {
     key: "topology",
@@ -158,6 +182,14 @@ const STEPS: readonly StepDef[] = [
       "AI theorists watch the same simulation and describe what they see in their own vocabulary.",
     theoryHook:
       "This is the move that makes Nomos different. The simulation runs once, but the chosen theorists each narrate it through their own lens. Marx might see class struggle where Durkheim sees ritual breakdown and Luhmann sees subsystems failing to translate each other. You're not asking which one is right — you're watching multiple readings of the same emergence, side by side. Pick more than one. Disagreement is where the intellectual move actually lives.",
+  },
+  {
+    key: "summary",
+    question: "Ready to begin?",
+    framing:
+      "Here's the society you've designed — world, agents, and observers in one view. Look it over, jump back to anything you'd like to change, then begin the simulation.",
+    theoryHook:
+      "Every choice on this page is a hypothesis: about what conditions produce what kinds of societies. Hit Begin, watch what emerges, and let the observers narrate it through their own theoretical vocabularies. If something surprises you, the answer is somewhere in these settings — that's the whole point of generative social science.",
   },
 ] as const;
 
@@ -208,10 +240,12 @@ export default function SetupPage() {
 
   const [draft, setDraft] = useState<SimulationConfig>(storeConfig);
   const [stepIndex, setStepIndex] = useState(0);
+  const [returnToSummary, setReturnToSummary] = useState(false);
 
   const step = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
   const progress = ((stepIndex + 1) / STEPS.length) * 100;
+  const summaryIndex = STEPS.findIndex((s) => s.key === "summary");
 
   function patchWorld(p: Partial<WorldConfig>) {
     setDraft((d) => ({ ...d, world: { ...d.world, ...p } }));
@@ -243,15 +277,33 @@ export default function SetupPage() {
       router.push("/");
       return;
     }
+    if (returnToSummary) {
+      setStepIndex(summaryIndex);
+      setReturnToSummary(false);
+      return;
+    }
     setStepIndex((i) => Math.min(STEPS.length - 1, i + 1));
   }
 
   function goBack() {
+    setReturnToSummary(false);
     setStepIndex((i) => Math.max(0, i - 1));
   }
 
-  const canAdvance =
-    step.key !== "observers" || draft.observers.length > 0;
+  function jumpToStep(key: StepKey) {
+    const idx = STEPS.findIndex((s) => s.key === key);
+    if (idx < 0) return;
+    setStepIndex(idx);
+    setReturnToSummary(true);
+  }
+
+  const canAdvance = (() => {
+    if (step.key === "observers") return draft.observers.length > 0;
+    if (step.key === "motivation") return draft.agents.motivation.length > 0;
+    if (step.key === "sophistication")
+      return draft.agents.sophistication.length > 0;
+    return true;
+  })();
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -320,6 +372,7 @@ export default function SetupPage() {
               patchPhysics={patchPhysics}
               patchAgents={patchAgents}
               toggleObserver={toggleObserver}
+              jumpToStep={jumpToStep}
             />
           </div>
 
@@ -377,6 +430,7 @@ function StepBody({
   patchPhysics,
   patchAgents,
   toggleObserver,
+  jumpToStep,
 }: {
   step: StepKey;
   draft: SimulationConfig;
@@ -384,6 +438,7 @@ function StepBody({
   patchPhysics: (p: Partial<WorldPhysics>) => void;
   patchAgents: (p: Partial<AgentModel>) => void;
   toggleObserver: (k: ObserverKey) => void;
+  jumpToStep: (key: StepKey) => void;
 }) {
   if (step === "scale") {
     return (
@@ -432,6 +487,25 @@ function StepBody({
               key={l}
               active={draft.world.landscape === l}
               onClick={() => patchWorld({ landscape: l })}
+              label={info.label}
+              hint={info.hint}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (step === "settlement") {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {(Object.keys(SETTLEMENT_INFO) as InitialSettlement[]).map((s) => {
+          const info = SETTLEMENT_INFO[s];
+          return (
+            <BigChoiceCard
+              key={s}
+              active={draft.world.initialSettlement === s}
+              onClick={() => patchWorld({ initialSettlement: s })}
               label={info.label}
               hint={info.hint}
             />
@@ -534,43 +608,67 @@ function StepBody({
     );
   }
 
-  if (step === "sophistication") {
+  if (step === "heterogeneity") {
+    const active = bucketIndex(
+      HETEROGENEITY_BUCKETS,
+      draft.world.physics.heterogeneity,
+    );
     return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {(Object.keys(SOPHISTICATION_INFO) as AgentSophistication[]).map(
-          (s) => {
-            const info = SOPHISTICATION_INFO[s];
-            return (
-              <BigChoiceCard
-                key={s}
-                active={draft.agents.sophistication === s}
-                onClick={() => patchAgents({ sophistication: s })}
-                label={info.label}
-                hint={info.hint}
-              />
-            );
-          },
-        )}
+        {HETEROGENEITY_BUCKETS.map((b, i) => (
+          <BigChoiceCard
+            key={b.label}
+            active={active === i}
+            onClick={() => patchPhysics({ heterogeneity: b.value })}
+            label={b.label}
+            hint={b.hint}
+          />
+        ))}
       </div>
     );
   }
 
-  if (step === "motivation") {
+  if (step === "sophistication") {
+    const selected = draft.agents.sophistication;
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {(Object.keys(MOTIVATION_INFO) as AgentMotivation[]).map((m) => {
-          const info = MOTIVATION_INFO[m];
-          return (
-            <BigChoiceCard
-              key={m}
-              active={draft.agents.motivation === m}
-              onClick={() => patchAgents({ motivation: m })}
-              label={info.label}
-              hint={info.hint}
-            />
-          );
-        })}
-      </div>
+      <MultiPickGrid
+        selectedCount={selected.length}
+        options={(Object.keys(SOPHISTICATION_INFO) as AgentSophistication[]).map(
+          (s) => ({
+            key: s,
+            active: selected.includes(s),
+            label: SOPHISTICATION_INFO[s].label,
+            hint: SOPHISTICATION_INFO[s].hint,
+            onToggle: () => {
+              const next = selected.includes(s)
+                ? selected.filter((x) => x !== s)
+                : [...selected, s];
+              patchAgents({ sophistication: next });
+            },
+          }),
+        )}
+      />
+    );
+  }
+
+  if (step === "motivation") {
+    const selected = draft.agents.motivation;
+    return (
+      <MultiPickGrid
+        selectedCount={selected.length}
+        options={(Object.keys(MOTIVATION_INFO) as AgentMotivation[]).map((m) => ({
+          key: m,
+          active: selected.includes(m),
+          label: MOTIVATION_INFO[m].label,
+          hint: MOTIVATION_INFO[m].hint,
+          onToggle: () => {
+            const next = selected.includes(m)
+              ? selected.filter((x) => x !== m)
+              : [...selected, m];
+            patchAgents({ motivation: next });
+          },
+        }))}
+      />
     );
   }
 
@@ -595,6 +693,10 @@ function StepBody({
 
   if (step === "observers") {
     return <ObserverPicker draft={draft} toggleObserver={toggleObserver} />;
+  }
+
+  if (step === "summary") {
+    return <SummaryReview draft={draft} jumpToStep={jumpToStep} />;
   }
 
   return null;
@@ -650,6 +752,44 @@ function BigChoiceCard({
       </div>
       <p className="text-[13px] leading-snug text-muted-foreground">{hint}</p>
     </button>
+  );
+}
+
+function MultiPickGrid({
+  options,
+  selectedCount,
+}: {
+  options: {
+    key: string;
+    active: boolean;
+    label: string;
+    hint: string;
+    onToggle: () => void;
+  }[];
+  selectedCount: number;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          Pick one or more
+        </span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          {selectedCount} selected
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {options.map((o) => (
+          <BigChoiceCard
+            key={o.key}
+            active={o.active}
+            onClick={o.onToggle}
+            label={o.label}
+            hint={o.hint}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -721,5 +861,207 @@ function ObserverPicker({
         })}
       </div>
     </div>
+  );
+}
+
+function SummaryReview({
+  draft,
+  jumpToStep,
+}: {
+  draft: SimulationConfig;
+  jumpToStep: (key: StepKey) => void;
+}) {
+  const metabolismIdx = bucketIndex(
+    METABOLISM_BUCKETS,
+    draft.world.physics.metabolism,
+  );
+  const regrowthIdx = bucketIndex(
+    REGROWTH_BUCKETS,
+    draft.world.physics.regrowthRate,
+  );
+  const visionIdx = bucketIndex(VISION_BUCKETS, draft.world.physics.vision);
+  const lifespanIdx = bucketIndex(
+    LIFESPAN_BUCKETS,
+    draft.world.physics.lifespan,
+  );
+  const heterogeneityIdx = bucketIndex(
+    HETEROGENEITY_BUCKETS,
+    draft.world.physics.heterogeneity,
+  );
+
+  return (
+    <div className="space-y-10">
+      <SummarySection title="World">
+        <SummaryRow
+          label="Population"
+          value={`${SCALE_INFO[draft.world.scale].label} · ${SCALE_INFO[
+            draft.world.scale
+          ].agents.toLocaleString()} agents`}
+          onEdit={() => jumpToStep("scale")}
+        />
+        <SummaryRow
+          label="Starting equality"
+          value={equalityBucket(draft.world.equality).label}
+          onEdit={() => jumpToStep("equality")}
+        />
+        <SummaryRow
+          label="Landscape"
+          value={LANDSCAPE_INFO[draft.world.landscape].label}
+          onEdit={() => jumpToStep("landscape")}
+        />
+        <SummaryRow
+          label="Initial settlement"
+          value={SETTLEMENT_INFO[draft.world.initialSettlement].label}
+          onEdit={() => jumpToStep("settlement")}
+        />
+        <SummaryRow
+          label="Inheritance"
+          value={
+            draft.world.reproduction ? "Children inherit" : "Each life resets"
+          }
+          onEdit={() => jumpToStep("reproduction")}
+        />
+      </SummarySection>
+
+      <SummarySection title="Physics">
+        <SummaryRow
+          label="Metabolism"
+          value={METABOLISM_BUCKETS[metabolismIdx].label}
+          onEdit={() => jumpToStep("metabolism")}
+        />
+        <SummaryRow
+          label="Regrowth"
+          value={REGROWTH_BUCKETS[regrowthIdx].label}
+          onEdit={() => jumpToStep("regrowth")}
+        />
+        <SummaryRow
+          label="Vision"
+          value={VISION_BUCKETS[visionIdx].label}
+          onEdit={() => jumpToStep("vision")}
+        />
+        <SummaryRow
+          label="Lifespan"
+          value={LIFESPAN_BUCKETS[lifespanIdx].label}
+          onEdit={() => jumpToStep("lifespan")}
+        />
+        <SummaryRow
+          label="Heterogeneity"
+          value={HETEROGENEITY_BUCKETS[heterogeneityIdx].label}
+          onEdit={() => jumpToStep("heterogeneity")}
+        />
+      </SummarySection>
+
+      <SummarySection title="Agents">
+        <SummaryRow
+          label="Cognition"
+          value={
+            draft.agents.sophistication.length === 0
+              ? "None"
+              : draft.agents.sophistication
+                  .map((s) => SOPHISTICATION_INFO[s].label)
+                  .join(" · ")
+          }
+          onEdit={() => jumpToStep("sophistication")}
+        />
+        <SummaryRow
+          label="Motivation"
+          value={
+            draft.agents.motivation.length === 0
+              ? "None"
+              : draft.agents.motivation
+                  .map((m) => MOTIVATION_INFO[m].label)
+                  .join(" · ")
+          }
+          onEdit={() => jumpToStep("motivation")}
+        />
+        <SummaryRow
+          label="Topology"
+          value={TOPOLOGY_INFO[draft.agents.topology].label}
+          onEdit={() => jumpToStep("topology")}
+        />
+      </SummarySection>
+
+      <SummarySection title="Observers">
+        <button
+          type="button"
+          onClick={() => jumpToStep("observers")}
+          className="group flex w-full cursor-pointer items-start justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.02]"
+        >
+          <span className="shrink-0 pt-1 font-sans text-[13px] text-muted-foreground">
+            {draft.observers.length === 0
+              ? "None"
+              : `${draft.observers.length} selected`}
+          </span>
+          <span className="flex flex-1 items-start justify-end gap-3">
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {draft.observers.map((k) => (
+                <span
+                  key={k}
+                  className="rounded-full border border-foreground/10 bg-card px-2.5 py-0.5 font-sans text-[12px] font-medium text-foreground/85"
+                >
+                  {OBSERVER_INFO[k].name}
+                </span>
+              ))}
+            </div>
+            <CaretRightIcon
+              size={12}
+              weight="bold"
+              className="mt-1.5 shrink-0 -translate-x-1 text-foreground opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+            />
+          </span>
+        </button>
+      </SummarySection>
+    </div>
+  );
+}
+
+function SummarySection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+        {title}
+      </h3>
+      <div className="divide-y divide-foreground/10 border-y border-foreground/10">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  onEdit,
+}: {
+  label: string;
+  value: string;
+  onEdit: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      className="group flex w-full cursor-pointer items-center justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.02]"
+    >
+      <span className="font-sans text-[13px] text-muted-foreground">
+        {label}
+      </span>
+      <span className="flex items-center gap-2.5">
+        <span className="font-sans text-[14px] font-medium text-foreground">
+          {value}
+        </span>
+        <CaretRightIcon
+          size={12}
+          weight="bold"
+          className="shrink-0 -translate-x-1 text-foreground opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+        />
+      </span>
+    </button>
   );
 }
