@@ -19,6 +19,9 @@ export type InteractionTopology =
   | "network"
   | "hierarchical";
 
+/** Discriminant for agent rule sets. New models slot in here. */
+export type AgentModelKind = "epstein_minimal";
+
 export type ObserverKey =
   | "epstein"
   | "bourdieu"
@@ -33,15 +36,41 @@ export type ObserverKey =
   | "butler"
   | "flack";
 
-export interface SimulationConfig {
+export interface WorldPhysics {
+  /** Resources consumed by each agent per turn. */
+  metabolism: number;
+  /** Fraction of depleted resources that grow back each turn (0..1). */
+  regrowthRate: number;
+  /** How many cells of the grid an agent can perceive. */
+  vision: number;
+  /** Maximum age in turns before an agent dies. */
+  lifespan: number;
+}
+
+export interface WorldConfig {
   scale: Scale;
   equality: Equality;
   landscape: Landscape;
   reproduction: boolean;
+  physics: WorldPhysics;
+}
+
+export interface AgentModel {
+  kind: AgentModelKind;
   sophistication: AgentSophistication;
   motivation: AgentMotivation;
   topology: InteractionTopology;
+}
+
+export interface SimulationConfig {
+  seed: number;
+  world: WorldConfig;
+  agents: AgentModel;
   observers: ObserverKey[];
+}
+
+export function newSeed(): number {
+  return Math.floor(Math.random() * 2_147_483_647);
 }
 
 export const SCALE_INFO: Record<
@@ -164,7 +193,105 @@ export const TOPOLOGY_INFO: Record<
 };
 
 export const REPRODUCTION_HINT =
-  "Agents inherit wealth and traits from their parents. Reveals how structure reproduces across generations.";
+  "Every society reproduces. The question is whether children inherit what their parents accumulated, or each life begins from scratch.";
+
+interface PhysicsBucket {
+  value: number;
+  label: string;
+  hint: string;
+}
+
+export const METABOLISM_BUCKETS: readonly PhysicsBucket[] = [
+  {
+    value: 0.5,
+    label: "Easy living",
+    hint: "Bodies cost little. Surplus is easy to accumulate.",
+  },
+  {
+    value: 1,
+    label: "Modest needs",
+    hint: "Standard rate. Steady consumption against steady production.",
+  },
+  {
+    value: 2,
+    label: "Demanding",
+    hint: "Survival is work. Falling behind on resources is dangerous.",
+  },
+  {
+    value: 3,
+    label: "Brutal",
+    hint: "Constant pressure. Famine looms if production stalls.",
+  },
+];
+
+export const REGROWTH_BUCKETS: readonly PhysicsBucket[] = [
+  {
+    value: 0.02,
+    label: "Slow recovery",
+    hint: "Once exhausted, land takes generations to recover.",
+  },
+  {
+    value: 0.1,
+    label: "Steady regrowth",
+    hint: "Resources replenish at a sustainable pace.",
+  },
+  {
+    value: 0.3,
+    label: "Fast renewal",
+    hint: "The world heals quickly. Carrying capacity is generous.",
+  },
+  {
+    value: 0.6,
+    label: "Abundance",
+    hint: "Almost faster than it can be consumed. Scarcity rarely bites.",
+  },
+];
+
+export const VISION_BUCKETS: readonly PhysicsBucket[] = [
+  {
+    value: 1,
+    label: "Their own square",
+    hint: "Agents perceive only what they stand on. Nearly blind.",
+  },
+  {
+    value: 3,
+    label: "Their neighbourhood",
+    hint: "Local awareness only. Geography hides opportunities.",
+  },
+  {
+    value: 6,
+    label: "Half the valley",
+    hint: "Wide awareness. Agents can plan toward distant resources.",
+  },
+  {
+    value: 12,
+    label: "Across the world",
+    hint: "Effectively global perception. Information is free.",
+  },
+];
+
+export const LIFESPAN_BUCKETS: readonly PhysicsBucket[] = [
+  {
+    value: 30,
+    label: "Short and brutal",
+    hint: "Few turns per agent. Rapid turnover.",
+  },
+  {
+    value: 60,
+    label: "Mortal lives",
+    hint: "Standard arc. Time to accumulate, time to lose it.",
+  },
+  {
+    value: 120,
+    label: "Long-lived",
+    hint: "Wealth and habits persist longer. Slower turnover.",
+  },
+  {
+    value: 200,
+    label: "Generational",
+    hint: "Near-permanent agents. Structure entrenches before death matters.",
+  },
+];
 
 export interface ObserverEntry {
   label: string;
@@ -286,13 +413,27 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
   },
 };
 
+export const DEFAULT_PHYSICS: WorldPhysics = {
+  metabolism: 1,
+  regrowthRate: 0.1,
+  vision: 3,
+  lifespan: 60,
+};
+
 export const DEFAULT_CONFIG: SimulationConfig = {
-  scale: "town",
-  equality: 0.2,
-  landscape: "two_peaks",
-  reproduction: false,
-  sophistication: "bounded_rational",
-  motivation: "material",
-  topology: "spatial",
+  seed: 0,
+  world: {
+    scale: "town",
+    equality: 0.2,
+    landscape: "two_peaks",
+    reproduction: true,
+    physics: DEFAULT_PHYSICS,
+  },
+  agents: {
+    kind: "epstein_minimal",
+    sophistication: "bounded_rational",
+    motivation: "material",
+    topology: "spatial",
+  },
   observers: ["epstein"],
 };
