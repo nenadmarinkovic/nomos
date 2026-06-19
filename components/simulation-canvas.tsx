@@ -197,7 +197,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
           />
         )}
 
-        {started && <Legend />}
 
         {!started && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -248,119 +247,6 @@ const MOTIVATION_COLOR: Record<string, string> = {
   power: "#111111",
 };
 
-const MOTIVATION_LABEL: Record<string, string> = {
-  material: "Material",
-  symbolic: "Symbolic",
-  normative: "Normative",
-  power: "Power",
-};
-
-function Legend() {
-  const motivation = useSimulationStore((s) => s.config.agents.motivation);
-  const keys = Object.keys(motivation).filter(
-    (k) => (motivation as Record<string, number | undefined>)[k] !== undefined,
-  );
-
-  return (
-    <div className="pointer-events-none absolute bottom-3 left-3 rounded-md border border-foreground/10 bg-card/90 px-3 py-2.5 shadow-sm backdrop-blur-md">
-      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        Key
-      </div>
-
-      <div className="mt-2 flex flex-col gap-1.5">
-        {keys.map((k) => (
-          <div key={k} className="flex items-center gap-2">
-            <LegendShape motivation={k} />
-            <span className="font-sans text-[12px] text-foreground/85">
-              {MOTIVATION_LABEL[k] ?? k}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-foreground/10 pt-2">
-        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-          Wealth
-        </span>
-        <span className="flex items-center gap-px">
-          {[0.35, 0.55, 0.8, 1].map((alpha) => (
-            <span
-              key={alpha}
-              aria-hidden
-              style={{ background: `rgba(160, 160, 160, ${alpha})` }}
-              className="block h-2.5 w-3"
-            />
-          ))}
-        </span>
-      </div>
-
-      <div className="mt-1.5 flex items-center justify-between gap-3">
-        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-          Resource
-        </span>
-        <span
-          aria-hidden
-          className="block h-2.5 w-2.5 rounded-full"
-          style={{ background: "rgba(120, 200, 130, 0.8)" }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function LegendShape({ motivation }: { motivation: string }) {
-  const color = MOTIVATION_COLOR[motivation] ?? "#E63946";
-  const isPower = motivation === "power";
-  const stroke = isPower ? "rgba(240,240,240,0.9)" : "rgba(20,20,20,0.7)";
-  const sw = 0.9;
-
-  if (motivation === "symbolic") {
-    return (
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-        <circle cx="7" cy="7" r="5.5" fill={color} stroke={stroke} strokeWidth={sw} />
-      </svg>
-    );
-  }
-  if (motivation === "normative") {
-    return (
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-        <polygon
-          points="7,1.5 12.5,12 1.5,12"
-          fill={color}
-          stroke={stroke}
-          strokeWidth={sw}
-          strokeLinejoin="miter"
-        />
-      </svg>
-    );
-  }
-  if (motivation === "power") {
-    return (
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-        <polygon
-          points="7,1.5 12.5,7 7,12.5 1.5,7"
-          fill={color}
-          stroke={stroke}
-          strokeWidth={sw}
-          strokeLinejoin="miter"
-        />
-      </svg>
-    );
-  }
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-      <rect
-        x="1.5"
-        y="1.5"
-        width="11"
-        height="11"
-        fill={color}
-        stroke={stroke}
-        strokeWidth={sw}
-      />
-    </svg>
-  );
-}
 
 function renderEngine(
   engine: Engine,
