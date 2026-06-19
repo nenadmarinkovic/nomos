@@ -40,9 +40,10 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 5,
+      version: 6,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ config: s.config }),
+      migrate: () => ({ config: DEFAULT_CONFIG }),
     },
   ),
 );
