@@ -46,17 +46,30 @@ export function ChartsPanel() {
   const started = useSimulationStore((s) => s.started);
   const history = useSimulationStore((s) => s.history);
   const snapshot = useSimulationStore((s) => s.snapshot);
+  const views = useSimulationStore((s) => s.views);
 
   if (!started) return null;
+
+  const visibleCount =
+    (views.gini ? 1 : 0) + (views.alive ? 1 : 0) + (views.wealth ? 1 : 0);
+  if (visibleCount === 0) return null;
 
   const histogramData = snapshot.wealthBins.map((count, i) => ({
     tier: WEALTH_BIN_LABELS[i] ?? "",
     count,
   }));
 
+  const gridCols =
+    visibleCount === 1
+      ? "grid-cols-1"
+      : visibleCount === 2
+        ? "grid-cols-2"
+        : "grid-cols-3";
+
   return (
     <aside className="hidden shrink-0 border-t border-foreground/10 bg-card/40 md:block">
-      <div className="grid grid-cols-3 divide-x divide-foreground/10">
+      <div className={`grid ${gridCols} divide-x divide-foreground/10`}>
+        {views.gini && (
         <ChartBlock
           label="Gini"
           value={snapshot.gini.toFixed(3)}
@@ -94,7 +107,9 @@ export function ChartsPanel() {
             </AreaChart>
           </ChartContainer>
         </ChartBlock>
+        )}
 
+        {views.alive && (
         <ChartBlock
           label="Alive"
           value={snapshot.alive.toLocaleString()}
@@ -131,7 +146,9 @@ export function ChartsPanel() {
             </LineChart>
           </ChartContainer>
         </ChartBlock>
+        )}
 
+        {views.wealth && (
         <ChartBlock
           label="Wealth"
           value={`${snapshot.alive.toLocaleString()} alive`}
@@ -167,6 +184,7 @@ export function ChartsPanel() {
             </BarChart>
           </ChartContainer>
         </ChartBlock>
+        )}
       </div>
     </aside>
   );
