@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { ChartsPanel } from "@/components/charts-panel";
 import { Sidebar, type SectionKey } from "@/components/sidebar";
 import { SimulationCanvas } from "@/components/simulation-canvas";
 import { SiteFooter } from "@/components/site-footer";
@@ -16,6 +17,7 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
   const running = useSimulationStore((s) => s.running);
   const started = useSimulationStore((s) => s.started);
   const turn = useSimulationStore((s) => s.turn);
+  const snapshot = useSimulationStore((s) => s.snapshot);
   const pauseRun = useSimulationStore((s) => s.pauseRun);
   const resumeRun = useSimulationStore((s) => s.resumeRun);
   const stopRun = useSimulationStore((s) => s.stopRun);
@@ -56,10 +58,14 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
           <div className="flex flex-1 overflow-hidden">
             <SimulationCanvas running={running} />
           </div>
+          <ChartsPanel />
           <SiteFooter
             turn={turn}
             agentCount={SCALE_INFO[config.world.scale].agents}
+            aliveCount={snapshot.alive}
+            gini={snapshot.gini}
             observerCount={config.observers.length}
+            started={started}
           />
         </main>
       </div>

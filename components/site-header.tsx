@@ -30,6 +30,14 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { SectionKey } from "@/components/sidebar";
+import { useSimulationStore } from "@/lib/store";
+
+const SPEEDS: { label: string; value: number }[] = [
+  { label: "1×", value: 1 },
+  { label: "2×", value: 2 },
+  { label: "4×", value: 4 },
+  { label: "Max", value: 8 },
+];
 
 interface SiteHeaderProps {
   running: boolean;
@@ -63,6 +71,8 @@ export function SiteHeader({
   const router = useRouter();
   const breadcrumb = SECTION_LABELS[activeSection];
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
+  const speed = useSimulationStore((s) => s.speed);
+  const setSpeed = useSimulationStore((s) => s.setSpeed);
 
   const action: "pause" | "resume" | "run" = running
     ? "pause"
@@ -71,6 +81,7 @@ export function SiteHeader({
       : "run";
 
   const showStop = running || paused;
+  const showSpeed = running || paused;
 
   function handleClick() {
     if (action === "pause") onPause();
@@ -157,6 +168,34 @@ export function SiteHeader({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          {showSpeed && (
+            <div
+              role="radiogroup"
+              aria-label="Simulation speed"
+              className="hidden items-center gap-0.5 rounded-md border border-foreground/10 bg-card p-0.5 sm:flex"
+            >
+              {SPEEDS.map((s) => {
+                const active = s.value === speed;
+                return (
+                  <button
+                    key={s.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setSpeed(s.value)}
+                    className={cn(
+                      "cursor-pointer rounded-[4px] px-2 py-1 font-mono text-[11px] tabular-nums transition-colors",
+                      active
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <ThemeToggle />
           {showStop && (
             <Button
