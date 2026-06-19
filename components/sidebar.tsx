@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
+import { CanvasLegend } from "@/components/canvas-legend";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
@@ -83,6 +84,11 @@ export function Sidebar({
         </div>
       </ScrollArea>
 
+      {!collapsed && (
+        <div className="shrink-0 border-t border-foreground/10">
+          <CanvasLegend />
+        </div>
+      )}
       <div
         aria-hidden
         className="h-14 shrink-0 border-t border-foreground/10"
