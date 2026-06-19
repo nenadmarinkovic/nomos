@@ -6,9 +6,11 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import {
   DEFAULT_CONFIG,
   newSeed,
+  type ObserverKey,
   type SimulationConfig,
 } from "@/lib/config";
 import type { EngineSnapshot } from "@/lib/engine";
+import type { EventKind, SignificantEvent } from "@/lib/events";
 
 const EMPTY_SNAPSHOT: EngineSnapshot = {
   turn: 0,
@@ -25,8 +27,25 @@ export interface HistoryPoint {
 }
 
 const HISTORY_LIMIT = 240;
+const CHRONICLE_LIMIT = 80;
 
 export type ViewKey = "gini" | "alive" | "wealth";
+
+export type NarrationStatus = "pending" | "done" | "error";
+
+/** One observer's reading of one significant event. */
+export interface ChronicleEntry {
+  key: string;
+  eventId: string;
+  turn: number;
+  observer: ObserverKey;
+  eventKind: EventKind;
+  eventTitle: string;
+  status: NarrationStatus;
+  text: string | null;
+  error: string | null;
+  createdAt: number;
+}
 
 interface SimulationState {
   config: SimulationConfig;
@@ -39,6 +58,7 @@ interface SimulationState {
   speed: number;
   canvasSize: { width: number; height: number };
   views: Record<ViewKey, boolean>;
+  chronicle: ChronicleEntry[];
   startRun: (next?: SimulationConfig) => void;
   resumeRun: () => void;
   pauseRun: () => void;
@@ -47,6 +67,9 @@ interface SimulationState {
   updateSnapshot: (snapshot: EngineSnapshot) => void;
   setCanvasSize: (s: { width: number; height: number }) => void;
   toggleView: (key: ViewKey) => void;
+  openNarrations: (event: SignificantEvent, observers: ObserverKey[]) => void;
+  resolveNarration: (key: string, text: string) => void;
+  failNarration: (key: string, error: string) => void;
 }
 
 export const useSimulationStore = create<SimulationState>()(
@@ -62,6 +85,7 @@ export const useSimulationStore = create<SimulationState>()(
       speed: 1,
       canvasSize: { width: 0, height: 0 },
       views: { gini: true, alive: true, wealth: true },
+      chronicle: [],
       startRun: (next) =>
         set((s) => ({
           config: { ...(next ?? s.config), seed: newSeed() },
@@ -71,6 +95,7 @@ export const useSimulationStore = create<SimulationState>()(
           runId: s.runId + 1,
           snapshot: EMPTY_SNAPSHOT,
           history: [],
+          chronicle: [],
         })),
       resumeRun: () => set({ running: true }),
       pauseRun: () => set({ running: false }),
@@ -81,6 +106,7 @@ export const useSimulationStore = create<SimulationState>()(
           turn: 0,
           snapshot: EMPTY_SNAPSHOT,
           history: [],
+          chronicle: [],
         }),
       setSpeed: (speed) => set({ speed }),
       setCanvasSize: (canvasSize) => set({ canvasSize }),
@@ -98,6 +124,41 @@ export const useSimulationStore = create<SimulationState>()(
           });
           return { snapshot, turn: snapshot.turn, history: next };
         }),
+      openNarrations: (event, observers) =>
+        set((s) => {
+          const now = Date.now();
+          const pending: ChronicleEntry[] = observers.map((observer) => ({
+            key: `${event.id}:${observer}`,
+            eventId: event.id,
+            turn: event.turn,
+            observer,
+            eventKind: event.kind,
+            eventTitle: event.title,
+            status: "pending",
+            text: null,
+            error: null,
+            createdAt: now,
+          }));
+          const merged = [...s.chronicle, ...pending];
+          return {
+            chronicle:
+              merged.length > CHRONICLE_LIMIT
+                ? merged.slice(merged.length - CHRONICLE_LIMIT)
+                : merged,
+          };
+        }),
+      resolveNarration: (key, text) =>
+        set((s) => ({
+          chronicle: s.chronicle.map((e) =>
+            e.key === key ? { ...e, status: "done", text, error: null } : e,
+          ),
+        })),
+      failNarration: (key, error) =>
+        set((s) => ({
+          chronicle: s.chronicle.map((e) =>
+            e.key === key ? { ...e, status: "error", error } : e,
+          ),
+        })),
     }),
     {
       name: "nomos-simulation",

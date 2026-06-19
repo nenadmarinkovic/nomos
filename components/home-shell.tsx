@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 import { ChartsPanel } from "@/components/charts-panel";
+import { ChroniclePanel } from "@/components/chronicle-panel";
+import { ObserverNarrator } from "@/components/observer-narrator";
 import { Sidebar, type SectionKey } from "@/components/sidebar";
 import { SimulationCanvas } from "@/components/simulation-canvas";
 import { SiteFooter } from "@/components/site-footer";
@@ -25,6 +27,7 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
   const paused = started && !running;
 
   const [section, setSection] = useState<SectionKey>("world");
+  const showChronicle = section === "observers" || section === "log";
   const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultCollapsed);
 
   const toggleSidebar = () =>
@@ -56,9 +59,14 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
         />
         <main className="flex flex-1 flex-col overflow-hidden">
           <div className="flex flex-1 overflow-hidden">
-            <SimulationCanvas running={running} />
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex flex-1 overflow-hidden">
+                <SimulationCanvas running={running} />
+              </div>
+              <ChartsPanel />
+            </div>
+            {showChronicle && <ChroniclePanel />}
           </div>
-          <ChartsPanel />
           <SiteFooter
             turn={turn}
             agentCount={SCALE_INFO[config.world.scale].agents}
@@ -69,6 +77,8 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
           />
         </main>
       </div>
+
+      <ObserverNarrator />
     </div>
   );
 }
