@@ -104,7 +104,7 @@ export function Stepper({ steps, step, maxReached, onSelect }: StepperProps) {
                 </div>
                 <div
                   className={cn(
-                    "font-serif text-sm italic leading-none",
+                    "font-sans text-sm font-medium leading-none",
                     isCurrent || isComplete
                       ? "text-foreground"
                       : isReachable
@@ -116,7 +116,7 @@ export function Stepper({ steps, step, maxReached, onSelect }: StepperProps) {
                 </div>
                 <div
                   className={cn(
-                    "mt-1 hidden max-w-[180px] text-[11px] leading-snug sm:block",
+                    "mt-1 hidden max-w-[180px] font-sans text-[11px] leading-snug sm:block",
                     isCurrent
                       ? "text-muted-foreground"
                       : isComplete

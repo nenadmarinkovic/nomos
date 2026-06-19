@@ -2,21 +2,58 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { PauseIcon, PlayIcon } from "@phosphor-icons/react";
+import {
+  CaretRightIcon,
+  PauseIcon,
+  PlayIcon,
+  SidebarSimpleIcon,
+} from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { SectionKey } from "@/components/sidebar";
 
 interface SiteHeaderProps {
   running: boolean;
+  sidebarCollapsed: boolean;
+  activeSection: SectionKey;
+  onToggleSidebar?: () => void;
   onRun: () => void;
   onPause: () => void;
 }
 
-export function SiteHeader({ running, onRun, onPause }: SiteHeaderProps) {
+const SECTION_LABELS: Record<SectionKey, { group: string; label: string }> = {
+  world: { group: "Setup", label: "World" },
+  agents: { group: "Setup", label: "Agents" },
+  observers: { group: "Setup", label: "Observers" },
+  metrics: { group: "Run", label: "Metrics" },
+  log: { group: "Run", label: "Chronicle" },
+};
+
+export function SiteHeader({
+  running,
+  sidebarCollapsed,
+  activeSection,
+  onToggleSidebar,
+  onRun,
+  onPause,
+}: SiteHeaderProps) {
+  const breadcrumb = SECTION_LABELS[activeSection];
+
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-foreground/10 bg-background px-4">
-      <div className="flex items-center gap-3">
+    <header className="flex h-14 shrink-0 items-stretch border-b border-foreground/10 bg-background">
+      <div
+        className={cn(
+          "hidden shrink-0 items-center border-foreground/10 px-4 transition-[width] duration-200 md:flex md:border-r",
+          sidebarCollapsed ? "md:w-[60px]" : "md:w-56",
+        )}
+      >
         <Link href="/" aria-label="Nomos" className="flex items-center">
           <Image
             src="/logo.svg"
@@ -29,16 +66,70 @@ export function SiteHeader({ running, onRun, onPause }: SiteHeaderProps) {
         </Link>
       </div>
 
-      <div className="flex items-center gap-2">
-        <ThemeToggle />
-        <Button
-          variant={running ? "secondary" : "default"}
-          size="sm"
-          onClick={running ? onPause : onRun}
-        >
-          {running ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />}
-          {running ? "Pause" : "Run"}
-        </Button>
+      <div className="flex flex-1 items-center justify-between gap-4 px-3 md:px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            href="/"
+            aria-label="Nomos"
+            className="flex items-center md:hidden"
+          >
+            <Image
+              src="/logo.svg"
+              alt="Nomos"
+              width={38}
+              height={35}
+              priority
+              className="h-8 w-auto dark:invert"
+            />
+          </Link>
+
+          {onToggleSidebar && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    onClick={onToggleSidebar}
+                    aria-label={
+                      sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                    }
+                    className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+                  >
+                    <SidebarSimpleIcon size={18} weight="regular" />
+                  </button>
+                }
+              />
+              <TooltipContent side="bottom" sideOffset={6}>
+                {sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          <nav
+            aria-label="breadcrumb"
+            className="flex min-w-0 items-center gap-2 font-sans text-xs"
+          >
+            <span className="text-muted-foreground">{breadcrumb.group}</span>
+            <CaretRightIcon
+              size={12}
+              weight="bold"
+              className="shrink-0 text-muted-foreground/50"
+            />
+            <span className="truncate text-foreground">{breadcrumb.label}</span>
+          </nav>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <ThemeToggle />
+          <Button
+            variant={running ? "secondary" : "default"}
+            size="sm"
+            onClick={running ? onPause : onRun}
+          >
+            {running ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />}
+            {running ? "Pause" : "Run"}
+          </Button>
+        </div>
       </div>
     </header>
   );
