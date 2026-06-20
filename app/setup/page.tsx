@@ -8,6 +8,7 @@ import {
   ArrowCounterClockwiseIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
+  ArrowSquareOutIcon,
   CaretRightIcon,
   CheckIcon,
   PlayIcon,
@@ -196,6 +197,230 @@ const STEPS: readonly StepDef[] = [
   },
 ] as const;
 
+/**
+ * "What the simulation actually does" — one or more anchors per step that show,
+ * in plain English first and a short snippet second, where this decision takes
+ * shape in the code. Aimed at non-developers: every anchor leads with a sentence
+ * anyone can read, and the `mode` badge is honest about what the snippet is —
+ * the real engine code, a faithful simplification, or a planned-but-unwired rule.
+ */
+type CodeMode = "real" | "pseudo" | "planned";
+
+interface CodeAnchor {
+  /** The rule in one ordinary sentence — shown above the snippet. */
+  plain: string;
+  /** ≤ ~7 lines: real engine code, faithful pseudocode, or a planned sketch. */
+  snippet: string;
+  mode: CodeMode;
+  /** Source file the snippet is drawn from. Omitted for planned rules. */
+  file?: string;
+  /** Line range, e.g. "191-213". Used to build the source link. */
+  lines?: string;
+}
+
+const REPO_BLOB = "https://github.com/nenadmarinkovic/nomos/blob/main";
+
+const STEP_CODE: Partial<Record<StepKey, CodeAnchor[]>> = {
+  scale: [
+    {
+      plain:
+        "Your pick sets how wide the world is and how many agents are born into it.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "10-20",
+      snippet: `const GRID_SIZE   = { village: 40,  town: 70,  city: 110 };  // world width
+const AGENT_COUNT = { village: 200, town: 800, city: 3000 }; // people`,
+    },
+  ],
+  equality: [
+    {
+      plain:
+        "Each agent's starting wealth is blended between a flat baseline everyone shares and a lucky random draw. The more inequality you ask for, the more the random draw takes over.",
+      mode: "pseudo",
+      file: "lib/engine.ts",
+      lines: "606-617",
+      snippet: `// equality 0 → everyone gets the same baseline
+// equality 1 → wealth is a pure (lucky) random draw
+wealth = baseline * (1 - equality)
+       + randomDraw *  equality`,
+    },
+  ],
+  landscape: [
+    {
+      plain:
+        "Resources are piled up at a few 'peaks' and fade with distance. Your choice decides where those peaks sit.",
+      mode: "pseudo",
+      file: "lib/engine.ts",
+      lines: "496-545",
+      snippet: `flat       → sugar & spice spread evenly everywhere
+two_peaks  → two sugar zones E–W, two spice zones N–S
+centre     → sugar at the core, spice in the corners
+scattered  → six random patches of each
+// every cell fades with distance from its nearest peak`,
+    },
+  ],
+  settlement: [
+    {
+      plain:
+        "On turn one the agents have to be placed somewhere. Your choice picks the pattern.",
+      mode: "pseudo",
+      file: "lib/engine.ts",
+      lines: "660-758",
+      snippet: `scattered  → drop each agent on a random free cell
+single     → gather everyone around the centre
+clustered  → pick a few hubs, settle agents near them
+segregated → sort by wealth, fill one quadrant at a time`,
+    },
+  ],
+  reproduction: [
+    {
+      plain:
+        "When an agent dies, if inheritance is on, a newborn appears elsewhere carrying the parent's starting wealth and traits. If it's off, the agent is simply gone.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "376-407",
+      snippet: `private killAgent(a: Agent) {
+  a.alive = false;
+  if (!this.reproduction) return;          // off → no heir
+  const child: Agent = {
+    /* ... */
+    sugar: a.initialSugar, spice: a.initialSpice, // parent's wealth
+    vision: a.vision, maxAge: a.maxAge,           // and its traits
+    age: 0,
+  };
+  this.agents.push(child);
+}`,
+    },
+  ],
+  metabolism: [
+    {
+      plain:
+        "Every turn each agent burns a little of both goods just to stay alive. Run either one down to nothing and it dies.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "231-239",
+      snippet: `private consume(a: Agent) {
+  a.sugar -= a.sugarMetab;   // burn food just to stay alive
+  a.spice -= a.spiceMetab;
+  a.age++;
+  if (a.sugar <= 0 || a.spice <= 0 || a.age >= a.maxAge)
+    this.killAgent(a);       // starved (or too old)
+}`,
+    },
+  ],
+  regrowth: [
+    {
+      plain:
+        "Each patch of land grows back a slice of its maximum every turn, and never past full.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "175-183",
+      snippet: `private regrow(stock, max) {
+  for (let i = 0; i < stock.length; i++) {
+    const next = stock[i] + this.regrowthRate * max[i];
+    stock[i] = next > max[i] ? max[i] : next;  // grow, but cap at full
+  }
+}`,
+    },
+  ],
+  vision: [
+    {
+      plain:
+        "An agent looks outward ring by ring, as far as its vision reaches, and moves to the richest cell it can find.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "191-213",
+      snippet: `for (let d = 1; d <= a.vision; d++) {       // look out to its vision
+  const targets = [[a.x+d,a.y],[a.x-d,a.y],[a.x,a.y+d],[a.x,a.y-d]];
+  for (const [cx, cy] of targets) {
+    const score = this.scoreCell(a, cx, cy);
+    if (score > bestScore) { bestScore = score; bestX = cx; bestY = cy; }
+  }
+}
+// then move to the best cell found`,
+    },
+  ],
+  lifespan: [
+    {
+      plain:
+        "Agents age one turn at a time and die the moment they pass their maximum age — even if they're well fed.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "234-237",
+      snippet: `a.age++;                  // one turn older
+if (a.age >= a.maxAge)    // past its lifespan?
+  this.killAgent(a);      // dies, even if well fed`,
+    },
+  ],
+  heterogeneity: [
+    {
+      plain:
+        "Each agent's vision, metabolism, and lifespan are drawn around the average. Zero heterogeneity makes everyone identical; higher widens the spread.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "578-581",
+      snippet: `const sampleAttr = (mean) => {
+  if (h === 0) return mean;                // h = 0 → everyone identical
+  return mean * (1 - h + 2 * h * rng());   // bigger h → wider spread
+};
+// drawn per agent for vision, metabolism and lifespan`,
+    },
+  ],
+  sophistication: [
+    {
+      plain:
+        "How agents think — from blind reaction to social imitation. Your choice is recorded with the society, but the cognitive behaviours below aren't wired into the engine yet.",
+      mode: "planned",
+      snippet: `minimal  → go straight to the best cell you can see
+bounded  → settle for a 'good enough' cell, not always the best
+adaptive → remember what paid off and do more of it
+social   → copy whatever nearby agents are doing`,
+    },
+  ],
+  motivation: [
+    {
+      plain:
+        "What an agent wants changes how it rates a cell — pure resources, or resources plus the pull of wealthy or crowded neighbours.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "267-278",
+      snippet: `// resources on the cell, plus the pull of nearby agents:
+switch (a.motivation) {
+  case "symbolic":  return resources + avgWealth * 0.08; // chase status
+  case "normative": return resources + count * 0.6;      // chase company
+  case "power":     return own > avgWealth               // chase dominance
+      ? resources + count * 0.7 : resources;
+  default:          return resources;                    // chase material
+}`,
+    },
+  ],
+  topology: [
+    {
+      plain:
+        "Who an agent can trade with each turn — random strangers, only the cells touching it, or a wider neighbourhood that grows with its vision.",
+      mode: "pseudo",
+      file: "lib/engine.ts",
+      lines: "311-338",
+      snippet: `random  → meet a few agents from anywhere in the world
+spatial → only the agents in the cells touching you
+network → a wider neighbourhood that grows with your vision`,
+    },
+  ],
+  observers: [
+    {
+      plain:
+        "Each theorist you pick gets the same factual event, wrapped in a prompt that tells the AI to read it through that thinker's own vocabulary.",
+      mode: "pseudo",
+      file: "lib/observers.ts",
+      lines: "26-63",
+      snippet: `system: "You are Marx, the theorist. Read events through your lens…"
+user:   "Event (turn 42): the top 10% now hold 60% of all wealth.
+         Narrate what you see."
+// one such prompt per chosen observer, per significant event`,
+    },
+  ],
+};
+
 const EQUALITY_BUCKETS: ReadonlyArray<{
   value: number;
   label: string;
@@ -383,6 +608,10 @@ export default function SetupPage() {
           <p className="mt-12 max-w-2xl font-serif text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
             {step.theoryHook}
           </p>
+
+          {STEP_CODE[step.key] && (
+            <CodeAnchors anchors={STEP_CODE[step.key]!} />
+          )}
         </div>
       </main>
 
@@ -1073,6 +1302,74 @@ function SummarySection({
         {children}
       </div>
     </section>
+  );
+}
+
+const MODE_LABEL: Record<CodeMode, string> = {
+  real: "Actual code",
+  pseudo: "Simplified",
+  planned: "Planned — not wired yet",
+};
+
+function blobHref(file: string, lines?: string): string {
+  if (!lines) return `${REPO_BLOB}/${file}`;
+  const [start, end] = lines.split("-");
+  return `${REPO_BLOB}/${file}#L${start}${end ? `-L${end}` : ""}`;
+}
+
+function CodeAnchors({ anchors }: { anchors: CodeAnchor[] }) {
+  return (
+    <details className="group mt-12 max-w-2xl border-t border-foreground/10 pt-6">
+      <summary className="flex cursor-pointer list-none items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+        <CaretRightIcon
+          size={11}
+          weight="bold"
+          className="shrink-0 transition-transform duration-200 group-open:rotate-90"
+        />
+        What the simulation actually does
+      </summary>
+      <div className="mt-6 space-y-7">
+        {anchors.map((anchor, i) => (
+          <CodeAnchorBlock key={i} anchor={anchor} />
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function CodeAnchorBlock({ anchor }: { anchor: CodeAnchor }) {
+  return (
+    <div className="space-y-3">
+      <span
+        className={cn(
+          "inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground",
+          anchor.mode === "planned"
+            ? "border-dashed border-foreground/25"
+            : "border-foreground/15",
+        )}
+      >
+        {MODE_LABEL[anchor.mode]}
+      </span>
+      <p className="font-serif text-[15px] leading-relaxed text-foreground/80">
+        {anchor.plain}
+      </p>
+      <pre className="overflow-x-auto rounded-lg border border-foreground/10 bg-foreground/[0.03] px-4 py-3.5 font-mono text-[12px] leading-relaxed text-foreground/85">
+        <code>{anchor.snippet}</code>
+      </pre>
+      {anchor.file && (
+        <a
+          href={blobHref(anchor.file, anchor.lines)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {anchor.file}
+          {anchor.lines && <span className="text-muted-foreground/50">·</span>}
+          {anchor.lines && <span>{anchor.lines}</span>}
+          <ArrowSquareOutIcon size={12} weight="regular" />
+        </a>
+      )}
+    </div>
   );
 }
 
