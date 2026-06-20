@@ -13,7 +13,11 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowSquareUpRightIcon } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
-import { activeWorldRef } from "@/lib/active-world";
+import {
+  activeFrameAtRef,
+  activeIntervalRef,
+  activeWorldRef,
+} from "@/lib/active-world";
 import { useSimulationStore } from "@/lib/store";
 import type { WorldView } from "@/lib/world";
 
@@ -35,8 +39,7 @@ export function MiniSimWindow() {
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
-  // Default position = anchored to bottom-right of the canvas area, with the
-  // 14px footer + 12px margin clearance. Initialized once the container is sized.
+  // Default position = bottom-right of the canvas area with footer clearance.
   useEffect(() => {
     if (position.x === -1 || position.y === -1) {
       const r = document.querySelector("main")?.getBoundingClientRect();
@@ -81,9 +84,43 @@ function MiniSimBody({
     useDraggable({ id: "mini-sim" });
   const turn = useSimulationStore((s) => s.turn);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef<number | null>(null);
 
-  // Redraw each turn. Cheap — small canvas, no interpolation.
+  // Animated mini-canvas while running — same interpolation curve as the main
+  // Field canvas, just rendered smaller and cheaper.
   useEffect(() => {
+    if (!running) return;
+    function loop() {
+      const canvas = canvasRef.current;
+      const world = activeWorldRef.current;
+      if (canvas && world) {
+        const dpr = window.devicePixelRatio || 1;
+        if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
+          canvas.width = W * dpr;
+          canvas.height = H * dpr;
+        }
+        const interval = activeIntervalRef.current;
+        const progress = Math.min(
+          1,
+          Math.max(
+            0,
+            (performance.now() - activeFrameAtRef.current) / interval,
+          ),
+        );
+        drawMini(world, canvas, dpr, progress);
+      }
+      rafRef.current = requestAnimationFrame(loop);
+    }
+    rafRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [running]);
+
+  // While paused, repaint once per turn change.
+  useEffect(() => {
+    if (running) return;
     void turn;
     const canvas = canvasRef.current;
     const world = activeWorldRef.current;
@@ -93,8 +130,8 @@ function MiniSimBody({
       canvas.width = W * dpr;
       canvas.height = H * dpr;
     }
-    drawMini(world, canvas, dpr);
-  }, [turn]);
+    drawMini(world, canvas, dpr, 1);
+  }, [turn, running]);
 
   const x = position.x + (transform?.x ?? 0);
   const y = position.y + (transform?.y ?? 0);
@@ -156,7 +193,12 @@ function MiniSimBody({
   );
 }
 
-function drawMini(world: WorldView, canvas: HTMLCanvasElement, dpr: number) {
+function drawMini(
+  world: WorldView,
+  canvas: HTMLCanvasElement,
+  dpr: number,
+  progress: number,
+) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const cw = canvas.width / world.width;
@@ -164,7 +206,7 @@ function drawMini(world: WorldView, canvas: HTMLCanvasElement, dpr: number) {
   const cellSize = Math.min(cw, ch);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Resource hint — faint dots only where land is rich.
+  // Resource hint
   for (let y = 0; y < world.height; y++) {
     for (let x = 0; x < world.width; x++) {
       const idx = y * world.width + x;
@@ -178,12 +220,18 @@ function drawMini(world: WorldView, canvas: HTMLCanvasElement, dpr: number) {
     }
   }
 
-  // Agents: just 1×1 px dots colored by motivation. No outlines, no animation.
+  // Agents interpolated between previous and current cell.
+  const ease =
+    progress < 0.5
+      ? 4 * progress * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
   const r = Math.max(1.4 * dpr, cellSize * 0.5);
   for (const a of world.agents) {
     if (!a.alive) continue;
-    const cx = a.x * cw + cw / 2;
-    const cy = a.y * ch + ch / 2;
+    const ix = a.prevX + (a.x - a.prevX) * ease;
+    const iy = a.prevY + (a.y - a.prevY) * ease;
+    const cx = ix * cw + cw / 2;
+    const cy = iy * ch + ch / 2;
     ctx.fillStyle = MOTIVATION_COLOR[a.motivation] ?? "#E63946";
     ctx.fillRect(cx - r / 2, cy - r / 2, r, r);
   }

@@ -12,28 +12,22 @@ import { useEffect, useRef, useState } from "react";
 import { XIcon } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
-import { activeWorldRef } from "@/lib/active-world";
-import type { FrameMessage, WorkerInbound } from "@/lib/sim-worker-core";
-import { deserializeWorld, type RenderAgent, type WorldView } from "@/lib/world";
+import {
+  activeFrameAtRef,
+  activeIntervalRef,
+  activeWorldRef,
+} from "@/lib/active-world";
+import { type RenderAgent, type WorldView } from "@/lib/world";
 import { useSimulationStore } from "@/lib/store";
 
 interface SimulationCanvasProps {
   running: boolean;
 }
 
-const BASE_TICK_MS = 200;
-
 export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const workerRef = useRef<Worker | null>(null);
-  const worldRef = useRef<WorldView | null>(null);
   const rafRef = useRef<number | null>(null);
-  /** performance.now() when the most recent frame arrived from the worker. */
-  const frameAtRef = useRef<number>(0);
-  /** Current tick interval (ms), used to interpolate between frames. */
-  const intervalRef = useRef<number>(BASE_TICK_MS);
-  const runningRef = useRef<boolean>(false);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [inspectorPos, setInspectorPos] = useState({ x: 12, y: 12 });
@@ -54,40 +48,32 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
 
-  const config = useSimulationStore((s) => s.config);
   const started = useSimulationStore((s) => s.started);
   const runId = useSimulationStore((s) => s.runId);
-  const speed = useSimulationStore((s) => s.speed);
-  const updateSnapshot = useSimulationStore((s) => s.updateSnapshot);
+  const turn = useSimulationStore((s) => s.turn);
   const setCanvasSize = useSimulationStore((s) => s.setCanvasSize);
-  const speedRef = useRef(speed);
 
   // Draw the latest world to the canvas at a given inter-frame progress (0..1).
   function paint(progress = 1, selId = selectedIdRef.current) {
     const canvas = canvasRef.current;
-    const world = worldRef.current;
+    const world = activeWorldRef.current;
     if (!canvas || !world) return;
     const dpr = window.devicePixelRatio || 1;
     renderWorld(world, canvas, dpr, { selectedId: selId, progress });
   }
 
   useEffect(() => {
-    runningRef.current = running;
-  }, [running]);
-
-  useEffect(() => {
-    speedRef.current = speed;
-    intervalRef.current = BASE_TICK_MS / speed;
-    workerRef.current?.postMessage({
-      type: "setSpeed",
-      speed,
-    } satisfies WorkerInbound);
-  }, [speed]);
-
-  useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedId(null);
   }, [runId, started]);
+
+  // Repaint after each fresh frame when not running (paused / idle).
+  useEffect(() => {
+    void turn;
+    if (running) return;
+    paint(1);
+     
+  }, [turn, running]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -114,7 +100,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
 
   function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
-    const world = worldRef.current;
+    const world = activeWorldRef.current;
     if (!canvas || !world) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
@@ -138,7 +124,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
 
   function handleCanvasMove(e: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
-    const world = worldRef.current;
+    const world = activeWorldRef.current;
     if (!canvas || !world) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
@@ -168,67 +154,23 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     hoveredIdRef.current = null;
   }
 
-  // Spawn (and tear down) the simulation worker for the active run. The worker
-  // owns the engine and the tick loop; it posts a frame after every tick.
+  // Clear the canvas when no run is active. The worker lifecycle now lives
+  // in <SimulationEngine /> at the AppShell root so it survives navigation.
   useEffect(() => {
-    if (!started) {
-      workerRef.current?.terminate();
-      workerRef.current = null;
-      worldRef.current = null;
-      activeWorldRef.current = null;
-      clearCanvas(canvasRef.current);
-      return;
-    }
+    if (!started) clearCanvas(canvasRef.current);
+  }, [started]);
 
-    const worker = new Worker(new URL("../lib/sim.worker.ts", import.meta.url));
-    workerRef.current = worker;
-
-    worker.onmessage = (e: MessageEvent<FrameMessage>) => {
-      const msg = e.data;
-      if (msg.type !== "frame") return;
-      worldRef.current = deserializeWorld(msg.frame);
-      activeWorldRef.current = worldRef.current;
-      frameAtRef.current = performance.now();
-      updateSnapshot(msg.snapshot);
-      if (!runningRef.current) paint(1);
-    };
-
-    worker.postMessage({
-      type: "init",
-      config,
-      speed: speedRef.current,
-    } satisfies WorkerInbound);
-    if (runningRef.current) {
-      worker.postMessage({ type: "resume" } satisfies WorkerInbound);
-    }
-
-    return () => {
-      worker.terminate();
-      if (workerRef.current === worker) workerRef.current = null;
-    };
-  }, [runId, started, config, updateSnapshot]);
-
-  // Pause/resume the worker's loop as the run toggles.
-  useEffect(() => {
-    const worker = workerRef.current;
-    if (!worker) return;
-    worker.postMessage({
-      type: running ? "resume" : "pause",
-    } satisfies WorkerInbound);
-    if (running) frameAtRef.current = performance.now();
-  }, [running]);
-
-  // While running, drive the canvas at animation-frame rate, interpolating each
-  // agent between its previous and current cell using the time since the last
-  // frame arrived from the worker.
+  // While running, drive the canvas at animation-frame rate, interpolating
+  // each agent between its previous and current cell using the time since the
+  // last frame arrived from the worker (published by SimulationEngine).
   useEffect(() => {
     if (!running) return;
 
     function loop() {
-      const interval = intervalRef.current;
+      const interval = activeIntervalRef.current;
       const progress = Math.min(
         1,
-        Math.max(0, (performance.now() - frameAtRef.current) / interval),
+        Math.max(0, (performance.now() - activeFrameAtRef.current) / interval),
       );
       paint(progress);
       rafRef.current = requestAnimationFrame(loop);
@@ -239,6 +181,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
+     
   }, [running]);
 
   return (
@@ -265,7 +208,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
             onDragEnd={handleInspectorDragEnd}
           >
             <InspectorOverlay
-              worldRef={worldRef}
               selectedId={selectedId}
               position={inspectorPos}
               onClose={() => setSelectedId(null)}
@@ -617,12 +559,10 @@ interface AgentSnapshot {
 }
 
 function InspectorOverlay({
-  worldRef,
   selectedId,
   position,
   onClose,
 }: {
-  worldRef: React.RefObject<WorldView | null>;
   selectedId: number;
   position: { x: number; y: number };
   onClose: () => void;
@@ -633,16 +573,19 @@ function InspectorOverlay({
   const [snap, setSnap] = useState<AgentSnapshot | null>(null);
 
   useEffect(() => {
-    const world = worldRef.current;
+    const world = activeWorldRef.current;
     if (!world) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSnap(null);
       return;
     }
     const a = world.agents[selectedId];
     if (!a) {
+       
       setSnap(null);
       return;
     }
+     
     setSnap({
       id: a.id,
       alive: a.alive,
@@ -657,7 +600,7 @@ function InspectorOverlay({
       spiceMetab: a.spiceMetab,
       motivation: a.motivation,
     });
-  }, [turn, selectedId, worldRef]);
+  }, [turn, selectedId]);
 
   if (!snap) return null;
 
