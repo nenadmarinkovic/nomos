@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { ChroniclePanel } from "@/components/chronicle-panel";
 import { FloatingWindows } from "@/components/floating-windows";
@@ -10,11 +11,18 @@ import { SimulationCanvas } from "@/components/simulation-canvas";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { SCALE_INFO } from "@/lib/config";
+import { getRun } from "@/lib/runs-api";
 import { useSimulationStore } from "@/lib/store";
 
 const SIDEBAR_COOKIE = "sidebar-collapsed";
 
-export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
+export function HomeShell({
+  defaultCollapsed,
+  sharedRunId,
+}: {
+  defaultCollapsed: boolean;
+  sharedRunId?: string;
+}) {
   const config = useSimulationStore((s) => s.config);
   const running = useSimulationStore((s) => s.running);
   const started = useSimulationStore((s) => s.started);
@@ -23,6 +31,31 @@ export function HomeShell({ defaultCollapsed }: { defaultCollapsed: boolean }) {
   const pauseRun = useSimulationStore((s) => s.pauseRun);
   const resumeRun = useSimulationStore((s) => s.resumeRun);
   const stopRun = useSimulationStore((s) => s.stopRun);
+  const replayRun = useSimulationStore((s) => s.replayRun);
+
+  const router = useRouter();
+  const sharedHandled = useRef(false);
+
+  // A shared link (`/?run=<id>`) loads that run and replays it, then strips
+  // the param so a reload doesn't restart it. Deterministic replay means the
+  // visitor sees exactly the run that was shared. A bad or deleted id just
+  // falls through to the normal home screen.
+  useEffect(() => {
+    if (!sharedRunId || sharedHandled.current) return;
+    sharedHandled.current = true;
+    let cancelled = false;
+    getRun(sharedRunId)
+      .then((detail) => {
+        if (!cancelled) replayRun(detail.config);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) router.replace("/");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sharedRunId, replayRun, router]);
 
   const paused = started && !running;
 
