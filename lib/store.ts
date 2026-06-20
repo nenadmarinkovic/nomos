@@ -20,6 +20,7 @@ const EMPTY_SNAPSHOT: EngineSnapshot = {
   wealthBins: [0, 0, 0, 0, 0, 0],
   tradePrice: 0,
   tradeVolume: 0,
+  motivationCounts: { material: 0, symbolic: 0, normative: 0, power: 0 },
 };
 
 export interface HistoryPoint {
@@ -27,6 +28,12 @@ export interface HistoryPoint {
   alive: number;
   gini: number;
   tradePrice: number;
+  motivationCounts: {
+    material: number;
+    symbolic: number;
+    normative: number;
+    power: number;
+  };
 }
 
 const HISTORY_LIMIT = 240;
@@ -37,6 +44,7 @@ export type ViewKey =
   | "alive"
   | "wealth"
   | "price"
+  | "stream"
   | "narrator"
   | "network";
 
@@ -50,8 +58,9 @@ export const DEFAULT_WINDOW_POSITIONS: Record<ViewKey, WindowPosition> = {
   alive: { x: 20, y: 230 },
   wealth: { x: 20, y: 440 },
   price: { x: 20, y: 650 },
+  stream: { x: 320, y: 280 },
   narrator: { x: 320, y: 20 },
-  network: { x: 320, y: 280 },
+  network: { x: 320, y: 560 },
 };
 
 export type NarrationStatus = "pending" | "done" | "error";
@@ -79,6 +88,7 @@ interface SimulationState {
   snapshot: EngineSnapshot;
   history: HistoryPoint[];
   speed: number;
+  canvasView: "field" | "network" | "network3d";
   canvasSize: { width: number; height: number };
   views: Record<ViewKey, boolean>;
   windowPositions: Record<ViewKey, WindowPosition>;
@@ -89,6 +99,7 @@ interface SimulationState {
   pauseRun: () => void;
   stopRun: () => void;
   setSpeed: (speed: number) => void;
+  setCanvasView: (view: "field" | "network" | "network3d") => void;
   updateSnapshot: (snapshot: EngineSnapshot) => void;
   setCanvasSize: (s: { width: number; height: number }) => void;
   toggleView: (key: ViewKey) => void;
@@ -111,12 +122,14 @@ export const useSimulationStore = create<SimulationState>()(
       snapshot: EMPTY_SNAPSHOT,
       history: [],
       speed: 1,
+      canvasView: "field",
       canvasSize: { width: 0, height: 0 },
       views: {
         gini: true,
         alive: true,
         wealth: true,
         price: true,
+        stream: true,
         narrator: true,
         network: false,
       },
@@ -158,6 +171,7 @@ export const useSimulationStore = create<SimulationState>()(
           chronicle: [],
         }),
       setSpeed: (speed) => set({ speed }),
+      setCanvasView: (canvasView) => set({ canvasView }),
       setCanvasSize: (canvasSize) => set({ canvasSize }),
       toggleView: (key) =>
         set((s) => ({ views: { ...s.views, [key]: !s.views[key] } })),
@@ -180,6 +194,7 @@ export const useSimulationStore = create<SimulationState>()(
             "alive",
             "wealth",
             "price",
+            "stream",
             "narrator",
             "network",
           ];
@@ -198,6 +213,7 @@ export const useSimulationStore = create<SimulationState>()(
             alive: 200,
             wealth: 200,
             price: 200,
+            stream: 220,
             narrator: 280,
             network: 380,
           };
@@ -262,6 +278,7 @@ export const useSimulationStore = create<SimulationState>()(
             alive: snapshot.alive,
             gini: snapshot.gini,
             tradePrice: snapshot.tradePrice,
+            motivationCounts: snapshot.motivationCounts,
           });
           return { snapshot, turn: snapshot.turn, history: next };
         }),
@@ -303,7 +320,7 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 10,
+      version: 11,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         config: s.config,
@@ -317,6 +334,7 @@ export const useSimulationStore = create<SimulationState>()(
           alive: true,
           wealth: true,
           price: true,
+          stream: true,
           narrator: true,
           network: false,
         },
