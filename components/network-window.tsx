@@ -3,7 +3,7 @@
 import * as d3 from "d3";
 import { useEffect, useRef, useState } from "react";
 
-import type { Engine } from "@/lib/engine";
+import type { RenderAgent, WorldView } from "@/lib/world";
 import { useSimulationStore } from "@/lib/store";
 
 interface NetworkNode extends d3.SimulationNodeDatum {
@@ -36,7 +36,7 @@ const REBUILD_EVERY_N_TURNS = 6;
 const NEIGHBOR_RADIUS = 4;
 
 interface NetworkWindowBodyProps {
-  engineRef: React.RefObject<Engine | null>;
+  worldRef: React.RefObject<WorldView | null>;
 }
 
 interface HoverInfo {
@@ -47,7 +47,7 @@ interface HoverInfo {
   cy: number;
 }
 
-export function NetworkWindowBody({ engineRef }: NetworkWindowBodyProps) {
+export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
   const turn = useSimulationStore((s) => s.turn);
   const svgRef = useRef<SVGSVGElement>(null);
   const lastBuiltTurn = useRef<number>(-9999);
@@ -62,13 +62,13 @@ export function NetworkWindowBody({ engineRef }: NetworkWindowBodyProps) {
     lastBuiltTurn.current = turn;
 
     const svg = svgRef.current;
-    const engine = engineRef.current;
-    if (!svg || !engine) return;
+    const world = worldRef.current;
+    if (!svg || !world) return;
 
     const W = svg.clientWidth || 280;
     const H = svg.clientHeight || 220;
 
-    const aliveAgents = engine.agents.filter((a) => a.alive);
+    const aliveAgents = world.agents.filter((a) => a.alive);
     const sampled = sampleAgents(aliveAgents, MAX_NODES);
 
     const nodes: NetworkNode[] = sampled.map((a) => ({
@@ -77,7 +77,7 @@ export function NetworkWindowBody({ engineRef }: NetworkWindowBodyProps) {
       wealth: a.sugar + a.spice,
     }));
 
-    const links: NetworkLink[] = buildLinks(sampled, engine);
+    const links: NetworkLink[] = buildLinks(sampled, world);
 
     setStats({ nodes: nodes.length, edges: links.length });
 
@@ -164,7 +164,7 @@ export function NetworkWindowBody({ engineRef }: NetworkWindowBodyProps) {
       clearTimeout(stopTimer);
       sim.stop();
     };
-  }, [turn, engineRef]);
+  }, [turn, worldRef]);
 
   return (
     <div className="space-y-2">
@@ -223,19 +223,17 @@ function shapePath(motivation: string): string {
   }
 }
 
-type EngineAgent = Engine["agents"][number];
-
-function sampleAgents(agents: EngineAgent[], n: number): EngineAgent[] {
+function sampleAgents(agents: RenderAgent[], n: number): RenderAgent[] {
   if (agents.length <= n) return agents;
   const step = agents.length / n;
-  const out: EngineAgent[] = [];
+  const out: RenderAgent[] = [];
   for (let i = 0; i < n; i++) {
     out.push(agents[Math.floor(i * step)]);
   }
   return out;
 }
 
-function buildLinks(agents: EngineAgent[], engine: Engine): NetworkLink[] {
+function buildLinks(agents: RenderAgent[], world: WorldView): NetworkLink[] {
   const links: NetworkLink[] = [];
   const ids = new Set(agents.map((a) => a.id));
 
@@ -243,12 +241,12 @@ function buildLinks(agents: EngineAgent[], engine: Engine): NetworkLink[] {
     const v = Math.min(a.vision, NEIGHBOR_RADIUS);
     for (let dy = -v; dy <= v; dy++) {
       const ny = a.y + dy;
-      if (ny < 0 || ny >= engine.height) continue;
+      if (ny < 0 || ny >= world.height) continue;
       for (let dx = -v; dx <= v; dx++) {
         if (dx === 0 && dy === 0) continue;
         const nx = a.x + dx;
-        if (nx < 0 || nx >= engine.width) continue;
-        const occ = engine.occupants[ny * engine.width + nx];
+        if (nx < 0 || nx >= world.width) continue;
+        const occ = world.occupants[ny * world.width + nx];
         if (occ === -1 || occ === a.id) continue;
         if (!ids.has(occ)) continue;
         if (occ < a.id) continue;

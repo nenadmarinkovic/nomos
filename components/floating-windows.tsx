@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/chart";
 import { NetworkWindowBody } from "@/components/network-window";
 import { cn } from "@/lib/utils";
-import { activeEngineRef } from "@/lib/active-engine";
+import { activeWorldRef } from "@/lib/active-world";
 import { OBSERVER_INFO } from "@/lib/config";
 import { WEALTH_BIN_LABELS } from "@/lib/engine";
 import { useSimulationStore, type ViewKey } from "@/lib/store";
@@ -367,7 +367,7 @@ function NetworkWindow() {
       title="Network"
       meta="Society as graph"
     >
-      <NetworkWindowBody engineRef={activeEngineRef} />
+      <NetworkWindowBody worldRef={activeWorldRef} />
       <p className="mt-2 font-sans text-[11px] text-muted-foreground">
         Agents within vision, force-laid
       </p>
