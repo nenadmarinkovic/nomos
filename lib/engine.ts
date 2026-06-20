@@ -73,6 +73,14 @@ function welfare(sugar: number, spice: number, ms: number, msp: number): number 
 export const WEALTH_BIN_EDGES = [5, 10, 20, 40, 80] as const;
 export const WEALTH_BIN_LABELS = ["<5", "5–10", "10–20", "20–40", "40–80", "80+"] as const;
 
+/** Trade-tie dynamics. A successful trade adds INCREMENT to the dyad's weight;
+ * each tick every weight is multiplied by DECAY; weights below THRESHOLD are
+ * dropped. CAP prevents a single pair from dominating the layout visually. */
+const TIE_INCREMENT = 1;
+const TIE_DECAY = 0.97;
+const TIE_THRESHOLD = 0.25;
+const TIE_CAP = 8;
+
 export interface EngineSnapshot {
   turn: number;
   alive: number;
@@ -83,6 +91,13 @@ export interface EngineSnapshot {
   tradePrice: number;
   /** Number of trades executed this turn. */
   tradeVolume: number;
+  /** Per-motivation alive count, in the canonical motivation order. */
+  motivationCounts: {
+    material: number;
+    symbolic: number;
+    normative: number;
+    power: number;
+  };
 }
 
 export class Engine {
@@ -101,6 +116,10 @@ export class Engine {
   /** Trade telemetry for the most recent tick. */
   private lastTradePrice = 0;
   private lastTradeVolume = 0;
+
+  /** Sparse dyadic trade-tie weights. Outer key = lower agent id, inner key =
+   * higher id. Decays each tick; bumps on each successful trade. */
+  private tiesMap = new Map<number, Map<number, number>>();
 
   private rng: () => number;
   private regrowthRate: number;
@@ -164,6 +183,7 @@ export class Engine {
 
     // Phase 2: trade with neighbours. A market — and a price — emerges here.
     this.tradePhase();
+    this.decayTies();
 
     // Phase 3: pay metabolism, age, and die (or leave an heir). Capture the
     // living set first so reproduction's newborns don't act this turn.
@@ -517,12 +537,45 @@ export class Engine {
     buyer.spice += spiceQty;
     seller.sugar += sugarQty;
     seller.spice -= spiceQty;
+    this.bumpTie(a.id, b.id);
     return price;
+  }
+
+  private bumpTie(idA: number, idB: number): void {
+    const lo = idA < idB ? idA : idB;
+    const hi = idA < idB ? idB : idA;
+    let row = this.tiesMap.get(lo);
+    if (!row) {
+      row = new Map();
+      this.tiesMap.set(lo, row);
+    }
+    const next = Math.min(TIE_CAP, (row.get(hi) ?? 0) + TIE_INCREMENT);
+    row.set(hi, next);
+  }
+
+  private decayTies(): void {
+    for (const [lo, row] of this.tiesMap) {
+      for (const [hi, w] of row) {
+        const next = w * TIE_DECAY;
+        if (next < TIE_THRESHOLD) row.delete(hi);
+        else row.set(hi, next);
+      }
+      if (row.size === 0) this.tiesMap.delete(lo);
+    }
+  }
+
+  private scrubTies(id: number): void {
+    this.tiesMap.delete(id);
+    for (const [lo, row] of this.tiesMap) {
+      row.delete(id);
+      if (row.size === 0) this.tiesMap.delete(lo);
+    }
   }
 
   private killAgent(a: Agent): void {
     a.alive = false;
     this.occupants[a.y * this.width + a.x] = -1;
+    this.scrubTies(a.id);
 
     if (!this.reproduction) return;
 
@@ -572,9 +625,16 @@ export class Engine {
     let totalWealth = 0;
     const wealths: number[] = [];
     const wealthBins = new Array(WEALTH_BIN_EDGES.length + 1).fill(0);
+    const motivationCounts = {
+      material: 0,
+      symbolic: 0,
+      normative: 0,
+      power: 0,
+    };
     for (const a of this.agents) {
       if (!a.alive) continue;
       alive++;
+      motivationCounts[a.motivation]++;
       const w = holdings(a);
       totalWealth += w;
       wealths.push(w);
@@ -596,11 +656,28 @@ export class Engine {
       wealthBins,
       tradePrice: this.lastTradePrice,
       tradeVolume: this.lastTradeVolume,
+      motivationCounts,
     };
   }
 
   randomFloat(): number {
     return this.rng();
+  }
+
+  /** Flat [idA, idB, weight, ...] view of the current trade-tie map. */
+  get ties(): Float32Array {
+    let count = 0;
+    for (const row of this.tiesMap.values()) count += row.size;
+    const out = new Float32Array(count * 3);
+    let i = 0;
+    for (const [lo, row] of this.tiesMap) {
+      for (const [hi, w] of row) {
+        out[i++] = lo;
+        out[i++] = hi;
+        out[i++] = w;
+      }
+    }
+    return out;
   }
 }
 
