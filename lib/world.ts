@@ -47,6 +47,8 @@ export interface WorldView {
   occupants: Int32Array;
   /** Indexed by agent id (id === array index). */
   agents: readonly RenderAgent[];
+  /** Flat triples [idA, idB, weight, …] of decaying trade-partner ties. */
+  ties: Float32Array;
 }
 
 /**
@@ -65,6 +67,8 @@ export interface WorldFrame {
   maxSpice: ArrayBuffer;
   occupants: ArrayBuffer;
   agents: ArrayBuffer;
+  /** Flat triples buffer of trade-partner ties, [idA, idB, weight, …]. */
+  ties: ArrayBuffer;
 }
 
 const STRIDE = 14;
@@ -120,6 +124,7 @@ export function serializeWorld(view: WorldView): {
   const spice = view.spice.slice();
   const maxSpice = view.maxSpice.slice();
   const occupants = view.occupants.slice();
+  const ties = view.ties.slice();
 
   const frame: WorldFrame = {
     width: view.width,
@@ -132,6 +137,7 @@ export function serializeWorld(view: WorldView): {
     maxSpice: maxSpice.buffer,
     occupants: occupants.buffer,
     agents: data.buffer,
+    ties: ties.buffer,
   };
 
   return {
@@ -143,6 +149,7 @@ export function serializeWorld(view: WorldView): {
       frame.maxSpice,
       frame.occupants,
       frame.agents,
+      frame.ties,
     ],
   };
 }
@@ -181,5 +188,6 @@ export function deserializeWorld(frame: WorldFrame): WorldView {
     maxSpice: new Float32Array(frame.maxSpice),
     occupants: new Int32Array(frame.occupants),
     agents,
+    ties: new Float32Array(frame.ties),
   };
 }

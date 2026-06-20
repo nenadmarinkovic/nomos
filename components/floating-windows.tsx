@@ -28,9 +28,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { NetworkWindowBody } from "@/components/network-window";
 import { cn } from "@/lib/utils";
-import { activeWorldRef } from "@/lib/active-world";
 import { OBSERVER_INFO } from "@/lib/config";
 import { WEALTH_BIN_LABELS } from "@/lib/engine";
 import { useSimulationStore, type ViewKey } from "@/lib/store";
@@ -74,8 +72,8 @@ export function FloatingWindows() {
         <AliveWindow />
         <WealthWindow />
         <PriceWindow />
+        <StreamWindow />
         <NarratorWindow />
-        <NetworkWindow />
       </div>
     </DndContext>
   );
@@ -360,17 +358,122 @@ function PriceWindow() {
   );
 }
 
-function NetworkWindow() {
+const MOTIVATION_ORDER = ["material", "symbolic", "normative", "power"] as const;
+const MOTIVATION_COLORS: Record<(typeof MOTIVATION_ORDER)[number], string> = {
+  material: "#E63946",
+  symbolic: "#2E5C9E",
+  normative: "#FFD23F",
+  power: "#111111",
+};
+const MOTIVATION_LABELS: Record<(typeof MOTIVATION_ORDER)[number], string> = {
+  material: "Material",
+  symbolic: "Symbolic",
+  normative: "Normative",
+  power: "Power",
+};
+
+function StreamWindow() {
+  const history = useSimulationStore((s) => s.history);
+  const snapshot = useSimulationStore((s) => s.snapshot);
+
+  const { paths, total } = useMemo(() => {
+    if (history.length < 2) return { paths: null, total: 0 };
+
+    const W = 264;
+    const H = 96;
+    const n = history.length;
+    const stepX = W / Math.max(1, n - 1);
+
+    const totals: number[] = new Array(n);
+    let maxTotal = 0;
+    for (let i = 0; i < n; i++) {
+      const m = history[i].motivationCounts;
+      const t = m.material + m.symbolic + m.normative + m.power;
+      totals[i] = t;
+      if (t > maxTotal) maxTotal = t;
+    }
+    if (maxTotal === 0) return { paths: null, total: 0 };
+
+    const cumLow: number[] = new Array(n).fill(0);
+    const layers = MOTIVATION_ORDER.map((key) => {
+      const top: { x: number; y: number }[] = new Array(n);
+      const bottom: { x: number; y: number }[] = new Array(n);
+      for (let i = 0; i < n; i++) {
+        const count = history[i].motivationCounts[key];
+        const denom = totals[i] || 1;
+        const lo = cumLow[i];
+        const hi = lo + count / denom;
+        const x = i * stepX;
+        bottom[i] = { x, y: H - lo * H };
+        top[i] = { x, y: H - hi * H };
+        cumLow[i] = hi;
+      }
+      const upper = top.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L");
+      const lower = bottom
+        .slice()
+        .reverse()
+        .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+        .join(" L");
+      return { key, d: `M${upper} L${lower} Z`, color: MOTIVATION_COLORS[key] };
+    });
+
+    return { paths: layers, total: totals[n - 1] };
+  }, [history]);
+
+  const live = snapshot.motivationCounts;
+  const liveTotal =
+    live.material + live.symbolic + live.normative + live.power || 1;
+
   return (
     <FloatingWindow
-      windowKey="network"
-      title="Network"
-      meta="Society as graph"
+      windowKey="stream"
+      title="Motivations"
+      meta={total > 0 ? total.toLocaleString() : undefined}
     >
-      <NetworkWindowBody worldRef={activeWorldRef} />
-      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
-        Agents within vision, force-laid
-      </p>
+      <div className="h-24 w-full overflow-hidden rounded-sm bg-foreground/[0.03]">
+        {paths ? (
+          <svg
+            viewBox="0 0 264 96"
+            preserveAspectRatio="none"
+            className="block h-full w-full"
+          >
+            {paths.map((layer) => (
+              <path
+                key={layer.key}
+                d={layer.d}
+                fill={layer.color}
+                fillOpacity={0.82}
+                stroke="none"
+              />
+            ))}
+          </svg>
+        ) : (
+          <div className="flex h-full items-center justify-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            gathering…
+          </div>
+        )}
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+        {MOTIVATION_ORDER.map((key) => {
+          const count = live[key];
+          const pct = ((count / liveTotal) * 100).toFixed(0);
+          return (
+            <div key={key} className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="block size-2 rounded-[1px]"
+                style={{ background: MOTIVATION_COLORS[key] }}
+              />
+              <span className="font-sans text-[11px] text-foreground/85">
+                {MOTIVATION_LABELS[key]}
+              </span>
+              <span className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground">
+                {pct}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </FloatingWindow>
   );
 }

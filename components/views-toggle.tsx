@@ -24,8 +24,8 @@ const VIEWS: { key: ViewKey; label: string }[] = [
   { key: "alive", label: "Alive" },
   { key: "wealth", label: "Wealth" },
   { key: "price", label: "Price" },
+  { key: "stream", label: "Motivations" },
   { key: "narrator", label: "Narrator" },
-  { key: "network", label: "Network" },
 ];
 
 type CornerKey = "tl" | "tr" | "bl" | "br";
