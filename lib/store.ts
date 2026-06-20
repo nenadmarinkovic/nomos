@@ -163,13 +163,15 @@ export const useSimulationStore = create<SimulationState>()(
           const margin = 10;
           const gap = 10;
 
-          /** Approximate rendered height per window. */
+          /** Conservative rendered-height upper bounds per window. The
+           * narrator and network bodies in particular can stretch past
+           * the chart-window default, so we leave headroom. */
           const WIN_HEIGHTS: Record<ViewKey, number> = {
-            gini: 180,
-            alive: 180,
-            wealth: 180,
-            narrator: 220,
-            network: 300,
+            gini: 200,
+            alive: 200,
+            wealth: 200,
+            narrator: 280,
+            network: 380,
           };
 
           const cols = visible.length <= 2 ? 1 : 2;
@@ -197,19 +199,25 @@ export const useSimulationStore = create<SimulationState>()(
               for (let i = colKeys.length - 1; i >= 0; i--) {
                 const key = colKeys[i];
                 const h = WIN_HEIGHTS[key];
-                const y = yBottom - h;
-                positions[key] = { x: Math.max(0, x), y: Math.max(0, y) };
+                // Clamp so the window's top never goes above the canvas
+                // top margin, and its bottom never goes past H - margin.
+                const y = Math.max(
+                  margin,
+                  Math.min(H - margin - h, yBottom - h),
+                );
+                positions[key] = { x: Math.max(0, x), y };
                 yBottom = y - gap;
               }
             } else {
               let yTop = margin;
               for (const key of colKeys) {
                 const h = WIN_HEIGHTS[key];
-                positions[key] = {
-                  x: Math.max(0, x),
-                  y: Math.max(0, yTop),
-                };
-                yTop += h + gap;
+                const y = Math.max(
+                  margin,
+                  Math.min(H - margin - h, yTop),
+                );
+                positions[key] = { x: Math.max(0, x), y };
+                yTop = y + h + gap;
               }
             }
           });
