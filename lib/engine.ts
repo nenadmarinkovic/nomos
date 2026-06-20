@@ -1,10 +1,12 @@
 import type {
   AgentMotivation,
+  AgentSophistication,
   InitialSettlement,
   InteractionTopology,
   Landscape,
   Scale,
   SimulationConfig,
+  WeightedSelection,
 } from "@/lib/config";
 
 const GRID_SIZE: Record<Scale, number> = {
@@ -39,6 +41,12 @@ export interface Agent {
   initialSugar: number;
   initialSpice: number;
   motivation: AgentMotivation;
+  /** Decision rule governing movement (and, for social agents, imitation). */
+  sophistication: AgentSophistication;
+  /** Adaptive agents only: learned willingness to range far afield (0..1). */
+  boldness: number;
+  /** Adaptive agents only: holdings at the previous tick, to sense gain or loss. */
+  lastHoldings: number;
 }
 
 /** Combined holdings — the scalar "wealth" used for Gini, tiers, and display. */
@@ -183,22 +191,75 @@ export class Engine {
   }
 
   private moveAndHarvest(a: Agent): void {
+    const target = this.chooseTarget(a);
+
+    a.prevX = a.x;
+    a.prevY = a.y;
+    if (target.x !== a.x || target.y !== a.y) {
+      this.occupants[a.y * this.width + a.x] = -1;
+      a.x = target.x;
+      a.y = target.y;
+      this.occupants[a.y * this.width + a.x] = a.id;
+    }
+
+    const idx = a.y * this.width + a.x;
+    a.sugar += this.cells[idx];
+    a.spice += this.spice[idx];
+    this.cells[idx] = 0;
+    this.spice[idx] = 0;
+  }
+
+  /**
+   * Pick the cell an agent moves to this tick. Sophistication selects the rule:
+   * minimal agents optimise greedily over their whole field of view; bounded
+   * agents satisfice over a shorter horizon; adaptive agents learn how far to
+   * range based on whether ranging has been paying off; social agents follow
+   * and imitate the wealthiest neighbour they can see.
+   */
+  private chooseTarget(a: Agent): { x: number; y: number } {
+    switch (a.sophistication) {
+      case "bounded_rational":
+        return this.satisficeMove(a);
+      case "adaptive":
+        return this.adaptiveMove(a);
+      case "social":
+        return this.imitativeMove(a);
+      default:
+        return this.greedyMove(a, a.vision);
+    }
+  }
+
+  /** The four on-axis cells exactly `d` steps from the agent. */
+  private axisTargets(a: Agent, d: number): [number, number][] {
+    return [
+      [a.x + d, a.y],
+      [a.x - d, a.y],
+      [a.x, a.y + d],
+      [a.x, a.y - d],
+    ];
+  }
+
+  private inBounds(x: number, y: number): boolean {
+    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+  }
+
+  private isFree(idx: number, a: Agent): boolean {
+    const occ = this.occupants[idx];
+    return occ === -1 || occ === a.id;
+  }
+
+  /** Reactive optimiser: the best free cell within `vision`, ties broken nearer. */
+  private greedyMove(a: Agent, vision: number): { x: number; y: number } {
     let bestX = a.x;
     let bestY = a.y;
     let bestScore = this.scoreCell(a, a.x, a.y);
     let bestDist = 0;
 
-    for (let d = 1; d <= a.vision; d++) {
-      const targets: [number, number][] = [
-        [a.x + d, a.y],
-        [a.x - d, a.y],
-        [a.x, a.y + d],
-        [a.x, a.y - d],
-      ];
-      for (const [cx, cy] of targets) {
-        if (cx < 0 || cy < 0 || cx >= this.width || cy >= this.height) continue;
+    for (let d = 1; d <= vision; d++) {
+      for (const [cx, cy] of this.axisTargets(a, d)) {
+        if (!this.inBounds(cx, cy)) continue;
         const idx = cy * this.width + cx;
-        if (this.occupants[idx] !== -1 && this.occupants[idx] !== a.id) continue;
+        if (!this.isFree(idx, a)) continue;
         const score = this.scoreCell(a, cx, cy);
         if (
           score > bestScore ||
@@ -211,24 +272,110 @@ export class Engine {
         }
       }
     }
+    return { x: bestX, y: bestY };
+  }
 
-    a.prevX = a.x;
-    a.prevY = a.y;
-    if (bestX !== a.x || bestY !== a.y) {
-      this.occupants[a.y * this.width + a.x] = -1;
-      a.x = bestX;
-      a.y = bestY;
-      this.occupants[a.y * this.width + a.x] = a.id;
+  /**
+   * Bounded rationality: look only half as far and take the first cell that is
+   * clearly better than standing still, rather than scanning for the optimum.
+   */
+  private satisficeMove(a: Agent): { x: number; y: number } {
+    const goodEnough = this.scoreCell(a, a.x, a.y) * 1.1 + 0.5;
+    const horizon = Math.max(1, Math.ceil(a.vision / 2));
+
+    for (let d = 1; d <= horizon; d++) {
+      for (const [cx, cy] of this.axisTargets(a, d)) {
+        if (!this.inBounds(cx, cy)) continue;
+        const idx = cy * this.width + cx;
+        if (!this.isFree(idx, a)) continue;
+        if (this.scoreCell(a, cx, cy) >= goodEnough) return { x: cx, y: cy };
+      }
+    }
+    return { x: a.x, y: a.y };
+  }
+
+  /**
+   * Adaptation: with probability `boldness` the agent ranges across its whole
+   * field of view; otherwise it stays local. Boldness is reinforced each tick
+   * in `consume` depending on whether holdings rose — agents learn whether
+   * exploration pays off in the world they actually inhabit.
+   */
+  private adaptiveMove(a: Agent): { x: number; y: number } {
+    const vision = this.rng() < a.boldness ? a.vision : 1;
+    return this.greedyMove(a, vision);
+  }
+
+  /**
+   * Social imitation: head toward the wealthiest neighbour in view and, now and
+   * then, adopt their motivation — strategies spread through proximity. With no
+   * richer neighbour to follow, the agent falls back to greedy optimisation.
+   */
+  private imitativeMove(a: Agent): { x: number; y: number } {
+    let exemplar = -1;
+    let exemplarWealth = holdings(a);
+    let ex = a.x;
+    let ey = a.y;
+
+    for (let d = 1; d <= a.vision; d++) {
+      for (const [cx, cy] of this.axisTargets(a, d)) {
+        if (!this.inBounds(cx, cy)) continue;
+        const occ = this.occupants[cy * this.width + cx];
+        if (occ === -1 || occ === a.id) continue;
+        const other = this.agents[occ];
+        if (!other.alive) continue;
+        const w = holdings(other);
+        if (w > exemplarWealth) {
+          exemplarWealth = w;
+          exemplar = occ;
+          ex = cx;
+          ey = cy;
+        }
+      }
     }
 
-    const idx = a.y * this.width + a.x;
-    a.sugar += this.cells[idx];
-    a.spice += this.spice[idx];
-    this.cells[idx] = 0;
-    this.spice[idx] = 0;
+    if (exemplar === -1) return this.greedyMove(a, a.vision);
+
+    // Gossip: occasionally take on the richer neighbour's motivation.
+    const role = this.agents[exemplar].motivation;
+    if (role !== a.motivation && this.rng() < 0.1) a.motivation = role;
+
+    // Step one cell toward the exemplar, onto the best free cell in that line.
+    const stepX = Math.sign(ex - a.x);
+    const stepY = Math.sign(ey - a.y);
+    const candidates: [number, number][] = [
+      [a.x + stepX, a.y + stepY],
+      [a.x + stepX, a.y],
+      [a.x, a.y + stepY],
+    ];
+
+    let bestX = a.x;
+    let bestY = a.y;
+    let bestScore = this.scoreCell(a, a.x, a.y);
+    for (const [cx, cy] of candidates) {
+      if (cx === a.x && cy === a.y) continue;
+      if (!this.inBounds(cx, cy)) continue;
+      const idx = cy * this.width + cx;
+      if (!this.isFree(idx, a)) continue;
+      const score = this.scoreCell(a, cx, cy);
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = cx;
+        bestY = cy;
+      }
+    }
+    return { x: bestX, y: bestY };
   }
 
   private consume(a: Agent): void {
+    if (a.sophistication === "adaptive") {
+      const now = holdings(a);
+      a.boldness =
+        now > a.lastHoldings
+          ? Math.min(1, a.boldness + 0.05)
+          : Math.max(0.05, a.boldness - 0.05);
+      a.lastHoldings = now;
+    }
+
     a.sugar -= a.sugarMetab;
     a.spice -= a.spiceMetab;
     a.age++;
@@ -401,6 +548,9 @@ export class Engine {
       spiceMetab: a.spiceMetab,
       maxAge: a.maxAge,
       motivation: a.motivation,
+      sophistication: a.sophistication,
+      boldness: 0.5,
+      lastHoldings: a.initialSugar + a.initialSpice,
     };
     this.agents.push(child);
     this.occupants[idx] = child.id;
@@ -580,28 +730,39 @@ function spawnAgents(
     return mean * (1 - h + 2 * h * rng());
   };
 
-  const motivationKeys: AgentMotivation[] = [];
-  const motivationCumWeights: number[] = [];
-  let acc = 0;
-  for (const [k, w] of Object.entries(config.agents.motivation) as [
-    AgentMotivation,
-    number | undefined,
-  ][]) {
-    if (w === undefined || w <= 0) continue;
-    motivationKeys.push(k);
-    acc += w;
-    motivationCumWeights.push(acc);
-  }
-  const motivationTotal = acc;
-  const pickMotivation = (): AgentMotivation => {
-    if (motivationKeys.length === 0) return "material";
-    if (motivationKeys.length === 1) return motivationKeys[0];
-    const r = rng() * motivationTotal;
-    for (let i = 0; i < motivationCumWeights.length; i++) {
-      if (r < motivationCumWeights[i]) return motivationKeys[i];
+  // Weighted draw from a mix like { material: 1, power: 2 }, normalised on the
+  // fly. Used for both motivation and sophistication so an agent's traits match
+  // the proportions the operator set on the setup screen.
+  const buildPicker = <K extends string>(
+    weights: WeightedSelection<K>,
+    fallback: K,
+  ): (() => K) => {
+    const keys: K[] = [];
+    const cumWeights: number[] = [];
+    let acc = 0;
+    for (const [k, w] of Object.entries(weights) as [K, number | undefined][]) {
+      if (w === undefined || w <= 0) continue;
+      keys.push(k);
+      acc += w;
+      cumWeights.push(acc);
     }
-    return motivationKeys[motivationKeys.length - 1];
+    const total = acc;
+    return () => {
+      if (keys.length === 0) return fallback;
+      if (keys.length === 1) return keys[0];
+      const r = rng() * total;
+      for (let i = 0; i < cumWeights.length; i++) {
+        if (r < cumWeights[i]) return keys[i];
+      }
+      return keys[keys.length - 1];
+    };
   };
+
+  const pickMotivation = buildPicker(config.agents.motivation, "material");
+  const pickSophistication = buildPicker(
+    config.agents.sophistication,
+    "minimal",
+  );
 
   const baseline = 15;
   const eq = config.world.equality;
@@ -652,6 +813,9 @@ function spawnAgents(
       spiceMetab: Math.max(0.1, sampleAttr(metabMean)),
       maxAge: Math.max(10, Math.round(sampleAttr(physics.lifespan))),
       motivation: pickMotivation(),
+      sophistication: pickSophistication(),
+      boldness: 0.5,
+      lastHoldings: sugar + spice,
     });
   }
   return agents;
