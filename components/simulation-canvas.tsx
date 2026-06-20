@@ -478,7 +478,20 @@ function renderWorld(
       const cx = ax * cellW + cellW / 2;
       const cy = ay * cellH + cellH / 2;
 
-      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      const isDark =
+        typeof document !== "undefined" &&
+        document.documentElement.classList.contains("dark");
+      const lineColor = isDark
+        ? "rgba(255,255,255,0.55)"
+        : "rgba(20,20,20,0.55)";
+      const ringColor = isDark
+        ? "rgba(255,255,255,0.95)"
+        : "rgba(20,20,20,0.85)";
+      const ringHaloColor = isDark
+        ? "rgba(0,0,0,0.45)"
+        : "rgba(255,255,255,0.9)";
+
+      ctx.strokeStyle = lineColor;
       ctx.lineWidth = Math.max(0.8, 0.9 * dpr);
       for (const id of neighborsInVision(world, a)) {
         const n = world.agents[id];
@@ -494,7 +507,16 @@ function renderWorld(
       }
 
       const r = Math.max(shapeSize * 0.9, 7 * dpr);
-      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      // Two-pass ring: a slightly wider halo behind the main stroke. Keeps the
+      // selection visible whether the underlying agent shape is pale (light
+      // theme + yellow triangle) or dark (dark theme + black diamond).
+      ctx.strokeStyle = ringHaloColor;
+      ctx.lineWidth = Math.max(2.6, 3.2 * dpr);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = ringColor;
       ctx.lineWidth = Math.max(1.4, 1.5 * dpr);
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);

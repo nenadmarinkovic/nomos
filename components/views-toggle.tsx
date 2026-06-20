@@ -5,9 +5,17 @@ import {
   ArrowDownRightIcon,
   ArrowUpLeftIcon,
   ArrowUpRightIcon,
+  CornersOutIcon,
 } from "@phosphor-icons/react";
 
 import { Label } from "@/components/ui/label";
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarTrigger,
+} from "@/components/ui/menubar";
 import { Switch } from "@/components/ui/switch";
 import { useSimulationStore, type ViewKey } from "@/lib/store";
 
@@ -22,21 +30,27 @@ const VIEWS: { key: ViewKey; label: string }[] = [
 
 type CornerKey = "tl" | "tr" | "bl" | "br";
 
-const CORNERS: { key: CornerKey; Icon: typeof ArrowUpLeftIcon }[] = [
-  { key: "tl", Icon: ArrowUpLeftIcon },
-  { key: "tr", Icon: ArrowUpRightIcon },
-  { key: "bl", Icon: ArrowDownLeftIcon },
-  { key: "br", Icon: ArrowDownRightIcon },
+const CORNERS: {
+  key: CornerKey;
+  label: string;
+  Icon: typeof ArrowUpLeftIcon;
+}[] = [
+  { key: "tl", label: "Top-left", Icon: ArrowUpLeftIcon },
+  { key: "tr", label: "Top-right", Icon: ArrowUpRightIcon },
+  { key: "bl", label: "Bottom-left", Icon: ArrowDownLeftIcon },
+  { key: "br", label: "Bottom-right", Icon: ArrowDownRightIcon },
 ];
 
 export function ViewsToggle() {
   const started = useSimulationStore((s) => s.started);
   const views = useSimulationStore((s) => s.views);
   const toggleView = useSimulationStore((s) => s.toggleView);
-  const resetWindows = useSimulationStore((s) => s.resetWindows);
+  const setAllViews = useSimulationStore((s) => s.setAllViews);
   const alignWindows = useSimulationStore((s) => s.alignWindows);
 
   if (!started) return null;
+
+  const anyVisible = Object.values(views).some(Boolean);
 
   return (
     <div className="space-y-2 px-3 py-2.5">
@@ -47,10 +61,10 @@ export function ViewsToggle() {
           </span>
           <button
             type="button"
-            onClick={resetWindows}
+            onClick={() => setAllViews(!anyVisible)}
             className="cursor-pointer font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
           >
-            Reset
+            {anyVisible ? "Hide all" : "Show all"}
           </button>
         </div>
         <div className="flex flex-col">
@@ -83,34 +97,26 @@ export function ViewsToggle() {
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           Align
         </span>
-        <div className="grid grid-cols-2 overflow-hidden rounded-md border border-foreground/15">
-          {CORNERS.map(({ key, Icon }, i) => {
-            const isLeft = i % 2 === 0;
-            const isTop = i < 2;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => alignWindows(key)}
-                aria-label={`Align windows ${key}`}
-                title={key.toUpperCase()}
-                className={[
-                  "flex size-7 cursor-pointer items-center justify-center bg-card transition-colors hover:bg-foreground/[0.06]",
-                  !isLeft && "border-l border-foreground/15",
-                  !isTop && "border-t border-foreground/15",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                <Icon
-                  size={12}
-                  weight="bold"
-                  className="text-muted-foreground"
-                />
-              </button>
-            );
-          })}
-        </div>
+        <Menubar>
+          <MenubarMenu>
+            <MenubarTrigger>
+              <CornersOutIcon size={11} weight="bold" />
+              Corner
+            </MenubarTrigger>
+            <MenubarContent align="end">
+              {CORNERS.map(({ key, label, Icon }) => (
+                <MenubarItem key={key} onSelect={() => alignWindows(key)}>
+                  <Icon
+                    size={12}
+                    weight="bold"
+                    className="text-muted-foreground"
+                  />
+                  <span className="font-sans text-[12px]">{label}</span>
+                </MenubarItem>
+              ))}
+            </MenubarContent>
+          </MenubarMenu>
+        </Menubar>
       </div>
     </div>
   );
