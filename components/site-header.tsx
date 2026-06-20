@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { RunLibrary } from "@/components/run-library";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Tooltip,
@@ -195,6 +196,7 @@ export function SiteHeader({
               })}
             </div>
           )}
+          <RunLibrary />
           <ThemeToggle />
           {showStop && (
             <Button
