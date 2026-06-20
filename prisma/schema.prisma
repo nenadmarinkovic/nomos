@@ -1,0 +1,32 @@
+// Persistence for saved simulation runs (v0.2).
+//
+// A run is deterministic given its config and seed, so a saved run stores the
+// config (seed included) and is re-executed identically on replay. The history
+// and chronicle are kept as JSON so the saved run can be browsed — its metric
+// timeline and the observers' readings — without re-running it.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Run {
+  id          String   @id @default(cuid())
+  name        String
+  createdAt   DateTime @default(now())
+  seed        Int
+  turn        Int
+  alive       Int
+  gini        Float
+  totalWealth Float
+  /// JSON-encoded SimulationConfig, HistoryPoint[], and ChronicleEntry[].
+  config      String
+  history     String
+  chronicle   String
+
+  @@index([createdAt])
+}
