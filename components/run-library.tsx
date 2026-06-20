@@ -3,8 +3,10 @@
 import { useCallback, useState } from "react";
 import {
   ArchiveIcon,
+  CheckIcon,
   CircleNotchIcon,
   FloppyDiskIcon,
+  LinkIcon,
   PlayIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
@@ -60,6 +62,7 @@ export function RunLibrary() {
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -118,6 +121,20 @@ export function RunLibrary() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load run");
       setBusyId(null);
+    }
+  }
+
+  async function handleShare(id: string) {
+    const url = `${window.location.origin}/?run=${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(id);
+      window.setTimeout(
+        () => setCopiedId((c) => (c === id ? null : c)),
+        1500,
+      );
+    } catch {
+      setError("Could not copy the link to your clipboard");
     }
   }
 
@@ -252,6 +269,19 @@ export function RunLibrary() {
                         <PlayIcon weight="fill" />
                       )}
                       Replay
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Copy link to ${run.name}`}
+                      onClick={() => handleShare(run.id)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      {copiedId === run.id ? (
+                        <CheckIcon className="text-emerald-500" />
+                      ) : (
+                        <LinkIcon />
+                      )}
                     </Button>
                     <Button
                       variant="ghost"
