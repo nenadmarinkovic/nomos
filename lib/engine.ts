@@ -1,6 +1,7 @@
 import type {
   AgentMotivation,
   InitialSettlement,
+  InteractionTopology,
   Landscape,
   Scale,
   SimulationConfig,
@@ -26,13 +27,39 @@ export interface Agent {
   /** Position at the start of this tick, used for inter-frame interpolation. */
   prevX: number;
   prevY: number;
-  wealth: number;
+  /** Holdings of the two traded goods. */
+  sugar: number;
+  spice: number;
   age: number;
   vision: number;
-  metabolism: number;
+  /** Per-good consumption each turn. Differing ratios are what drive trade. */
+  sugarMetab: number;
+  spiceMetab: number;
   maxAge: number;
-  initialEndowment: number;
+  initialSugar: number;
+  initialSpice: number;
   motivation: AgentMotivation;
+}
+
+/** Combined holdings — the scalar "wealth" used for Gini, tiers, and display. */
+export function holdings(a: Agent): number {
+  return a.sugar + a.spice;
+}
+
+/**
+ * Marginal rate of substitution: how many units of sugar this agent will give
+ * up for one unit of spice, given current holdings and per-good needs. An agent
+ * rich in sugar and short on spice values spice highly (high MRS) and will buy
+ * it; two agents with different MRS both gain by trading toward the middle.
+ */
+export function mrs(a: Agent): number {
+  return (a.sugar / a.sugarMetab) / (a.spice / a.spiceMetab);
+}
+
+/** Cobb-Douglas welfare. Movement and trade both try to raise it. */
+function welfare(sugar: number, spice: number, ms: number, msp: number): number {
+  const mt = ms + msp;
+  return Math.pow(sugar, ms / mt) * Math.pow(spice, msp / mt);
 }
 
 export const WEALTH_BIN_EDGES = [5, 10, 20, 40, 80] as const;
@@ -44,25 +71,39 @@ export interface EngineSnapshot {
   gini: number;
   totalWealth: number;
   wealthBins: number[];
+  /** Geometric-mean exchange rate (sugar per spice) of trades this turn, or 0 if none. */
+  tradePrice: number;
+  /** Number of trades executed this turn. */
+  tradeVolume: number;
 }
 
 export class Engine {
   readonly width: number;
   readonly height: number;
+  /** Sugar landscape: carrying capacity and current stock per cell. */
   readonly maxCells: Float32Array;
   readonly cells: Float32Array;
+  /** Spice landscape: the second good, spatially anti-correlated with sugar. */
+  readonly maxSpice: Float32Array;
+  readonly spice: Float32Array;
   readonly occupants: Int32Array;
   agents: Agent[];
   turn = 0;
 
+  /** Trade telemetry for the most recent tick. */
+  private lastTradePrice = 0;
+  private lastTradeVolume = 0;
+
   private rng: () => number;
   private regrowthRate: number;
   private reproduction: boolean;
+  private topology: InteractionTopology;
 
   constructor(config: SimulationConfig) {
     this.rng = mulberry32(config.seed || 1);
     this.regrowthRate = config.world.physics.regrowthRate;
     this.reproduction = config.world.reproduction;
+    this.topology = config.agents.topology;
 
     const size = GRID_SIZE[config.world.scale];
     this.width = size;
@@ -71,16 +112,20 @@ export class Engine {
     const total = size * size;
     this.maxCells = new Float32Array(total);
     this.cells = new Float32Array(total);
+    this.maxSpice = new Float32Array(total);
+    this.spice = new Float32Array(total);
     this.occupants = new Int32Array(total).fill(-1);
 
     buildLandscape(
       this.maxCells,
+      this.maxSpice,
       this.width,
       this.height,
       config.world.landscape,
       this.rng,
     );
     this.cells.set(this.maxCells);
+    this.spice.set(this.maxSpice);
 
     const requested = AGENT_COUNT[config.world.scale];
     const cap = Math.floor(total * 0.5);
@@ -93,13 +138,8 @@ export class Engine {
   }
 
   tick(): void {
-    for (let i = 0; i < this.cells.length; i++) {
-      const m = this.maxCells[i];
-      if (m > 0) {
-        const next = this.cells[i] + this.regrowthRate * m;
-        this.cells[i] = next > m ? m : next;
-      }
-    }
+    this.regrow(this.cells, this.maxCells);
+    this.regrow(this.spice, this.maxSpice);
 
     const order: number[] = [];
     for (const a of this.agents) {
@@ -107,16 +147,42 @@ export class Engine {
     }
     shuffle(order, this.rng);
 
+    // Phase 1: move toward the best cell and harvest both goods.
     for (const id of order) {
       const a = this.agents[id];
       if (!a.alive) continue;
-      this.actAgent(a);
+      this.moveAndHarvest(a);
+    }
+
+    // Phase 2: trade with neighbours. A market — and a price — emerges here.
+    this.tradePhase();
+
+    // Phase 3: pay metabolism, age, and die (or leave an heir). Capture the
+    // living set first so reproduction's newborns don't act this turn.
+    const living: number[] = [];
+    for (const a of this.agents) {
+      if (a.alive) living.push(a.id);
+    }
+    for (const id of living) {
+      const a = this.agents[id];
+      if (!a.alive) continue;
+      this.consume(a);
     }
 
     this.turn++;
   }
 
-  private actAgent(a: Agent): void {
+  private regrow(stock: Float32Array, max: Float32Array): void {
+    for (let i = 0; i < stock.length; i++) {
+      const m = max[i];
+      if (m > 0) {
+        const next = stock[i] + this.regrowthRate * m;
+        stock[i] = next > m ? m : next;
+      }
+    }
+  }
+
+  private moveAndHarvest(a: Agent): void {
     let bestX = a.x;
     let bestY = a.y;
     let bestScore = this.scoreCell(a, a.x, a.y);
@@ -156,19 +222,26 @@ export class Engine {
     }
 
     const idx = a.y * this.width + a.x;
-    a.wealth += this.cells[idx];
+    a.sugar += this.cells[idx];
+    a.spice += this.spice[idx];
     this.cells[idx] = 0;
+    this.spice[idx] = 0;
+  }
 
-    a.wealth -= a.metabolism;
+  private consume(a: Agent): void {
+    a.sugar -= a.sugarMetab;
+    a.spice -= a.spiceMetab;
     a.age++;
 
-    if (a.wealth <= 0 || a.age >= a.maxAge) {
+    if (a.sugar <= 0 || a.spice <= 0 || a.age >= a.maxAge) {
       this.killAgent(a);
     }
   }
 
   private scoreCell(a: Agent, x: number, y: number): number {
-    const resources = this.cells[y * this.width + x];
+    // Total stuff on the cell. Trade later sorts out the sugar/spice imbalance;
+    // movement just chases abundance, as before.
+    const resources = this.cells[y * this.width + x] + this.spice[y * this.width + x];
     if (a.motivation === "material") return resources;
 
     let count = 0;
@@ -185,10 +258,11 @@ export class Engine {
         const other = this.agents[occ];
         if (!other.alive) continue;
         count++;
-        totalWealth += other.wealth;
+        totalWealth += holdings(other);
       }
     }
     const avgWealth = count > 0 ? totalWealth / count : 0;
+    const own = holdings(a);
 
     switch (a.motivation) {
       case "symbolic":
@@ -196,12 +270,107 @@ export class Engine {
       case "normative":
         return resources + count * 0.6;
       case "power":
-        return count > 0 && a.wealth > avgWealth
+        return count > 0 && own > avgWealth
           ? resources + count * 0.7
           : resources;
       default:
         return resources;
     }
+  }
+
+  /**
+   * Every agent looks to its partners (chosen by the configured topology) and
+   * trades spice for sugar whenever both sides come out ahead. The price paid
+   * is the geometric mean of the two valuations — the local clearing rate.
+   * Aggregated across the field, those rates are the emergent market price.
+   */
+  private tradePhase(): void {
+    let logPriceSum = 0;
+    let volume = 0;
+
+    for (const a of this.agents) {
+      if (!a.alive) continue;
+      const partners = this.partnersFor(a);
+      for (const bId of partners) {
+        // Pair each unordered couple once.
+        if (bId <= a.id) continue;
+        const b = this.agents[bId];
+        if (!b.alive) continue;
+        const price = this.tryTrade(a, b);
+        if (price > 0) {
+          logPriceSum += Math.log(price);
+          volume++;
+        }
+      }
+    }
+
+    this.lastTradeVolume = volume;
+    this.lastTradePrice = volume > 0 ? Math.exp(logPriceSum / volume) : 0;
+  }
+
+  /** Candidate trading partners for one agent under the active topology. */
+  private partnersFor(a: Agent): number[] {
+    const out: number[] = [];
+    if (this.topology === "random") {
+      // Anyone may meet anyone: a few random draws from the field.
+      for (let i = 0; i < 4; i++) {
+        const j = Math.floor(this.rng() * this.agents.length);
+        const other = this.agents[j];
+        if (other && other.alive && other.id !== a.id) out.push(other.id);
+      }
+      return out;
+    }
+    // Spatial (adjacent only) and network (persistent neighbourhood within
+    // vision) both read the grid; network simply reaches further.
+    const radius = this.topology === "network" ? Math.min(a.vision, 4) : 1;
+    for (let dy = -radius; dy <= radius; dy++) {
+      const ny = a.y + dy;
+      if (ny < 0 || ny >= this.height) continue;
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = a.x + dx;
+        if (nx < 0 || nx >= this.width) continue;
+        const occ = this.occupants[ny * this.width + nx];
+        if (occ !== -1 && occ !== a.id) out.push(occ);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Attempt a single spice-for-sugar exchange between two agents. Executes only
+   * if both end up strictly better off (a Pareto improvement). Returns the price
+   * paid (sugar per spice), or 0 if no trade happened.
+   */
+  private tryTrade(a: Agent, b: Agent): number {
+    const mrsA = mrs(a);
+    const mrsB = mrs(b);
+    if (mrsA === mrsB) return 0;
+
+    // The higher-MRS agent values spice more, so it buys spice and sells sugar.
+    const buyer = mrsA > mrsB ? a : b;
+    const seller = mrsA > mrsB ? b : a;
+
+    // Local price: geometric mean of the two valuations (sugar per spice).
+    const price = Math.sqrt(mrsA * mrsB);
+    const spiceQty = 1;
+    const sugarQty = price * spiceQty;
+
+    // Feasibility: seller can spare the spice, buyer can spare the sugar.
+    if (seller.spice <= spiceQty || buyer.sugar <= sugarQty) return 0;
+
+    const buyerBefore = welfare(buyer.sugar, buyer.spice, buyer.sugarMetab, buyer.spiceMetab);
+    const sellerBefore = welfare(seller.sugar, seller.spice, seller.sugarMetab, seller.spiceMetab);
+    const buyerAfter = welfare(buyer.sugar - sugarQty, buyer.spice + spiceQty, buyer.sugarMetab, buyer.spiceMetab);
+    const sellerAfter = welfare(seller.sugar + sugarQty, seller.spice - spiceQty, seller.sugarMetab, seller.spiceMetab);
+
+    if (buyerAfter <= buyerBefore || sellerAfter <= sellerBefore) return 0;
+
+    buyer.sugar -= sugarQty;
+    buyer.spice += spiceQty;
+    seller.sugar += sugarQty;
+    seller.spice -= spiceQty;
+    return price;
   }
 
   private killAgent(a: Agent): void {
@@ -222,11 +391,14 @@ export class Engine {
       y: cy,
       prevX: cx,
       prevY: cy,
-      wealth: a.initialEndowment,
-      initialEndowment: a.initialEndowment,
+      sugar: a.initialSugar,
+      spice: a.initialSpice,
+      initialSugar: a.initialSugar,
+      initialSpice: a.initialSpice,
       age: 0,
       vision: a.vision,
-      metabolism: a.metabolism,
+      sugarMetab: a.sugarMetab,
+      spiceMetab: a.spiceMetab,
       maxAge: a.maxAge,
       motivation: a.motivation,
     };
@@ -253,11 +425,12 @@ export class Engine {
     for (const a of this.agents) {
       if (!a.alive) continue;
       alive++;
-      totalWealth += a.wealth;
-      wealths.push(a.wealth);
+      const w = holdings(a);
+      totalWealth += w;
+      wealths.push(w);
       let placed = false;
       for (let i = 0; i < WEALTH_BIN_EDGES.length; i++) {
-        if (a.wealth < WEALTH_BIN_EDGES[i]) {
+        if (w < WEALTH_BIN_EDGES[i]) {
           wealthBins[i]++;
           placed = true;
           break;
@@ -271,6 +444,8 @@ export class Engine {
       totalWealth,
       gini: giniCoefficient(wealths),
       wealthBins,
+      tradePrice: this.lastTradePrice,
+      tradeVolume: this.lastTradeVolume,
     };
   }
 
@@ -313,39 +488,69 @@ function giniCoefficient(values: number[]): number {
   return (2 * weighted) / (n * total) - (n + 1) / n;
 }
 
+/**
+ * Build the sugar and spice landscapes. The two goods are placed in different
+ * parts of the world so that wherever an agent settles it tends to be rich in
+ * one good and short of the other — the geographic precondition for trade.
+ */
 function buildLandscape(
-  max: Float32Array,
+  sugar: Float32Array,
+  spice: Float32Array,
   width: number,
   height: number,
   landscape: Landscape,
   rng: () => number,
 ): void {
   if (landscape === "flat") {
-    max.fill(3);
+    sugar.fill(3);
+    spice.fill(3);
     return;
   }
 
   type Peak = { x: number; y: number };
-  let peaks: Peak[] = [];
+  let sugarPeaks: Peak[] = [];
+  let spicePeaks: Peak[] = [];
   let sigma = Math.min(width, height) / 6;
 
   if (landscape === "two_peaks") {
-    peaks = [
+    // Sugar runs east–west, spice north–south: the two gradients cross.
+    sugarPeaks = [
       { x: width * 0.27, y: height * 0.5 },
       { x: width * 0.73, y: height * 0.5 },
     ];
+    spicePeaks = [
+      { x: width * 0.5, y: height * 0.27 },
+      { x: width * 0.5, y: height * 0.73 },
+    ];
     sigma = Math.min(width, height) / 5;
   } else if (landscape === "centre") {
-    peaks = [{ x: width * 0.5, y: height * 0.5 }];
+    // Sugar at the core, spice in the periphery corners.
+    sugarPeaks = [{ x: width * 0.5, y: height * 0.5 }];
+    spicePeaks = [
+      { x: width * 0.2, y: height * 0.2 },
+      { x: width * 0.8, y: height * 0.8 },
+    ];
     sigma = Math.min(width, height) / 4;
   } else if (landscape === "scattered") {
-    const k = 8;
+    const k = 6;
     for (let i = 0; i < k; i++) {
-      peaks.push({ x: rng() * width, y: rng() * height });
+      sugarPeaks.push({ x: rng() * width, y: rng() * height });
+      spicePeaks.push({ x: rng() * width, y: rng() * height });
     }
     sigma = Math.min(width, height) / 10;
   }
 
+  fillGaussian(sugar, width, height, sugarPeaks, sigma);
+  fillGaussian(spice, width, height, spicePeaks, sigma);
+}
+
+function fillGaussian(
+  out: Float32Array,
+  width: number,
+  height: number,
+  peaks: { x: number; y: number }[],
+  sigma: number,
+): void {
   const twoSigmaSq = 2 * sigma * sigma;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -356,7 +561,7 @@ function buildLandscape(
         const v = 4 * Math.exp(-(dx * dx + dy * dy) / twoSigmaSq);
         if (v > best) best = v;
       }
-      max[y * width + x] = best;
+      out[y * width + x] = best;
     }
   }
 }
@@ -424,6 +629,12 @@ function spawnAgents(
   for (let i = 0; i < count; i++) {
     const p = positions[i];
     if (!p) continue;
+    // Split the endowment unevenly between the two goods so holdings differ
+    // from the start — the other precondition for trade.
+    const frac = 0.3 + rng() * 0.4;
+    const sugar = Math.max(1, wealths[i] * frac);
+    const spice = Math.max(1, wealths[i] * (1 - frac));
+    const metabMean = physics.metabolism;
     agents.push({
       id: i,
       alive: true,
@@ -431,11 +642,14 @@ function spawnAgents(
       y: p.y,
       prevX: p.x,
       prevY: p.y,
-      wealth: wealths[i],
-      initialEndowment: wealths[i],
+      sugar,
+      spice,
+      initialSugar: sugar,
+      initialSpice: spice,
       age: 0,
       vision: Math.max(1, Math.round(sampleAttr(physics.vision))),
-      metabolism: Math.max(0.1, sampleAttr(physics.metabolism)),
+      sugarMetab: Math.max(0.1, sampleAttr(metabMean)),
+      spiceMetab: Math.max(0.1, sampleAttr(metabMean)),
       maxAge: Math.max(10, Math.round(sampleAttr(physics.lifespan))),
       motivation: pickMotivation(),
     });

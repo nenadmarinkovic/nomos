@@ -38,13 +38,20 @@ export function ObserverNarrator() {
   const detectorRef = useRef<DetectorState>({
     peakAlive: 0,
     lastEventTurn: null,
+    marketFormed: false,
   });
   const seenRef = useRef<Set<string>>(new Set());
-  const historyRef = useRef<{ turn: number; alive: number; gini: number }[]>([]);
+  const historyRef = useRef<
+    { turn: number; alive: number; gini: number; tradePrice: number }[]
+  >([]);
 
   // Reset everything when a new run begins.
   useEffect(() => {
-    detectorRef.current = { peakAlive: 0, lastEventTurn: null };
+    detectorRef.current = {
+      peakAlive: 0,
+      lastEventTurn: null,
+      marketFormed: false,
+    };
     seenRef.current = new Set();
     historyRef.current = [];
   }, [runId]);
@@ -62,6 +69,7 @@ export function ObserverNarrator() {
         turn: snapshot.turn,
         alive: snapshot.alive,
         gini: snapshot.gini,
+        tradePrice: snapshot.tradePrice,
       });
       if (hist.length > 300) hist.shift();
     }

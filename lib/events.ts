@@ -17,12 +17,16 @@ export type EventKind =
   | "stratification"
   | "population_crash"
   | "population_boom"
+  | "market_forming"
+  | "price_shock"
   | "collapse";
 
 export interface MetricPoint {
   turn: number;
   alive: number;
   gini: number;
+  /** Emergent exchange rate this turn (sugar per spice), 0 if no trade. */
+  tradePrice: number;
 }
 
 export interface EventMetrics {
@@ -36,6 +40,10 @@ export interface EventMetrics {
   deltaGini: number;
   /** Share of the living population sitting in the wealthiest bin (0..1). */
   topWealthShare: number;
+  /** Emergent exchange rate this turn (sugar per spice), 0 if no trade. */
+  tradePrice: number;
+  /** Trades executed this turn. */
+  tradeVolume: number;
 }
 
 export interface SignificantEvent {
@@ -55,6 +63,8 @@ export interface DetectorState {
   peakAlive: number;
   /** Turn of the last event we emitted, or null if none yet. */
   lastEventTurn: number | null;
+  /** Whether a market has already been announced this run. */
+  marketFormed: boolean;
 }
 
 /** Turns back we compare against when measuring change. */
@@ -69,8 +79,13 @@ const TITLES: Record<EventKind, string> = {
   stratification: "Society stratifies",
   population_crash: "Population crashes",
   population_boom: "Population booms",
+  market_forming: "A market emerges",
+  price_shock: "Prices convulse",
   collapse: "Collapse",
 };
+
+/** Trades per turn before we call it a genuine market rather than barter noise. */
+const MARKET_THRESHOLD = 12;
 
 /**
  * Inspect the latest snapshot against recent history and return a single
@@ -81,7 +96,7 @@ export function detectEvent(
   history: MetricPoint[],
   state: DetectorState,
 ): SignificantEvent | null {
-  const { turn, alive, gini, wealthBins } = snapshot;
+  const { turn, alive, gini, wealthBins, tradePrice, tradeVolume } = snapshot;
   const total = wealthBins.reduce((s, n) => s + n, 0);
   const topWealthShare =
     total > 0 ? wealthBins[wealthBins.length - 1] / total : 0;
@@ -108,6 +123,12 @@ export function detectEvent(
   const alivePct = ref.alive > 0 ? deltaAlive / ref.alive : 0;
   const shared = { deltaAlive, deltaGini, topWealthShare };
 
+  // The first time trade thickens into a real market.
+  if (!state.marketFormed && tradeVolume >= MARKET_THRESHOLD) {
+    state.marketFormed = true;
+    return makeEvent("market_forming", "major", snapshot, shared);
+  }
+
   // Collapse takes priority: the society is all but gone.
   if (state.peakAlive > 20 && alive <= state.peakAlive * 0.18) {
     return makeEvent("collapse", "major", snapshot, shared);
@@ -124,6 +145,19 @@ export function detectEvent(
   // Crossing the 0.5 Gini line is a qualitative threshold of its own.
   if (ref.gini < 0.5 && gini >= 0.5) {
     return makeEvent("stratification", "major", snapshot, shared);
+  }
+
+  // A sharp swing in the exchange rate, once a market is actually running.
+  if (
+    state.marketFormed &&
+    tradeVolume >= MARKET_THRESHOLD / 2 &&
+    ref.tradePrice > 0 &&
+    tradePrice > 0
+  ) {
+    const ratio = tradePrice / ref.tradePrice;
+    if (ratio >= 1.6 || ratio <= 0.625) {
+      return makeEvent("price_shock", "minor", snapshot, shared);
+    }
   }
 
   if (deltaGini <= -0.08) {
@@ -163,6 +197,8 @@ function makeEvent(
     alive: snapshot.alive,
     gini: snapshot.gini,
     totalWealth: snapshot.totalWealth,
+    tradePrice: snapshot.tradePrice,
+    tradeVolume: snapshot.tradeVolume,
     ...partial,
   };
   return {
@@ -183,6 +219,7 @@ function summarize(kind: EventKind, m: EventMetrics): string {
   const dGini = signed(m.deltaGini, 2);
   const dAlive = signed(m.deltaAlive, 0);
   const topPct = Math.round(m.topWealthShare * 100);
+  const price = m.tradePrice.toFixed(2);
 
   switch (kind) {
     case "founding":
@@ -197,6 +234,10 @@ function summarize(kind: EventKind, m: EventMetrics): string {
       return `Between recent turns the living population fell by ${dAlive} to ${alive} at turn ${m.turn}, while the Gini coefficient sits at ${gini}.`;
     case "population_boom":
       return `The living population has grown by ${dAlive} to ${alive} by turn ${m.turn}, with the Gini coefficient at ${gini}.`;
+    case "market_forming":
+      return `By turn ${m.turn} exchange between agents has thickened into a market: ${m.tradeVolume} trades clear this turn at a price of about ${price} units of sugar per unit of spice. ${alive} agents are alive, with a Gini coefficient of ${gini}.`;
+    case "price_shock":
+      return `At turn ${m.turn} the exchange rate has swung sharply to about ${price} units of sugar per unit of spice across ${m.tradeVolume} trades, while ${alive} agents remain alive and the Gini coefficient sits at ${gini}.`;
     case "collapse":
       return `By turn ${m.turn} the society has all but collapsed: only ${alive} agents remain alive, with a Gini coefficient of ${gini}.`;
   }

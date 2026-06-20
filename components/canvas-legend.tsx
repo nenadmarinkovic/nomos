@@ -61,12 +61,23 @@ export function CanvasLegend() {
 
       <div className="flex items-center justify-between gap-3">
         <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-          Resource
+          Sugar
         </span>
         <span
           aria-hidden
-          className="block h-2.5 w-2.5 rounded-full"
-          style={{ background: "rgba(120, 200, 130, 0.8)" }}
+          className="block h-2.5 w-2.5"
+          style={{ background: "rgba(120, 200, 130, 0.85)" }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+          Spice
+        </span>
+        <span
+          aria-hidden
+          className="block h-2.5 w-2.5"
+          style={{ background: "rgba(214, 158, 90, 0.85)" }}
         />
       </div>
     </div>
