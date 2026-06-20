@@ -74,7 +74,7 @@ export function NetworkWindowBody({ engineRef }: NetworkWindowBodyProps) {
     const nodes: NetworkNode[] = sampled.map((a) => ({
       id: a.id,
       motivation: a.motivation,
-      wealth: a.wealth,
+      wealth: a.sugar + a.spice,
     }));
 
     const links: NetworkLink[] = buildLinks(sampled, engine);
