@@ -1,14 +1,27 @@
 "use client";
 
-import { CubeIcon, GlobeIcon, GraphIcon } from "@phosphor-icons/react";
+import { GlobeIcon, GraphIcon } from "@phosphor-icons/react";
 
-import { cn } from "@/lib/utils";
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarTrigger,
+} from "@/components/ui/menubar";
 import { useSimulationStore } from "@/lib/store";
 
+type CanvasView = "field" | "network";
+
+const VIEWS: { key: CanvasView; label: string; Icon: typeof GlobeIcon }[] = [
+  { key: "field", label: "Field", Icon: GlobeIcon },
+  { key: "network", label: "Network", Icon: GraphIcon },
+];
+
 /**
- * Segmented toggle that swaps between the geographic Field view and the
- * topological Network view of the same simulation. Floats over the canvas
- * top-right corner.
+ * Sidebar section that swaps between the geographic Field view and the
+ * force-graph Network view of the same simulation. Hidden until the user has
+ * started a run.
  */
 export function CanvasViewToggle() {
   const started = useSimulationStore((s) => s.started);
@@ -17,55 +30,34 @@ export function CanvasViewToggle() {
 
   if (!started) return null;
 
-  return (
-    <div className="pointer-events-auto absolute right-4 top-4 z-10 flex items-center gap-0.5 rounded-md border border-foreground/10 bg-card/85 p-0.5 shadow-sm backdrop-blur-sm">
-      <Option
-        active={view === "field"}
-        onClick={() => setView("field")}
-        Icon={GlobeIcon}
-        label="Field"
-      />
-      <Option
-        active={view === "network"}
-        onClick={() => setView("network")}
-        Icon={GraphIcon}
-        label="Network"
-      />
-      <Option
-        active={view === "network3d"}
-        onClick={() => setView("network3d")}
-        Icon={CubeIcon}
-        label="3D"
-      />
-    </div>
-  );
-}
+  const current = VIEWS.find((v) => v.key === view) ?? VIEWS[0];
+  const CurrentIcon = current.Icon;
 
-function Option({
-  active,
-  onClick,
-  Icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  Icon: typeof GlobeIcon;
-  label: string;
-}) {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "flex cursor-pointer items-center gap-1.5 rounded-[4px] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] transition-colors",
-        active
-          ? "bg-foreground text-background"
-          : "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
-      )}
-    >
-      <Icon size={11} weight={active ? "fill" : "regular"} />
-      {label}
-    </button>
+    <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        Canvas
+      </span>
+      <Menubar>
+        <MenubarMenu>
+          <MenubarTrigger>
+            <CurrentIcon size={11} weight="bold" />
+            {current.label}
+          </MenubarTrigger>
+          <MenubarContent align="end">
+            {VIEWS.map(({ key, label, Icon }) => (
+              <MenubarItem key={key} onSelect={() => setView(key)}>
+                <Icon
+                  size={12}
+                  weight="bold"
+                  className="text-muted-foreground"
+                />
+                <span className="font-sans text-[12px]">{label}</span>
+              </MenubarItem>
+            ))}
+          </MenubarContent>
+        </MenubarMenu>
+      </Menubar>
+    </div>
   );
 }
