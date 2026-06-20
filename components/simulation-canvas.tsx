@@ -12,8 +12,9 @@ import { useEffect, useRef, useState } from "react";
 import { XIcon } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
-import { activeEngineRef } from "@/lib/active-engine";
-import { Engine } from "@/lib/engine";
+import { activeWorldRef } from "@/lib/active-world";
+import type { FrameMessage, WorkerInbound } from "@/lib/sim-worker-core";
+import { deserializeWorld, type RenderAgent, type WorldView } from "@/lib/world";
 import { useSimulationStore } from "@/lib/store";
 
 interface SimulationCanvasProps {
@@ -25,9 +26,14 @@ const BASE_TICK_MS = 200;
 export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const engineRef = useRef<Engine | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const worldRef = useRef<WorldView | null>(null);
   const rafRef = useRef<number | null>(null);
-  const lastTickRef = useRef<number>(0);
+  /** performance.now() when the most recent frame arrived from the worker. */
+  const frameAtRef = useRef<number>(0);
+  /** Current tick interval (ms), used to interpolate between frames. */
+  const intervalRef = useRef<number>(BASE_TICK_MS);
+  const runningRef = useRef<boolean>(false);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [inspectorPos, setInspectorPos] = useState({ x: 12, y: 12 });
@@ -55,8 +61,27 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const updateSnapshot = useSimulationStore((s) => s.updateSnapshot);
   const setCanvasSize = useSimulationStore((s) => s.setCanvasSize);
   const speedRef = useRef(speed);
+
+  // Draw the latest world to the canvas at a given inter-frame progress (0..1).
+  function paint(progress = 1, selId = selectedIdRef.current) {
+    const canvas = canvasRef.current;
+    const world = worldRef.current;
+    if (!canvas || !world) return;
+    const dpr = window.devicePixelRatio || 1;
+    renderWorld(world, canvas, dpr, { selectedId: selId, progress });
+  }
+
+  useEffect(() => {
+    runningRef.current = running;
+  }, [running]);
+
   useEffect(() => {
     speedRef.current = speed;
+    intervalRef.current = BASE_TICK_MS / speed;
+    workerRef.current?.postMessage({
+      type: "setSpeed",
+      speed,
+    } satisfies WorkerInbound);
   }, [speed]);
 
   useEffect(() => {
@@ -84,55 +109,50 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     const dpr = window.devicePixelRatio || 1;
     canvas.width = size.width * dpr;
     canvas.height = size.height * dpr;
-    if (engineRef.current) {
-      renderEngine(engineRef.current, canvas, dpr, {
-        selectedId: selectedIdRef.current,
-      });
-    }
+    paint(1);
   }, [size]);
 
   function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
-    const engine = engineRef.current;
-    if (!canvas || !engine) return;
+    const world = worldRef.current;
+    if (!canvas || !world) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
-    const cellW = rect.width / engine.width;
-    const cellH = rect.height / engine.height;
+    const cellW = rect.width / world.width;
+    const cellH = rect.height / world.height;
     const gx = Math.floor(px / cellW);
     const gy = Math.floor(py / cellH);
-    if (gx < 0 || gy < 0 || gx >= engine.width || gy >= engine.height) {
+    if (gx < 0 || gy < 0 || gx >= world.width || gy >= world.height) {
       setSelectedId(null);
       return;
     }
-    const id = engine.occupants[gy * engine.width + gx];
+    const id = world.occupants[gy * world.width + gx];
     if (id === -1) {
       setSelectedId(null);
       return;
     }
     setSelectedId(id);
-    const dpr = window.devicePixelRatio || 1;
-    renderEngine(engine, canvas, dpr, { selectedId: id });
+    paint(1, id);
   }
 
   function handleCanvasMove(e: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
-    const engine = engineRef.current;
-    if (!canvas || !engine) return;
+    const world = worldRef.current;
+    if (!canvas || !world) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
-    const cellW = rect.width / engine.width;
-    const cellH = rect.height / engine.height;
+    const cellW = rect.width / world.width;
+    const cellH = rect.height / world.height;
     const gx = Math.floor(px / cellW);
     const gy = Math.floor(py / cellH);
-    if (gx < 0 || gy < 0 || gx >= engine.width || gy >= engine.height) {
+    if (gx < 0 || gy < 0 || gx >= world.width || gy >= world.height) {
       canvas.style.cursor = "default";
       hoveredIdRef.current = null;
       return;
     }
-    const id = engine.occupants[gy * engine.width + gx];
+    const id = world.occupants[gy * world.width + gx];
     if (id === -1) {
       canvas.style.cursor = "default";
       hoveredIdRef.current = null;
@@ -148,47 +168,69 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     hoveredIdRef.current = null;
   }
 
+  // Spawn (and tear down) the simulation worker for the active run. The worker
+  // owns the engine and the tick loop; it posts a frame after every tick.
   useEffect(() => {
     if (!started) {
-      engineRef.current = null;
-      activeEngineRef.current = null;
+      workerRef.current?.terminate();
+      workerRef.current = null;
+      worldRef.current = null;
+      activeWorldRef.current = null;
       clearCanvas(canvasRef.current);
       return;
     }
-    const engine = new Engine(config);
-    engineRef.current = engine;
-    activeEngineRef.current = engine;
-    updateSnapshot(engine.getSnapshot());
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const dpr = window.devicePixelRatio || 1;
-      renderEngine(engine, canvas, dpr, { selectedId: null });
+
+    const worker = new Worker(new URL("../lib/sim.worker.ts", import.meta.url));
+    workerRef.current = worker;
+
+    worker.onmessage = (e: MessageEvent<FrameMessage>) => {
+      const msg = e.data;
+      if (msg.type !== "frame") return;
+      worldRef.current = deserializeWorld(msg.frame);
+      activeWorldRef.current = worldRef.current;
+      frameAtRef.current = performance.now();
+      updateSnapshot(msg.snapshot);
+      if (!runningRef.current) paint(1);
+    };
+
+    worker.postMessage({
+      type: "init",
+      config,
+      speed: speedRef.current,
+    } satisfies WorkerInbound);
+    if (runningRef.current) {
+      worker.postMessage({ type: "resume" } satisfies WorkerInbound);
     }
+
+    return () => {
+      worker.terminate();
+      if (workerRef.current === worker) workerRef.current = null;
+    };
   }, [runId, started, config, updateSnapshot]);
 
+  // Pause/resume the worker's loop as the run toggles.
+  useEffect(() => {
+    const worker = workerRef.current;
+    if (!worker) return;
+    worker.postMessage({
+      type: running ? "resume" : "pause",
+    } satisfies WorkerInbound);
+    if (running) frameAtRef.current = performance.now();
+  }, [running]);
+
+  // While running, drive the canvas at animation-frame rate, interpolating each
+  // agent between its previous and current cell using the time since the last
+  // frame arrived from the worker.
   useEffect(() => {
     if (!running) return;
-    lastTickRef.current = performance.now();
-    const dpr = window.devicePixelRatio || 1;
 
-    function loop(now: number) {
-      const engine = engineRef.current;
-      const canvas = canvasRef.current;
-      if (!engine || !canvas) return;
-      const interval = BASE_TICK_MS / speedRef.current;
-      if (now - lastTickRef.current >= interval) {
-        engine.tick();
-        updateSnapshot(engine.getSnapshot());
-        lastTickRef.current = now;
-      }
+    function loop() {
+      const interval = intervalRef.current;
       const progress = Math.min(
         1,
-        Math.max(0, (now - lastTickRef.current) / interval),
+        Math.max(0, (performance.now() - frameAtRef.current) / interval),
       );
-      renderEngine(engine, canvas, dpr, {
-        selectedId: selectedIdRef.current,
-        progress,
-      });
+      paint(progress);
       rafRef.current = requestAnimationFrame(loop);
     }
 
@@ -197,7 +239,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-  }, [running, updateSnapshot]);
+  }, [running]);
 
   return (
     <div className="relative flex h-full flex-1 flex-col">
@@ -223,7 +265,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
             onDragEnd={handleInspectorDragEnd}
           >
             <InspectorOverlay
-              engineRef={engineRef}
+              worldRef={worldRef}
               selectedId={selectedId}
               position={inspectorPos}
               onClose={() => setSelectedId(null)}
@@ -381,8 +423,8 @@ function drawResource(
 }
 
 
-function renderEngine(
-  engine: Engine,
+function renderWorld(
+  world: WorldView,
   canvas: HTMLCanvasElement,
   dpr: number,
   opts: { selectedId: number | null; progress?: number },
@@ -394,8 +436,8 @@ function renderEngine(
 
   const W = canvas.width;
   const H = canvas.height;
-  const cellW = W / engine.width;
-  const cellH = H / engine.height;
+  const cellW = W / world.width;
+  const cellH = H / world.height;
   const shapeSize = Math.min(cellW, cellH);
 
   ctx.clearRect(0, 0, W, H);
@@ -403,13 +445,13 @@ function renderEngine(
   const dotSize = Math.max(shapeSize * 0.18, 2 * dpr);
   // Sugar (green) and spice (amber) are two separate goods. Where one is dense
   // the other is usually sparse — that gradient is what makes trade pay.
-  drawResource(ctx, engine.cells, engine.maxCells, [120, 200, 130], -1, cellW, cellH, dotSize, engine.width, engine.height);
-  drawResource(ctx, engine.spice, engine.maxSpice, [214, 158, 90], 1, cellW, cellH, dotSize, engine.width, engine.height);
+  drawResource(ctx, world.cells, world.maxCells, [120, 200, 130], -1, cellW, cellH, dotSize, world.width, world.height);
+  drawResource(ctx, world.spice, world.maxSpice, [214, 158, 90], 1, cellW, cellH, dotSize, world.width, world.height);
 
   const agentSize = Math.max(shapeSize * 0.72, 5 * dpr);
   const outlineWidth = Math.max(0.6, 0.7 * dpr);
 
-  for (const a of engine.agents) {
+  for (const a of world.agents) {
     if (!a.alive) continue;
     const ix = a.prevX + (a.x - a.prevX) * ease;
     const iy = a.prevY + (a.y - a.prevY) * ease;
@@ -429,7 +471,7 @@ function renderEngine(
   }
 
   if (opts.selectedId !== null) {
-    const a = engine.agents[opts.selectedId];
+    const a = world.agents[opts.selectedId];
     if (a && a.alive) {
       const ax = a.prevX + (a.x - a.prevX) * ease;
       const ay = a.prevY + (a.y - a.prevY) * ease;
@@ -438,8 +480,8 @@ function renderEngine(
 
       ctx.strokeStyle = "rgba(255,255,255,0.55)";
       ctx.lineWidth = Math.max(0.8, 0.9 * dpr);
-      for (const id of neighborsInVision(engine, a)) {
-        const n = engine.agents[id];
+      for (const id of neighborsInVision(world, a)) {
+        const n = world.agents[id];
         if (!n || !n.alive) continue;
         const nix = n.prevX + (n.x - n.prevX) * ease;
         const niy = n.prevY + (n.y - n.prevY) * ease;
@@ -507,10 +549,10 @@ function drawShape(
   if (withStroke) ctx.strokeRect(cx - half, cy - half, size, size);
 }
 
-function neighborsInVision(engine: Engine, a: Agent): number[] {
+function neighborsInVision(world: WorldView, a: RenderAgent): number[] {
   const out: number[] = [];
-  const W = engine.width;
-  const H = engine.height;
+  const W = world.width;
+  const H = world.height;
   const v = a.vision;
   for (let dy = -v; dy <= v; dy++) {
     const ny = a.y + dy;
@@ -519,7 +561,7 @@ function neighborsInVision(engine: Engine, a: Agent): number[] {
       if (dx === 0 && dy === 0) continue;
       const nx = a.x + dx;
       if (nx < 0 || nx >= W) continue;
-      const occ = engine.occupants[ny * W + nx];
+      const occ = world.occupants[ny * W + nx];
       if (occ !== -1 && occ !== a.id) out.push(occ);
     }
   }
@@ -537,8 +579,6 @@ function applyAlpha(color: string, alpha: number): string {
   return color;
 }
 
-type Agent = Engine["agents"][number];
-
 interface AgentSnapshot {
   id: number;
   alive: boolean;
@@ -555,12 +595,12 @@ interface AgentSnapshot {
 }
 
 function InspectorOverlay({
-  engineRef,
+  worldRef,
   selectedId,
   position,
   onClose,
 }: {
-  engineRef: React.RefObject<Engine | null>;
+  worldRef: React.RefObject<WorldView | null>;
   selectedId: number;
   position: { x: number; y: number };
   onClose: () => void;
@@ -571,12 +611,12 @@ function InspectorOverlay({
   const [snap, setSnap] = useState<AgentSnapshot | null>(null);
 
   useEffect(() => {
-    const engine = engineRef.current;
-    if (!engine) {
+    const world = worldRef.current;
+    if (!world) {
       setSnap(null);
       return;
     }
-    const a = engine.agents[selectedId];
+    const a = world.agents[selectedId];
     if (!a) {
       setSnap(null);
       return;
@@ -595,7 +635,7 @@ function InspectorOverlay({
       spiceMetab: a.spiceMetab,
       motivation: a.motivation,
     });
-  }, [turn, selectedId, engineRef]);
+  }, [turn, selectedId, worldRef]);
 
   if (!snap) return null;
 
