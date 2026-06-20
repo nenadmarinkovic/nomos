@@ -44,6 +44,9 @@ const aliveConfig: ChartConfig = {
 const histogramConfig: ChartConfig = {
   count: { label: "Agents", color: "#FFD23F" },
 };
+const priceConfig: ChartConfig = {
+  tradePrice: { label: "Price", color: "#D69E5A" },
+};
 
 export function FloatingWindows() {
   const started = useSimulationStore((s) => s.started);
@@ -70,6 +73,7 @@ export function FloatingWindows() {
         <GiniWindow />
         <AliveWindow />
         <WealthWindow />
+        <PriceWindow />
         <NarratorWindow />
         <NetworkWindow />
       </div>
@@ -291,6 +295,66 @@ function WealthWindow() {
       </ChartContainer>
       <p className="mt-2 font-sans text-[11px] text-muted-foreground">
         Distribution by tier
+      </p>
+    </FloatingWindow>
+  );
+}
+
+function PriceWindow() {
+  const history = useSimulationStore((s) => s.history);
+  const snapshot = useSimulationStore((s) => s.snapshot);
+
+  // Gaps (turns with no trade) become nulls so the line connects across them
+  // instead of plunging to zero.
+  const data = useMemo(
+    () =>
+      history.map((p) => ({
+        turn: p.turn,
+        tradePrice: p.tradePrice > 0 ? p.tradePrice : null,
+      })),
+    [history],
+  );
+
+  const meta =
+    snapshot.tradePrice > 0
+      ? `${snapshot.tradePrice.toFixed(2)} · ${snapshot.tradeVolume}↔`
+      : "no trade";
+
+  return (
+    <FloatingWindow windowKey="price" title="Price" meta={meta}>
+      <ChartContainer config={priceConfig} className="aspect-auto h-24 w-full">
+        <LineChart
+          data={data}
+          margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+        >
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="turn" hide />
+          <YAxis hide domain={["auto", "auto"]} />
+          <ChartTooltip
+            cursor={false}
+            content={
+              <ChartTooltipContent
+                indicator="line"
+                labelFormatter={(_v, payload) => {
+                  const p = payload?.[0]?.payload as { turn?: number } | undefined;
+                  return `Turn ${p?.turn ?? 0}`;
+                }}
+              />
+            }
+          />
+          <Line
+            type="monotone"
+            dataKey="tradePrice"
+            stroke="var(--color-tradePrice)"
+            strokeWidth={1.5}
+            dot={false}
+            connectNulls
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ChartContainer>
+      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+        Sugar per spice, found by trade
       </p>
     </FloatingWindow>
   );
