@@ -92,8 +92,8 @@ interface SimulationState {
   updateSnapshot: (snapshot: EngineSnapshot) => void;
   setCanvasSize: (s: { width: number; height: number }) => void;
   toggleView: (key: ViewKey) => void;
+  setAllViews: (visible: boolean) => void;
   moveWindow: (key: ViewKey, position: WindowPosition) => void;
-  resetWindows: () => void;
   alignWindows: (corner: "tl" | "tr" | "bl" | "br") => void;
   openNarrations: (event: SignificantEvent, observers: ObserverKey[]) => void;
   resolveNarration: (key: string, text: string) => void;
@@ -161,12 +161,18 @@ export const useSimulationStore = create<SimulationState>()(
       setCanvasSize: (canvasSize) => set({ canvasSize }),
       toggleView: (key) =>
         set((s) => ({ views: { ...s.views, [key]: !s.views[key] } })),
+      setAllViews: (visible) =>
+        set((s) => {
+          const next: Record<ViewKey, boolean> = { ...s.views };
+          (Object.keys(next) as ViewKey[]).forEach((k) => {
+            next[k] = visible;
+          });
+          return { views: next };
+        }),
       moveWindow: (key, position) =>
         set((s) => ({
           windowPositions: { ...s.windowPositions, [key]: position },
         })),
-      resetWindows: () =>
-        set({ windowPositions: DEFAULT_WINDOW_POSITIONS }),
       alignWindows: (corner) =>
         set((s) => {
           const order: ViewKey[] = [

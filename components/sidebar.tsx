@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   ArrowRightIcon,
   CaretLeftIcon,
@@ -8,7 +10,6 @@ import {
   EyeIcon,
   GlobeIcon,
   PulseIcon,
-  ScrollIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react";
 
@@ -22,38 +23,38 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-type SectionKey = "world" | "agents" | "observers" | "metrics" | "log";
+export type SectionKey = "world" | "agents" | "metrics" | "narrator";
 
 interface SidebarProps {
-  active: SectionKey;
-  onSelect: (key: SectionKey) => void;
   collapsed: boolean;
   onToggle?: () => void;
 }
 
 type SectionDef = {
   key: SectionKey;
+  href: string;
   label: string;
   icon: typeof GlobeIcon;
 };
 
-const SETUP: SectionDef[] = [
-  { key: "world", label: "World", icon: GlobeIcon },
-  { key: "agents", label: "Agents", icon: UsersThreeIcon },
-  { key: "observers", label: "Observers", icon: EyeIcon },
+const SECTIONS: SectionDef[] = [
+  { key: "world", href: "/", label: "World", icon: GlobeIcon },
+  { key: "agents", href: "/agents", label: "Agents", icon: UsersThreeIcon },
+  { key: "metrics", href: "/metrics", label: "Metrics", icon: PulseIcon },
+  { key: "narrator", href: "/narrator", label: "Narrator", icon: EyeIcon },
 ];
 
-const RUN: SectionDef[] = [
-  { key: "metrics", label: "Metrics", icon: PulseIcon },
-  { key: "log", label: "Chronicle", icon: ScrollIcon },
-];
+export function sectionFromPath(pathname: string): SectionKey {
+  if (pathname.startsWith("/agents")) return "agents";
+  if (pathname.startsWith("/metrics")) return "metrics";
+  if (pathname.startsWith("/narrator")) return "narrator";
+  return "world";
+}
 
-export function Sidebar({
-  active,
-  onSelect,
-  collapsed,
-  onToggle,
-}: SidebarProps) {
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const pathname = usePathname() ?? "/";
+  const active = sectionFromPath(pathname);
+
   return (
     <aside
       className={cn(
@@ -64,31 +65,24 @@ export function Sidebar({
       <ScrollArea className="flex-1">
         <div
           className={cn(
-            "space-y-5 pb-3 pt-4",
+            "pb-3 pt-4",
             collapsed ? "px-1.5" : "px-2",
           )}
         >
           <NavGroup
-            label="Setup"
-            sections={SETUP}
+            sections={SECTIONS}
             active={active}
-            onSelect={onSelect}
-            collapsed={collapsed}
-          />
-          <NavGroup
-            label="Run"
-            sections={RUN}
-            active={active}
-            onSelect={onSelect}
             collapsed={collapsed}
           />
         </div>
       </ScrollArea>
 
       {!collapsed && (
-        <div className="flex shrink-0 flex-col border-t border-foreground/10">
-          <ViewsToggle />
-          <div className="border-t border-foreground/10">
+        <div className="flex shrink-0 flex-col empty:hidden">
+          <div className="border-t border-foreground/10 empty:hidden">
+            <ViewsToggle />
+          </div>
+          <div className="border-t border-foreground/10 empty:hidden">
             <CanvasLegend />
           </div>
         </div>
@@ -122,87 +116,73 @@ export function Sidebar({
 }
 
 function NavGroup({
-  label,
   sections,
   active,
-  onSelect,
   collapsed,
 }: {
-  label: string;
   sections: SectionDef[];
   active: SectionKey;
-  onSelect: (k: SectionKey) => void;
   collapsed: boolean;
 }) {
   return (
-    <div>
-      {!collapsed && (
-        <div className="px-2.5 pb-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
-          {label}
-        </div>
-      )}
-      <nav className="flex flex-col gap-px">
-        {sections.map(({ key, label: itemLabel, icon: Icon }) => {
-          const isActive = active === key;
-          const button = (
-            <button
-              type="button"
-              onClick={() => onSelect(key)}
-              aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "group relative flex cursor-pointer items-center rounded-md text-left text-[13px] transition-colors",
-                isActive
-                  ? "bg-foreground/[0.06] text-foreground"
-                  : "text-foreground/65 hover:bg-foreground/[0.03] hover:text-foreground",
-                collapsed
-                  ? "h-10 justify-center"
-                  : "justify-between gap-2.5 px-2.5 py-2",
-              )}
-            >
-              <div className="flex items-center gap-2.5">
-                <Icon
-                  size={18}
-                  weight="regular"
-                  className={cn(
-                    "shrink-0 transition-colors",
-                    isActive ? "text-foreground" : "text-foreground/40",
-                  )}
-                />
-                {!collapsed && (
-                  <span className="leading-tight">{itemLabel}</span>
+    <nav className="flex flex-col gap-px">
+      {sections.map(({ key, href, label: itemLabel, icon: Icon }) => {
+        const isActive = active === key;
+        const link = (
+          <Link
+            href={href}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "group relative flex cursor-pointer items-center rounded-md text-left text-[13px] transition-colors",
+              isActive
+                ? "bg-foreground/[0.06] text-foreground"
+                : "text-foreground/65 hover:bg-foreground/[0.03] hover:text-foreground",
+              collapsed
+                ? "h-10 justify-center"
+                : "justify-between gap-2.5 px-2.5 py-2",
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <Icon
+                size={18}
+                weight="regular"
+                className={cn(
+                  "shrink-0 transition-colors",
+                  isActive ? "text-foreground" : "text-foreground/40",
                 )}
-              </div>
+              />
               {!collapsed && (
-                <ArrowRightIcon
-                  size={11}
-                  weight="bold"
-                  className={cn(
-                    "shrink-0 transition-all duration-200",
-                    isActive
-                      ? "opacity-100"
-                      : "-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100",
-                  )}
-                />
+                <span className="leading-tight">{itemLabel}</span>
               )}
-            </button>
+            </div>
+            {!collapsed && (
+              <ArrowRightIcon
+                size={11}
+                weight="bold"
+                className={cn(
+                  "shrink-0 transition-all duration-200",
+                  isActive
+                    ? "opacity-100"
+                    : "-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100",
+                )}
+              />
+            )}
+          </Link>
+        );
+
+        if (collapsed) {
+          return (
+            <Tooltip key={key}>
+              <TooltipTrigger render={link} />
+              <TooltipContent side="right" sideOffset={8}>
+                {itemLabel}
+              </TooltipContent>
+            </Tooltip>
           );
+        }
 
-          if (collapsed) {
-            return (
-              <Tooltip key={key}>
-                <TooltipTrigger render={button} />
-                <TooltipContent side="right" sideOffset={8}>
-                  {itemLabel}
-                </TooltipContent>
-              </Tooltip>
-            );
-          }
-
-          return <React.Fragment key={key}>{button}</React.Fragment>;
-        })}
-      </nav>
-    </div>
+        return <React.Fragment key={key}>{link}</React.Fragment>;
+      })}
+    </nav>
   );
 }
-
-export type { SectionKey };

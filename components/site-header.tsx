@@ -51,11 +51,10 @@ interface SiteHeaderProps {
 }
 
 const SECTION_LABELS: Record<SectionKey, { group: string; label: string }> = {
-  world: { group: "Setup", label: "World" },
-  agents: { group: "Setup", label: "Agents" },
-  observers: { group: "Setup", label: "Observers" },
+  world: { group: "Run", label: "World" },
+  agents: { group: "Run", label: "Agents" },
   metrics: { group: "Run", label: "Metrics" },
-  log: { group: "Run", label: "Chronicle" },
+  narrator: { group: "Run", label: "Narrator" },
 };
 
 export function SiteHeader({
