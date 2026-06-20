@@ -1,15 +1,14 @@
 import { cookies } from "next/headers";
 
 import { AppShell } from "@/components/app-shell";
-import { FieldPage } from "@/components/pages/field-page";
 
-export default async function Home() {
+export default async function SimLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const store = await cookies();
   const defaultCollapsed = store.get("sidebar-collapsed")?.value === "true";
 
-  return (
-    <AppShell defaultCollapsed={defaultCollapsed}>
-      <FieldPage />
-    </AppShell>
-  );
+  return <AppShell defaultCollapsed={defaultCollapsed}>{children}</AppShell>;
 }

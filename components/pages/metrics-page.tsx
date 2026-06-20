@@ -1,69 +1,48 @@
 "use client";
 
-import { useMemo } from "react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useCallback } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import { activeWorldRef } from "@/lib/active-world";
+import { SnapshotBadge } from "@/components/snapshot-badge";
 import { SCALE_INFO } from "@/lib/config";
-import { WEALTH_BIN_LABELS } from "@/lib/engine";
 import { useSimulationStore } from "@/lib/store";
-
-const giniConfig: ChartConfig = {
-  gini: { label: "Gini", color: "#E63946" },
-};
-const aliveConfig: ChartConfig = {
-  alive: { label: "Alive", color: "#2E5C9E" },
-};
-const priceConfig: ChartConfig = {
-  tradePrice: { label: "Price", color: "#D69E5A" },
-};
-const wealthConfig: ChartConfig = {
-  count: { label: "Agents", color: "#FFD23F" },
-};
+import {
+  useStoreSnapshot,
+  useWorldSnapshot,
+} from "@/lib/use-world-snapshot";
+import type { WorldView } from "@/lib/world";
 
 export function MetricsPage() {
   const started = useSimulationStore((s) => s.started);
-  const turn = useSimulationStore((s) => s.turn);
-  const snapshot = useSimulationStore((s) => s.snapshot);
-  const history = useSimulationStore((s) => s.history);
   const config = useSimulationStore((s) => s.config);
+  const liveSnapshot = useSimulationStore((s) => s.snapshot);
 
-  const advanced = useMemo(() => {
-    void turn;
-    if (!started) return null;
-    const world = activeWorldRef.current;
-    if (!world) return null;
-    return computeAdvanced(world.agents);
-  }, [turn, started]);
+  const sample = useWorldSnapshot(
+    useCallback((world: WorldView) => computeAdvanced(world.agents), []),
+  );
+  const advanced = sample.data;
+
+  // Bind the summary numbers to the sample cadence so the page is fully
+  // frozen between explicit refreshes.
+  const snapshot = useStoreSnapshot(liveSnapshot, sample.turn);
 
   return (
     <ScrollArea className="flex-1">
       <div className="mx-auto w-full max-w-5xl px-6 py-8">
-        <Header />
+        <Header
+          badge={
+            <SnapshotBadge
+              turn={sample.turn}
+              stale={sample.stale}
+              onRefresh={sample.refresh}
+            />
+          }
+        />
 
         {!started ? (
           <EmptyState />
         ) : (
           <div className="mt-8 space-y-10">
-            {/* Summary cards */}
             <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <Summary
                 label="Turn"
@@ -91,222 +70,11 @@ export function MetricsPage() {
               />
             </section>
 
-            {/* Time series grid */}
-            <section className="space-y-3">
-              <SectionTitle
-                title="Time series"
-                hint="Every tick recorded since this run began."
-              />
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <BigChart
-                  title="Gini coefficient"
-                  meta={snapshot.gini.toFixed(3)}
-                  hint="0 = perfect equality · 1 = total concentration"
-                >
-                  <ChartContainer
-                    config={giniConfig}
-                    className="aspect-auto h-48 w-full"
-                  >
-                    <AreaChart data={history}>
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="turn"
-                        tickLine={false}
-                        axisLine={false}
-                        fontSize={9}
-                        tickMargin={4}
-                      />
-                      <YAxis
-                        domain={[0, 1]}
-                        tickLine={false}
-                        axisLine={false}
-                        fontSize={9}
-                        width={24}
-                      />
-                      <ChartTooltip
-                        cursor={false}
-                        content={
-                          <ChartTooltipContent
-                            indicator="line"
-                            labelFormatter={(_v, payload) => {
-                              const p = payload?.[0]?.payload as
-                                | { turn?: number }
-                                | undefined;
-                              return `Turn ${p?.turn ?? 0}`;
-                            }}
-                          />
-                        }
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="gini"
-                        stroke="var(--color-gini)"
-                        fill="var(--color-gini)"
-                        fillOpacity={0.18}
-                        strokeWidth={1.5}
-                        isAnimationActive={false}
-                      />
-                    </AreaChart>
-                  </ChartContainer>
-                </BigChart>
-
-                <BigChart
-                  title="Population"
-                  meta={snapshot.alive.toLocaleString()}
-                  hint="alive agents over time"
-                >
-                  <ChartContainer
-                    config={aliveConfig}
-                    className="aspect-auto h-48 w-full"
-                  >
-                    <LineChart data={history}>
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="turn"
-                        tickLine={false}
-                        axisLine={false}
-                        fontSize={9}
-                        tickMargin={4}
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        fontSize={9}
-                        width={32}
-                      />
-                      <ChartTooltip
-                        cursor={false}
-                        content={
-                          <ChartTooltipContent
-                            indicator="line"
-                            labelFormatter={(_v, payload) => {
-                              const p = payload?.[0]?.payload as
-                                | { turn?: number }
-                                | undefined;
-                              return `Turn ${p?.turn ?? 0}`;
-                            }}
-                          />
-                        }
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="alive"
-                        stroke="var(--color-alive)"
-                        strokeWidth={1.5}
-                        dot={false}
-                        isAnimationActive={false}
-                      />
-                    </LineChart>
-                  </ChartContainer>
-                </BigChart>
-
-                <BigChart
-                  title="Trade price"
-                  meta={
-                    snapshot.tradePrice > 0
-                      ? snapshot.tradePrice.toFixed(3)
-                      : "—"
-                  }
-                  hint="geometric mean of trades each turn"
-                >
-                  <ChartContainer
-                    config={priceConfig}
-                    className="aspect-auto h-48 w-full"
-                  >
-                    <LineChart data={history}>
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="turn"
-                        tickLine={false}
-                        axisLine={false}
-                        fontSize={9}
-                        tickMargin={4}
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        fontSize={9}
-                        width={32}
-                      />
-                      <ChartTooltip
-                        cursor={false}
-                        content={
-                          <ChartTooltipContent
-                            indicator="line"
-                            labelFormatter={(_v, payload) => {
-                              const p = payload?.[0]?.payload as
-                                | { turn?: number }
-                                | undefined;
-                              return `Turn ${p?.turn ?? 0}`;
-                            }}
-                          />
-                        }
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="tradePrice"
-                        stroke="var(--color-tradePrice)"
-                        strokeWidth={1.5}
-                        dot={false}
-                        isAnimationActive={false}
-                      />
-                    </LineChart>
-                  </ChartContainer>
-                </BigChart>
-
-                <BigChart
-                  title="Wealth tiers"
-                  meta={`${snapshot.alive.toLocaleString()} alive`}
-                  hint="current distribution by wealth band"
-                >
-                  <ChartContainer
-                    config={wealthConfig}
-                    className="aspect-auto h-48 w-full"
-                  >
-                    <BarChart
-                      data={snapshot.wealthBins.map((count, i) => ({
-                        tier: WEALTH_BIN_LABELS[i] ?? "",
-                        count,
-                      }))}
-                    >
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="tier"
-                        tickLine={false}
-                        axisLine={false}
-                        fontSize={9}
-                        tickMargin={4}
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        fontSize={9}
-                        width={32}
-                      />
-                      <Tooltip
-                        cursor={{ fill: "rgba(120,120,120,0.06)" }}
-                        content={
-                          <ChartTooltipContent indicator="dot" hideLabel />
-                        }
-                      />
-                      <Bar
-                        dataKey="count"
-                        fill="var(--color-count)"
-                        radius={[2, 2, 0, 0]}
-                        isAnimationActive={false}
-                      />
-                    </BarChart>
-                  </ChartContainer>
-                </BigChart>
-              </div>
-            </section>
-
-            {/* Derived numbers */}
             {advanced && (
               <section className="space-y-3">
                 <SectionTitle
                   title="Derived"
-                  hint="Numbers the windows compress away — the shape underneath."
+                  hint="Numbers the windows compress away."
                 />
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   <Summary
@@ -314,18 +82,16 @@ export function MetricsPage() {
                     value={`${advanced.meanAge.toFixed(1)}t`}
                   />
                   <Summary
-                    label="Oldest agent"
+                    label="Oldest"
                     value={`${advanced.maxAge}t`}
                   />
                   <Summary
                     label="Youth share"
                     value={`${(advanced.youthShare * 100).toFixed(0)}%`}
-                    hint="first quarter of lifespan"
                   />
                   <Summary
                     label="Spice-rich"
                     value={`${(advanced.spiceRichShare * 100).toFixed(0)}%`}
-                    hint="holds more spice than sugar"
                   />
                   <Summary
                     label="Top 10% holds"
@@ -353,18 +119,22 @@ export function MetricsPage() {
   );
 }
 
-function Header() {
+function Header({ badge }: { badge?: React.ReactNode }) {
   return (
-    <header className="space-y-2">
-      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-        Metrics · Signals
-      </p>
+    <header className="space-y-3">
+      <div className="flex items-start justify-between gap-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+          Metrics · Signals
+        </p>
+        {badge}
+      </div>
       <h1 className="font-serif text-3xl leading-tight tracking-tight text-foreground">
         What the numbers say.
       </h1>
       <p className="font-serif text-[15px] leading-relaxed text-foreground/70">
-        Time series of the headline measures, plus the shape underneath: who
-        holds what, how old they are, how the market is moving.
+        Time series of the headline measures, plus the shape underneath — who
+        holds what, how old they are, how the market is moving. Snapshotted on
+        arrival; press Refresh to take a fresh sample.
       </p>
     </header>
   );
@@ -389,39 +159,6 @@ function Summary({
       </div>
       {hint && (
         <div className="mt-0.5 font-sans text-[11px] text-muted-foreground">
-          {hint}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BigChart({
-  title,
-  meta,
-  hint,
-  children,
-}: {
-  title: string;
-  meta?: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-4">
-      <div className="mb-2 flex items-baseline justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          {title}
-        </span>
-        {meta && (
-          <span className="font-mono text-[12px] tabular-nums text-foreground">
-            {meta}
-          </span>
-        )}
-      </div>
-      {children}
-      {hint && (
-        <div className="mt-2 font-sans text-[11px] text-muted-foreground">
           {hint}
         </div>
       )}
