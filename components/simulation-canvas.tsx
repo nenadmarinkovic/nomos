@@ -349,6 +349,37 @@ const MOTIVATION_COLOR: Record<string, string> = {
   power: "#111111",
 };
 
+/** Paint one resource field as small dots, nudged so the two goods don't
+ * sit exactly on top of each other where they overlap. */
+function drawResource(
+  ctx: CanvasRenderingContext2D,
+  field: Float32Array,
+  maxField: Float32Array,
+  rgb: [number, number, number],
+  nudge: number,
+  cellW: number,
+  cellH: number,
+  dotSize: number,
+  width: number,
+  height: number,
+) {
+  const off = nudge * dotSize * 0.45;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      const v = field[idx];
+      const max = maxField[idx];
+      if (max <= 0 || v < max * 0.5) continue;
+      const intensity = Math.min(1, v / 4);
+      const alpha = 0.18 + intensity * 0.35;
+      ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+      const dx = x * cellW + cellW / 2 - dotSize / 2 + off;
+      const dy = y * cellH + cellH / 2 - dotSize / 2 + off;
+      ctx.fillRect(dx, dy, dotSize, dotSize);
+    }
+  }
+}
+
 
 function renderEngine(
   engine: Engine,
@@ -370,20 +401,10 @@ function renderEngine(
   ctx.clearRect(0, 0, W, H);
 
   const dotSize = Math.max(shapeSize * 0.18, 2 * dpr);
-  for (let y = 0; y < engine.height; y++) {
-    for (let x = 0; x < engine.width; x++) {
-      const idx = y * engine.width + x;
-      const v = engine.cells[idx];
-      const max = engine.maxCells[idx];
-      if (max <= 0 || v < max * 0.5) continue;
-      const intensity = Math.min(1, v / 4);
-      const alpha = 0.18 + intensity * 0.35;
-      ctx.fillStyle = `rgba(120, 200, 130, ${alpha})`;
-      const dx = x * cellW + cellW / 2 - dotSize / 2;
-      const dy = y * cellH + cellH / 2 - dotSize / 2;
-      ctx.fillRect(dx, dy, dotSize, dotSize);
-    }
-  }
+  // Sugar (green) and spice (amber) are two separate goods. Where one is dense
+  // the other is usually sparse — that gradient is what makes trade pay.
+  drawResource(ctx, engine.cells, engine.maxCells, [120, 200, 130], -1, cellW, cellH, dotSize, engine.width, engine.height);
+  drawResource(ctx, engine.spice, engine.maxSpice, [214, 158, 90], 1, cellW, cellH, dotSize, engine.width, engine.height);
 
   const agentSize = Math.max(shapeSize * 0.72, 5 * dpr);
   const outlineWidth = Math.max(0.6, 0.7 * dpr);
@@ -395,8 +416,8 @@ function renderEngine(
     const cx = ix * cellW + cellW / 2;
     const cy = iy * cellH + cellH / 2;
     const color = MOTIVATION_COLOR[a.motivation] ?? "#E63946";
-    const wealthDim =
-      a.wealth > 30 ? 1 : a.wealth > 12 ? 0.88 : a.wealth > 4 ? 0.7 : 0.5;
+    const w = a.sugar + a.spice;
+    const wealthDim = w > 30 ? 1 : w > 12 ? 0.88 : w > 4 ? 0.7 : 0.5;
     const isPower = a.motivation === "power";
 
     ctx.fillStyle = applyAlpha(color, wealthDim);
@@ -523,12 +544,13 @@ interface AgentSnapshot {
   alive: boolean;
   x: number;
   y: number;
-  wealth: number;
+  sugar: number;
+  spice: number;
   age: number;
   maxAge: number;
   vision: number;
-  metabolism: number;
-  initialEndowment: number;
+  sugarMetab: number;
+  spiceMetab: number;
   motivation: string;
 }
 
@@ -564,12 +586,13 @@ function InspectorOverlay({
       alive: a.alive,
       x: a.x,
       y: a.y,
-      wealth: a.wealth,
+      sugar: a.sugar,
+      spice: a.spice,
       age: a.age,
       maxAge: a.maxAge,
       vision: a.vision,
-      metabolism: a.metabolism,
-      initialEndowment: a.initialEndowment,
+      sugarMetab: a.sugarMetab,
+      spiceMetab: a.spiceMetab,
       motivation: a.motivation,
     });
   }, [turn, selectedId, engineRef]);
@@ -618,7 +641,12 @@ function InspectorOverlay({
       ) : (
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
           <InspectorRow label="Motivation" value={snap.motivation} />
-          <InspectorRow label="Wealth" value={snap.wealth.toFixed(1)} />
+          <InspectorRow
+            label="Wealth"
+            value={(snap.sugar + snap.spice).toFixed(1)}
+          />
+          <InspectorRow label="Sugar" value={snap.sugar.toFixed(1)} />
+          <InspectorRow label="Spice" value={snap.spice.toFixed(1)} />
           <InspectorRow label="Position" value={`${snap.x}, ${snap.y}`} />
           <InspectorRow
             label="Age"
@@ -627,11 +655,7 @@ function InspectorOverlay({
           <InspectorRow label="Vision" value={snap.vision.toString()} />
           <InspectorRow
             label="Metabolism"
-            value={snap.metabolism.toFixed(2)}
-          />
-          <InspectorRow
-            label="Endowment"
-            value={snap.initialEndowment.toFixed(1)}
+            value={`${snap.sugarMetab.toFixed(1)} / ${snap.spiceMetab.toFixed(1)}`}
           />
         </dl>
       )}

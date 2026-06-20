@@ -18,12 +18,15 @@ const EMPTY_SNAPSHOT: EngineSnapshot = {
   gini: 0,
   totalWealth: 0,
   wealthBins: [0, 0, 0, 0, 0, 0],
+  tradePrice: 0,
+  tradeVolume: 0,
 };
 
 export interface HistoryPoint {
   turn: number;
   alive: number;
   gini: number;
+  tradePrice: number;
 }
 
 const HISTORY_LIMIT = 240;
@@ -33,6 +36,7 @@ export type ViewKey =
   | "gini"
   | "alive"
   | "wealth"
+  | "price"
   | "narrator"
   | "network";
 
@@ -45,6 +49,7 @@ export const DEFAULT_WINDOW_POSITIONS: Record<ViewKey, WindowPosition> = {
   gini: { x: 20, y: 20 },
   alive: { x: 20, y: 230 },
   wealth: { x: 20, y: 440 },
+  price: { x: 20, y: 650 },
   narrator: { x: 320, y: 20 },
   network: { x: 320, y: 280 },
 };
@@ -110,6 +115,7 @@ export const useSimulationStore = create<SimulationState>()(
         gini: true,
         alive: true,
         wealth: true,
+        price: true,
         narrator: true,
         network: false,
       },
@@ -153,6 +159,7 @@ export const useSimulationStore = create<SimulationState>()(
             "gini",
             "alive",
             "wealth",
+            "price",
             "narrator",
             "network",
           ];
@@ -170,6 +177,7 @@ export const useSimulationStore = create<SimulationState>()(
             gini: 200,
             alive: 200,
             wealth: 200,
+            price: 200,
             narrator: 280,
             network: 380,
           };
@@ -233,6 +241,7 @@ export const useSimulationStore = create<SimulationState>()(
             turn: snapshot.turn,
             alive: snapshot.alive,
             gini: snapshot.gini,
+            tradePrice: snapshot.tradePrice,
           });
           return { snapshot, turn: snapshot.turn, history: next };
         }),
@@ -274,7 +283,7 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 9,
+      version: 10,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         config: s.config,
@@ -287,6 +296,7 @@ export const useSimulationStore = create<SimulationState>()(
           gini: true,
           alive: true,
           wealth: true,
+          price: true,
           narrator: true,
           network: false,
         },
