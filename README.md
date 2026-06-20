@@ -2,12 +2,12 @@
 
 A society simulation where agents follow simple rules and AI theorists observe what emerges.
 
-> **Status:** In development
+> **Status:** v0.1.0 — the simulation core and observers are working. See the [roadmap](#roadmap).
 
 ## Architecture
 
 1. **Initial conditions** — population, resource landscape, starting equality, reproduction. Kept as minimal as defensible (Epstein's Rawlsian commitment).
-2. **Agent model** — one or two simple rules for movement, exchange, harvest, metabolism, adaptation.
+2. **Agent model** — simple rules for movement, exchange, harvest, and metabolism. Each agent carries a _motivation_ (material, symbolic, normative, power) and a _sophistication_ (minimal, bounded-rational, adaptive, social) drawn from the mix set on the setup screen. Sophistication decides how an agent chooses where to move: minimal optimises greedily, bounded satisfices over a short horizon, adaptive learns how far to range from whether ranging pays off, and social follows and imitates its wealthiest neighbour.
 3. **Simulation engine** — agents follow rules, society emerges. Trade, law, states, politics, conflict aren't programmed — they emerge or don't.
 4. **Observers** — AI theorists (Bourdieu, Durkheim, Marx, Luhmann, Ibn Khaldun, Turchin, Schelling, Epstein, Flack) watch the same field and describe what they see in their own vocabulary.
 
@@ -43,6 +43,23 @@ A society simulation where agents follow simple rules and AI theorists observe w
 
 - Hetzner VPS (Falkenstein) running Dokploy for deploy + reverse proxy
 - [Better Auth](https://www.better-auth.com) for auth (when user accounts are added)
+
+## Roadmap
+
+- **v0.1.0 — Simulation core + observers** _(current)_
+  - Epstein-minimal agents on a two-good (sugar/spice) landscape: move, harvest, trade, metabolise, reproduce.
+  - Emergent market: a price and trade volume that arise from local exchange, not from any global rule.
+  - Four agent motivations and four sophistications, mixed per the setup screen and acted on by the engine.
+  - AI observers (Mistral) that read significant events through each theorist's lens into the Chronicle.
+  - Guided setup, floating metric windows (Gini, population, wealth, price), and a force-directed network graph.
+- **v0.2 — Persistence**
+  - Save, list, and replay runs (Prisma + SQLite). Shareable run URLs.
+- **v0.3 — Scale & performance**
+  - Move the tick loop into a Web Worker; render the agent field with PixiJS (WebGL), targeting 100k agents at 60fps.
+- **v0.4 — Accounts & sharing**
+  - Better Auth, Postgres, and a public gallery of saved runs.
+- **Later**
+  - Territory contours, a Luhmann-style subsystem graph, and additional agent models beyond `epstein_minimal`.
 
 ## Develop
 
