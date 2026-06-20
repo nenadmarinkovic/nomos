@@ -52,8 +52,9 @@ A society simulation where agents follow simple rules and AI theorists observe w
   - Four agent motivations and four sophistications, mixed per the setup screen and acted on by the engine.
   - AI observers (Mistral) that read significant events through each theorist's lens into the Chronicle.
   - Guided setup, floating metric windows (Gini, population, wealth, price), and a force-directed network graph.
-- **v0.2 — Persistence**
-  - Save, list, and replay runs (Prisma + SQLite). Shareable run URLs.
+- **v0.2 — Persistence** _(in progress)_
+  - Save, list, and replay runs (Prisma + SQLite). ✓ — runs are deterministic from their config and seed, so a replay re-executes identically; the saved metric history and observer Chronicle are kept alongside.
+  - Shareable run URLs. _(next)_
 - **v0.3 — Scale & performance**
   - Move the tick loop into a Web Worker; render the agent field with PixiJS (WebGL), targeting 100k agents at 60fps.
 - **v0.4 — Accounts & sharing**
@@ -64,10 +65,13 @@ A society simulation where agents follow simple rules and AI theorists observe w
 ## Develop
 
 ```bash
-npm install
-cp .env.example .env.local   # add your MISTRAL_API_KEY to enable observers
+npm install                  # also runs `prisma generate`
+cp .env.example .env         # DATABASE_URL is preset; add MISTRAL_API_KEY for observers
+npm run db:push              # create the local SQLite database (prisma/dev.db)
 npm run dev
 ```
+
+`.env` (not `.env.local`) is used so the Prisma CLI and Next.js read the same file.
 
 Open [http://localhost:3000](http://localhost:3000).
 
@@ -80,8 +84,10 @@ rm -rf .next && npm run dev
 ## Scripts
 
 ```bash
-npm run dev      # development server
-npm run build    # production build
-npm run start    # serve production build
-npm run lint     # eslint
+npm run dev       # development server
+npm run build     # production build
+npm run start     # serve production build
+npm run lint      # eslint
+npm run db:push   # sync the Prisma schema to the local SQLite database
+npm run db:migrate # create/apply a migration during schema changes
 ```

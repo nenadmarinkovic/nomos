@@ -84,6 +84,7 @@ interface SimulationState {
   windowPositions: Record<ViewKey, WindowPosition>;
   chronicle: ChronicleEntry[];
   startRun: (next?: SimulationConfig) => void;
+  replayRun: (config: SimulationConfig) => void;
   resumeRun: () => void;
   pauseRun: () => void;
   stopRun: () => void;
@@ -124,6 +125,19 @@ export const useSimulationStore = create<SimulationState>()(
       startRun: (next) =>
         set((s) => ({
           config: { ...(next ?? s.config), seed: newSeed() },
+          running: true,
+          started: true,
+          turn: 0,
+          runId: s.runId + 1,
+          snapshot: EMPTY_SNAPSHOT,
+          history: [],
+          chronicle: [],
+        })),
+      replayRun: (config) =>
+        set((s) => ({
+          // Keep the saved seed: the engine is deterministic, so the run
+          // unfolds exactly as it did when it was saved.
+          config,
           running: true,
           started: true,
           turn: 0,
