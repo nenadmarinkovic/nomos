@@ -23,6 +23,9 @@ export interface Agent {
   alive: boolean;
   x: number;
   y: number;
+  /** Position at the start of this tick, used for inter-frame interpolation. */
+  prevX: number;
+  prevY: number;
   wealth: number;
   age: number;
   vision: number;
@@ -143,6 +146,8 @@ export class Engine {
       }
     }
 
+    a.prevX = a.x;
+    a.prevY = a.y;
     if (bestX !== a.x || bestY !== a.y) {
       this.occupants[a.y * this.width + a.x] = -1;
       a.x = bestX;
@@ -215,6 +220,8 @@ export class Engine {
       alive: true,
       x: cx,
       y: cy,
+      prevX: cx,
+      prevY: cy,
       wealth: a.initialEndowment,
       initialEndowment: a.initialEndowment,
       age: 0,
@@ -422,6 +429,8 @@ function spawnAgents(
       alive: true,
       x: p.x,
       y: p.y,
+      prevX: p.x,
+      prevY: p.y,
       wealth: wealths[i],
       initialEndowment: wealths[i],
       age: 0,

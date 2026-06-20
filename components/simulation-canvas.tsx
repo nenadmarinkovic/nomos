@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { XIcon } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
+import { activeEngineRef } from "@/lib/active-engine";
 import { Engine } from "@/lib/engine";
 import { useSimulationStore } from "@/lib/store";
 
@@ -150,11 +151,13 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   useEffect(() => {
     if (!started) {
       engineRef.current = null;
+      activeEngineRef.current = null;
       clearCanvas(canvasRef.current);
       return;
     }
     const engine = new Engine(config);
     engineRef.current = engine;
+    activeEngineRef.current = engine;
     updateSnapshot(engine.getSnapshot());
     const canvas = canvasRef.current;
     if (canvas) {
@@ -176,11 +179,16 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       if (now - lastTickRef.current >= interval) {
         engine.tick();
         updateSnapshot(engine.getSnapshot());
-        renderEngine(engine, canvas, dpr, {
-          selectedId: selectedIdRef.current,
-        });
         lastTickRef.current = now;
       }
+      const progress = Math.min(
+        1,
+        Math.max(0, (now - lastTickRef.current) / interval),
+      );
+      renderEngine(engine, canvas, dpr, {
+        selectedId: selectedIdRef.current,
+        progress,
+      });
       rafRef.current = requestAnimationFrame(loop);
     }
 
@@ -322,6 +330,10 @@ function Step({
   );
 }
 
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 function clearCanvas(canvas: HTMLCanvasElement | null) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
@@ -342,8 +354,10 @@ function renderEngine(
   engine: Engine,
   canvas: HTMLCanvasElement,
   dpr: number,
-  opts: { selectedId: number | null },
+  opts: { selectedId: number | null; progress?: number },
 ) {
+  const progress = opts.progress ?? 1;
+  const ease = easeInOutCubic(progress);
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
@@ -376,8 +390,10 @@ function renderEngine(
 
   for (const a of engine.agents) {
     if (!a.alive) continue;
-    const cx = a.x * cellW + cellW / 2;
-    const cy = a.y * cellH + cellH / 2;
+    const ix = a.prevX + (a.x - a.prevX) * ease;
+    const iy = a.prevY + (a.y - a.prevY) * ease;
+    const cx = ix * cellW + cellW / 2;
+    const cy = iy * cellH + cellH / 2;
     const color = MOTIVATION_COLOR[a.motivation] ?? "#E63946";
     const wealthDim =
       a.wealth > 30 ? 1 : a.wealth > 12 ? 0.88 : a.wealth > 4 ? 0.7 : 0.5;
@@ -394,16 +410,20 @@ function renderEngine(
   if (opts.selectedId !== null) {
     const a = engine.agents[opts.selectedId];
     if (a && a.alive) {
-      const cx = a.x * cellW + cellW / 2;
-      const cy = a.y * cellH + cellH / 2;
+      const ax = a.prevX + (a.x - a.prevX) * ease;
+      const ay = a.prevY + (a.y - a.prevY) * ease;
+      const cx = ax * cellW + cellW / 2;
+      const cy = ay * cellH + cellH / 2;
 
       ctx.strokeStyle = "rgba(255,255,255,0.55)";
       ctx.lineWidth = Math.max(0.8, 0.9 * dpr);
       for (const id of neighborsInVision(engine, a)) {
         const n = engine.agents[id];
         if (!n || !n.alive) continue;
-        const nx = n.x * cellW + cellW / 2;
-        const ny = n.y * cellH + cellH / 2;
+        const nix = n.prevX + (n.x - n.prevX) * ease;
+        const niy = n.prevY + (n.y - n.prevY) * ease;
+        const nx = nix * cellW + cellW / 2;
+        const ny = niy * cellH + cellH / 2;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(nx, ny);

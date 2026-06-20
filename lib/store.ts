@@ -29,7 +29,12 @@ export interface HistoryPoint {
 const HISTORY_LIMIT = 240;
 const CHRONICLE_LIMIT = 80;
 
-export type ViewKey = "gini" | "alive" | "wealth" | "narrator";
+export type ViewKey =
+  | "gini"
+  | "alive"
+  | "wealth"
+  | "narrator"
+  | "network";
 
 export interface WindowPosition {
   x: number;
@@ -40,7 +45,8 @@ export const DEFAULT_WINDOW_POSITIONS: Record<ViewKey, WindowPosition> = {
   gini: { x: 20, y: 20 },
   alive: { x: 20, y: 230 },
   wealth: { x: 20, y: 440 },
-  narrator: { x: 300, y: 20 },
+  narrator: { x: 320, y: 20 },
+  network: { x: 320, y: 280 },
 };
 
 export type NarrationStatus = "pending" | "done" | "error";
@@ -82,6 +88,7 @@ interface SimulationState {
   toggleView: (key: ViewKey) => void;
   moveWindow: (key: ViewKey, position: WindowPosition) => void;
   resetWindows: () => void;
+  alignWindows: (corner: "tl" | "tr" | "bl" | "br") => void;
   openNarrations: (event: SignificantEvent, observers: ObserverKey[]) => void;
   resolveNarration: (key: string, text: string) => void;
   failNarration: (key: string, error: string) => void;
@@ -99,7 +106,13 @@ export const useSimulationStore = create<SimulationState>()(
       history: [],
       speed: 1,
       canvasSize: { width: 0, height: 0 },
-      views: { gini: true, alive: true, wealth: true, narrator: true },
+      views: {
+        gini: true,
+        alive: true,
+        wealth: true,
+        narrator: true,
+        network: false,
+      },
       windowPositions: DEFAULT_WINDOW_POSITIONS,
       chronicle: [],
       startRun: (next) =>
@@ -134,6 +147,75 @@ export const useSimulationStore = create<SimulationState>()(
         })),
       resetWindows: () =>
         set({ windowPositions: DEFAULT_WINDOW_POSITIONS }),
+      alignWindows: (corner) =>
+        set((s) => {
+          const order: ViewKey[] = [
+            "gini",
+            "alive",
+            "wealth",
+            "narrator",
+            "network",
+          ];
+          const visible = order.filter((k) => s.views[k]);
+          const W = s.canvasSize.width || 800;
+          const H = s.canvasSize.height || 600;
+          const winW = 288;
+          const margin = 10;
+          const gap = 10;
+
+          /** Approximate rendered height per window. */
+          const WIN_HEIGHTS: Record<ViewKey, number> = {
+            gini: 180,
+            alive: 180,
+            wealth: 180,
+            narrator: 220,
+            network: 300,
+          };
+
+          const cols = visible.length <= 2 ? 1 : 2;
+
+          // Row-major assignment: window i goes to column i % cols.
+          // Then each column stacks independently using actual heights.
+          const columns: ViewKey[][] = Array.from({ length: cols }, () => []);
+          visible.forEach((key, i) => {
+            const col = i % cols;
+            columns[col].push(key);
+          });
+
+          const isRight = corner === "tr" || corner === "br";
+          const isBottom = corner === "bl" || corner === "br";
+
+          const positions = { ...s.windowPositions };
+
+          columns.forEach((colKeys, colIdx) => {
+            const x = isRight
+              ? W - margin - winW - colIdx * (winW + gap)
+              : margin + colIdx * (winW + gap);
+
+            if (isBottom) {
+              let yBottom = H - margin;
+              for (let i = colKeys.length - 1; i >= 0; i--) {
+                const key = colKeys[i];
+                const h = WIN_HEIGHTS[key];
+                const y = yBottom - h;
+                positions[key] = { x: Math.max(0, x), y: Math.max(0, y) };
+                yBottom = y - gap;
+              }
+            } else {
+              let yTop = margin;
+              for (const key of colKeys) {
+                const h = WIN_HEIGHTS[key];
+                positions[key] = {
+                  x: Math.max(0, x),
+                  y: Math.max(0, yTop),
+                };
+                yTop += h + gap;
+              }
+            }
+          });
+
+          return { windowPositions: positions };
+        }),
       updateSnapshot: (snapshot) =>
         set((s) => {
           const next = s.history.slice(
@@ -184,7 +266,7 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 8,
+      version: 9,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         config: s.config,
@@ -193,7 +275,13 @@ export const useSimulationStore = create<SimulationState>()(
       }),
       migrate: () => ({
         config: DEFAULT_CONFIG,
-        views: { gini: true, alive: true, wealth: true, narrator: true },
+        views: {
+          gini: true,
+          alive: true,
+          wealth: true,
+          narrator: true,
+          network: false,
+        },
         windowPositions: DEFAULT_WINDOW_POSITIONS,
       }),
     },

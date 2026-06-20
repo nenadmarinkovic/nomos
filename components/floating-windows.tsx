@@ -28,7 +28,9 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { NetworkWindowBody } from "@/components/network-window";
 import { cn } from "@/lib/utils";
+import { activeEngineRef } from "@/lib/active-engine";
 import { OBSERVER_INFO } from "@/lib/config";
 import { WEALTH_BIN_LABELS } from "@/lib/engine";
 import { useSimulationStore, type ViewKey } from "@/lib/store";
@@ -69,6 +71,7 @@ export function FloatingWindows() {
         <AliveWindow />
         <WealthWindow />
         <NarratorWindow />
+        <NetworkWindow />
       </div>
     </DndContext>
   );
@@ -288,6 +291,21 @@ function WealthWindow() {
       </ChartContainer>
       <p className="mt-2 font-sans text-[11px] text-muted-foreground">
         Distribution by tier
+      </p>
+    </FloatingWindow>
+  );
+}
+
+function NetworkWindow() {
+  return (
+    <FloatingWindow
+      windowKey="network"
+      title="Network"
+      meta="Society as graph"
+    >
+      <NetworkWindowBody engineRef={activeEngineRef} />
+      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+        Agents within vision, force-laid
       </p>
     </FloatingWindow>
   );
