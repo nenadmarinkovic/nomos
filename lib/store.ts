@@ -88,7 +88,7 @@ interface SimulationState {
   snapshot: EngineSnapshot;
   history: HistoryPoint[];
   speed: number;
-  canvasView: "field" | "network" | "network3d";
+  canvasView: "field" | "network";
   canvasSize: { width: number; height: number };
   views: Record<ViewKey, boolean>;
   windowPositions: Record<ViewKey, WindowPosition>;
@@ -99,7 +99,7 @@ interface SimulationState {
   pauseRun: () => void;
   stopRun: () => void;
   setSpeed: (speed: number) => void;
-  setCanvasView: (view: "field" | "network" | "network3d") => void;
+  setCanvasView: (view: "field" | "network") => void;
   updateSnapshot: (snapshot: EngineSnapshot) => void;
   setCanvasSize: (s: { width: number; height: number }) => void;
   toggleView: (key: ViewKey) => void;

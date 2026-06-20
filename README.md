@@ -20,12 +20,12 @@ A society simulation where agents follow simple rules and AI theorists observe w
 - Phosphor Icons
 - Local fonts: Newsreader (serif) and Google Sans Flex (sans)
 
-**Simulation runtime** _(planned)_
+**Simulation runtime**
 
-- PixiJS (WebGL) for the agent field — targeting 100k agents at 60fps
-- Web Workers off the main thread for the tick loop
-- D3 for territory contours and the subsystem force graph
-- Zustand for cross-component state, Framer Motion for narrator transitions
+- Web Worker tick loop, posting world frames to the main thread as transferable buffers _(shipped)_
+- Canvas2D agent field; PixiJS / WebGL renderer still pending for 100k-agent scale
+- `d3-force` + `d3-zoom` + `d3-selection` for the 2D layouts that remain; Three.js (`react-force-graph-3d`) for the 3D Network view
+- Zustand (with `persist`) for cross-component state and saved layout positions
 
 **Data**
 
@@ -51,17 +51,35 @@ A society simulation where agents follow simple rules and AI theorists observe w
   - Emergent market: a price and trade volume that arise from local exchange, not from any global rule.
   - Four agent motivations and four sophistications, mixed per the setup screen and acted on by the engine.
   - AI observers (Mistral) that read significant events through each theorist's lens into the Chronicle.
-  - Guided setup, floating metric windows (Gini, population, wealth, price), and a force-directed network graph.
+  - Guided setup; floating, draggable metric windows (Gini, population, wealth distribution, trade price, motivation streamgraph) with corner-snap alignment.
 - **v0.2 — Persistence** _(done)_
   - Save, list, and replay runs (Prisma + SQLite). Runs are deterministic from their config and seed, so a replay re-executes identically; the saved metric history and observer Chronicle are kept alongside.
   - Shareable run URLs — `/?run=<id>` loads a saved run and replays it.
 - **v0.3 — Scale & performance** _(in progress)_
   - The tick loop runs in a Web Worker; the main thread renders interpolated frames the worker posts as transferable buffers, keeping the UI responsive. ✓
   - PixiJS (WebGL) field rendering toward 100k agents at 60fps. _(next)_
+- **v0.3.x — Social structure & inspection** _(done)_
+  - Persistent **trade-partner ties**: the engine tracks dyadic trade weights, bumping on each successful exchange and decaying multiplicatively each tick. Dead agents are scrubbed; ties below threshold are pruned.
+  - 3D **Network** view (react-force-graph-3d / Three.js): every alive agent rendered as a Bauhaus-styled mesh (cube/sphere/cone/octahedron per motivation), edges showing each agent's top-3 strongest trade partners so cluster structure stays readable instead of becoming a hairball.
+  - Orbit / zoom / drag camera; click-to-inspect side panel with live wealth, sugar/spice, age, vision, metabolism, embeddedness, and the agent's top six trade partners.
+  - **Motivation streamgraph** window: stacked-area share of material/symbolic/normative/power motivations over time.
+  - Sidebar **Canvas** menu (Field ↔ Network) replaces the old floating overlay.
 - **v0.4 — Accounts & sharing**
   - Better Auth, Postgres, and a public gallery of saved runs.
 - **Later**
-  - Territory contours, a Luhmann-style subsystem graph, and additional agent models beyond `epstein_minimal`.
+  - Phase-space plot (e.g. Gini × Alive trajectory) and Sankey of agent state transitions for macro-behaviour reading.
+  - Territory contours and a Luhmann-style subsystem graph.
+  - Additional agent models beyond `epstein_minimal`.
+
+## What still needs to be done
+
+Near term, in rough priority:
+
+1. **PixiJS WebGL field renderer** — replace the Canvas2D agent layer to push the geographic Field toward 100k agents at 60fps. Tick loop already lives in a worker, so this is a renderer-only swap.
+2. **Phase-space plot** — a small window plotting (Gini, alive) over time as a single moving point with a fading trail. Shows the society's trajectory through stability/collapse.
+3. **Accounts and sharing (v0.4)** — Better Auth + Postgres, public run gallery.
+4. **Optional Sankey / state-transition view** — only worth doing once agents actually change motivation under the engine rules; today they don't, so this is parked.
+5. **Territory contours and Luhmann subsystem graph** — long-tail nice-to-have.
 
 ## Develop
 

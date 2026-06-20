@@ -15,6 +15,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { CanvasLegend } from "@/components/canvas-legend";
+import { CanvasViewToggle } from "@/components/canvas-view-toggle";
 import { ViewsToggle } from "@/components/views-toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -79,6 +80,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {!collapsed && (
         <div className="flex shrink-0 flex-col empty:hidden">
+          <div className="border-t border-foreground/10 empty:hidden">
+            <CanvasViewToggle />
+          </div>
           <div className="border-t border-foreground/10 empty:hidden">
             <ViewsToggle />
           </div>
