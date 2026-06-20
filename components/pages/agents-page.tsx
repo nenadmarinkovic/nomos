@@ -1,31 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  Scatter,
-  ScatterChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useCallback } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import { activeWorldRef } from "@/lib/active-world";
+import { SnapshotBadge } from "@/components/snapshot-badge";
 import { MOTIVATION_INFO, type AgentMotivation } from "@/lib/config";
-import { useSimulationStore } from "@/lib/store";
-import type { RenderAgent } from "@/lib/world";
+import { useWorldSnapshot } from "@/lib/use-world-snapshot";
+import type { RenderAgent, WorldView } from "@/lib/world";
 
 const MOTIVATION_COLOR: Record<string, string> = {
   material: "#E63946",
@@ -34,161 +15,35 @@ const MOTIVATION_COLOR: Record<string, string> = {
   power: "#111111",
 };
 
-const motivationConfig: ChartConfig = {
-  count: { label: "Agents" },
-};
-
-const ageConfig: ChartConfig = {
-  count: { label: "Agents", color: "#9aa0a6" },
-};
-
 export function AgentsPage() {
-  const started = useSimulationStore((s) => s.started);
-  const turn = useSimulationStore((s) => s.turn);
-
-  const data = useMemo(() => {
-    void turn;
-    if (!started) return null;
-    const world = activeWorldRef.current;
-    if (!world) return null;
-    return computeData(world.agents);
-  }, [turn, started]);
+  const snapshot = useWorldSnapshot(
+    useCallback((world: WorldView) => computeData(world.agents), []),
+  );
+  const data = snapshot.data;
 
   return (
     <ScrollArea className="flex-1">
       <div className="mx-auto w-full max-w-5xl px-6 py-8">
-        <Header />
+        <Header
+          badge={
+            <SnapshotBadge
+              turn={snapshot.turn}
+              stale={snapshot.stale}
+              onRefresh={snapshot.refresh}
+            />
+          }
+        />
 
-        {!data || data.alive.length === 0 ? (
+        {!data || data.aliveCount === 0 ? (
           <EmptyState />
         ) : (
           <div className="mt-8 space-y-10">
-            <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <Card title="Motivation mix" meta={`${data.alive.length} alive`}>
-                <ChartContainer
-                  config={motivationConfig}
-                  className="aspect-auto h-56 w-full"
-                >
-                  <PieChart>
-                    <Tooltip
-                      content={
-                        <ChartTooltipContent indicator="dot" hideLabel />
-                      }
-                    />
-                    <Pie
-                      data={data.motivationMix}
-                      dataKey="count"
-                      nameKey="label"
-                      innerRadius={45}
-                      outerRadius={80}
-                      paddingAngle={1.5}
-                      strokeWidth={0}
-                      isAnimationActive={false}
-                    >
-                      {data.motivationMix.map((entry) => (
-                        <Cell key={entry.label} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ChartContainer>
-                <Legend mix={data.motivationMix} />
-              </Card>
-
-              <Card title="Age distribution" meta="ten-turn bins">
-                <ChartContainer
-                  config={ageConfig}
-                  className="aspect-auto h-56 w-full"
-                >
-                  <BarChart data={data.ageBins}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="label"
-                      tickLine={false}
-                      axisLine={false}
-                      fontSize={9}
-                      tickMargin={4}
-                    />
-                    <YAxis hide />
-                    <ChartTooltip
-                      cursor={{ fill: "rgba(120,120,120,0.06)" }}
-                      content={
-                        <ChartTooltipContent
-                          indicator="dot"
-                          labelFormatter={(value) => `Age ${value}`}
-                        />
-                      }
-                    />
-                    <Bar
-                      dataKey="count"
-                      fill="var(--color-count)"
-                      radius={[2, 2, 0, 0]}
-                      isAnimationActive={false}
-                    />
-                  </BarChart>
-                </ChartContainer>
-              </Card>
-            </section>
-
             <section>
               <SectionTitle
-                title="Wealth × Age"
-                hint="Each dot is one agent. Vertical streaks mean a cohort got rich together; horizontal spread means a generation diverged."
+                title="Motivation mix"
+                hint={`${data.aliveCount.toLocaleString()} alive · share of each drive in the population.`}
               />
-              <Card>
-                <ChartContainer
-                  config={motivationConfig}
-                  className="aspect-auto h-72 w-full"
-                >
-                  <ScatterChart>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      type="number"
-                      dataKey="age"
-                      name="Age"
-                      tickLine={false}
-                      axisLine={false}
-                      fontSize={10}
-                      tickMargin={4}
-                    />
-                    <YAxis
-                      type="number"
-                      dataKey="wealth"
-                      name="Wealth"
-                      tickLine={false}
-                      axisLine={false}
-                      fontSize={10}
-                      tickMargin={4}
-                      width={30}
-                    />
-                    <Tooltip
-                      cursor={{ strokeDasharray: "3 3" }}
-                      content={<ScatterTooltip />}
-                    />
-                    {(
-                      Object.keys(MOTIVATION_INFO) as AgentMotivation[]
-                    ).map((m) => {
-                      const points = data.scatter.filter((p) => p.m === m);
-                      if (points.length === 0) return null;
-                      return (
-                        <Scatter
-                          key={m}
-                          name={MOTIVATION_INFO[m].label}
-                          data={points}
-                          fill={MOTIVATION_COLOR[m]}
-                          fillOpacity={0.75}
-                          stroke={
-                            m === "power"
-                              ? "rgba(245,245,245,0.6)"
-                              : "rgba(20,20,20,0.4)"
-                          }
-                          strokeWidth={0.5}
-                          isAnimationActive={false}
-                        />
-                      );
-                    })}
-                  </ScatterChart>
-                </ChartContainer>
-              </Card>
+              <Legend mix={data.motivationMix} />
             </section>
 
             <section>
@@ -205,41 +60,25 @@ export function AgentsPage() {
   );
 }
 
-function Header() {
+function Header({ badge }: { badge?: React.ReactNode }) {
   return (
-    <header className="space-y-2">
-      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-        Agents · Population atlas
-      </p>
+    <header className="space-y-3">
+      <div className="flex items-start justify-between gap-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+          Agents · Population atlas
+        </p>
+        {badge}
+      </div>
       <h1 className="font-serif text-3xl leading-tight tracking-tight text-foreground">
         Who is alive, and how are they doing?
       </h1>
       <p className="font-serif text-[15px] leading-relaxed text-foreground/70">
-        A live read of the population: the mix of drives, the spread of ages,
-        wealth against age, and a ranked list of the hoarders and the strugglers.
+        A snapshot of the population: the mix of drives, the spread of ages,
+        wealth against age, and a ranked list of the hoarders and the
+        strugglers. The simulation keeps running in the corner — hit Refresh
+        to grab a fresh sample.
       </p>
     </header>
-  );
-}
-
-function ScatterTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: { payload?: { age: number; wealth: number; m: string } }[];
-}) {
-  if (!active || !payload?.length || !payload[0].payload) return null;
-  const p = payload[0].payload;
-  return (
-    <div className="rounded-md border border-foreground/10 bg-card px-2.5 py-1.5 font-mono text-[11px] text-foreground shadow-md">
-      <div>
-        {MOTIVATION_INFO[p.m as AgentMotivation]?.label ?? p.m}
-      </div>
-      <div className="mt-0.5 text-muted-foreground">
-        age {p.age} · wealth {p.wealth.toFixed(1)}
-      </div>
-    </div>
   );
 }
 
@@ -328,36 +167,6 @@ function RankTable({ rows }: { rows: RankedRow[] }) {
   );
 }
 
-function Card({
-  title,
-  meta,
-  children,
-}: {
-  title?: string;
-  meta?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-4">
-      {(title || meta) && (
-        <div className="mb-2 flex items-baseline justify-between">
-          {title && (
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              {title}
-            </span>
-          )}
-          {meta && (
-            <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-              {meta}
-            </span>
-          )}
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
-
 function SectionTitle({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="mb-3 space-y-1">
@@ -394,25 +203,60 @@ interface RankedRow {
 }
 
 interface AgentsData {
-  alive: RenderAgent[];
+  aliveCount: number;
   motivationMix: { label: string; count: number; color: string }[];
-  ageBins: { label: string; count: number }[];
-  scatter: { age: number; wealth: number; m: string }[];
   ranked: RankedRow[];
 }
 
+const TOP_N = 50;
+
+/**
+ * Single O(N) pass: count alive, count per motivation, and keep a small
+ * top-N heap of richest agents. Cheap even at 3000 agents.
+ */
 function computeData(agents: readonly RenderAgent[]): AgentsData {
-  const alive: RenderAgent[] = [];
+  let aliveCount = 0;
   const mix: Record<AgentMotivation, number> = {
     material: 0,
     symbolic: 0,
     normative: 0,
     power: 0,
   };
-  for (const a of agents) {
+
+  // Top-N tracker: a sorted array of <= TOP_N rows. Cheaper than sorting all.
+  const top: RankedRow[] = [];
+
+  for (let i = 0; i < agents.length; i++) {
+    const a = agents[i];
     if (!a.alive) continue;
-    alive.push(a);
+    aliveCount++;
     mix[a.motivation]++;
+
+    const wealth = a.sugar + a.spice;
+    if (top.length < TOP_N) {
+      insertSortedDesc(top, {
+        id: a.id,
+        m: a.motivation,
+        wealth,
+        age: a.age,
+        maxAge: a.maxAge,
+        vision: a.vision,
+        x: a.x,
+        y: a.y,
+      });
+    } else if (wealth > top[top.length - 1].wealth) {
+      top.pop();
+      insertSortedDesc(top, {
+        id: a.id,
+        m: a.motivation,
+        wealth,
+        age: a.age,
+        maxAge: a.maxAge,
+        vision: a.vision,
+        x: a.x,
+        y: a.y,
+      });
+    }
   }
 
   const motivationMix = (Object.keys(MOTIVATION_INFO) as AgentMotivation[])
@@ -423,38 +267,16 @@ function computeData(agents: readonly RenderAgent[]): AgentsData {
       color: MOTIVATION_COLOR[k],
     }));
 
-  // Age histogram in 10-turn buckets.
-  const ageBuckets = new Map<number, number>();
-  let maxBucket = 0;
-  for (const a of alive) {
-    const b = Math.floor(a.age / 10);
-    ageBuckets.set(b, (ageBuckets.get(b) ?? 0) + 1);
-    if (b > maxBucket) maxBucket = b;
+  return { aliveCount, motivationMix, ranked: top };
+}
+
+function insertSortedDesc(arr: RankedRow[], row: RankedRow) {
+  let lo = 0;
+  let hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (arr[mid].wealth < row.wealth) hi = mid;
+    else lo = mid + 1;
   }
-  const ageBins = Array.from({ length: maxBucket + 1 }, (_, i) => ({
-    label: `${i * 10}`,
-    count: ageBuckets.get(i) ?? 0,
-  }));
-
-  const scatter = alive.map((a) => ({
-    age: a.age,
-    wealth: a.sugar + a.spice,
-    m: a.motivation,
-  }));
-
-  const ranked: RankedRow[] = alive
-    .slice()
-    .sort((a, b) => b.sugar + b.spice - (a.sugar + a.spice))
-    .map((a) => ({
-      id: a.id,
-      m: a.motivation,
-      wealth: a.sugar + a.spice,
-      age: a.age,
-      maxAge: a.maxAge,
-      vision: a.vision,
-      x: a.x,
-      y: a.y,
-    }));
-
-  return { alive, motivationMix, ageBins, scatter, ranked };
+  arr.splice(lo, 0, row);
 }

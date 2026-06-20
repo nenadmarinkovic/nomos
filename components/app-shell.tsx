@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MiniSimWindow } from "@/components/mini-sim-window";
 import { ObserverNarrator } from "@/components/observer-narrator";
 import { Sidebar, sectionFromPath } from "@/components/sidebar";
+import { SimulationEngine } from "@/components/simulation-engine";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { SCALE_INFO } from "@/lib/config";
@@ -97,6 +98,7 @@ export function AppShell({
         </main>
       </div>
 
+      <SimulationEngine />
       <ObserverNarrator />
     </div>
   );
