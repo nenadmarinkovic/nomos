@@ -15,6 +15,12 @@ import {
   XIcon,
 } from "@phosphor-icons/react";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -283,7 +289,6 @@ segregated → sort by wealth, fill one quadrant at a time`,
   a.alive = false;
   if (!this.reproduction) return;          // off → no heir
   const child: Agent = {
-    /* ... */
     sugar: a.initialSugar, spice: a.initialSpice, // parent's wealth
     vision: a.vision, maxAge: a.maxAge,           // and its traits
     age: 0,
@@ -1319,21 +1324,29 @@ function blobHref(file: string, lines?: string): string {
 
 function CodeAnchors({ anchors }: { anchors: CodeAnchor[] }) {
   return (
-    <details className="group mt-12 max-w-2xl border-t border-foreground/10 pt-6">
-      <summary className="flex cursor-pointer list-none items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
-        <CaretRightIcon
-          size={11}
-          weight="bold"
-          className="shrink-0 transition-transform duration-200 group-open:rotate-90"
-        />
-        What the simulation actually does
-      </summary>
-      <div className="mt-6 space-y-7">
-        {anchors.map((anchor, i) => (
-          <CodeAnchorBlock key={i} anchor={anchor} />
-        ))}
-      </div>
-    </details>
+    <Accordion
+      type="single"
+      collapsible
+      className="mt-12 max-w-2xl border-t border-foreground/10 pt-6"
+    >
+      <AccordionItem value="anchors">
+        <AccordionTrigger className="group font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground">
+          <CaretRightIcon
+            size={11}
+            weight="bold"
+            className="shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-90"
+          />
+          What the simulation actually does
+        </AccordionTrigger>
+        <AccordionContent>
+          <div className="mt-6 space-y-7">
+            {anchors.map((anchor, i) => (
+              <CodeAnchorBlock key={i} anchor={anchor} />
+            ))}
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
