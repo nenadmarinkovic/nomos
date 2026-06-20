@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { ChroniclePanel } from "@/components/chronicle-panel";
-import { FloatingWindows } from "@/components/floating-windows";
+import { MiniSimWindow } from "@/components/mini-sim-window";
 import { ObserverNarrator } from "@/components/observer-narrator";
-import { Sidebar, type SectionKey } from "@/components/sidebar";
-import { SimulationCanvas } from "@/components/simulation-canvas";
+import { Sidebar, sectionFromPath } from "@/components/sidebar";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { SCALE_INFO } from "@/lib/config";
@@ -16,12 +14,12 @@ import { useSimulationStore } from "@/lib/store";
 
 const SIDEBAR_COOKIE = "sidebar-collapsed";
 
-export function HomeShell({
+export function AppShell({
   defaultCollapsed,
-  sharedRunId,
+  children,
 }: {
   defaultCollapsed: boolean;
-  sharedRunId?: string;
+  children: React.ReactNode;
 }) {
   const config = useSimulationStore((s) => s.config);
   const running = useSimulationStore((s) => s.running);
@@ -34,12 +32,13 @@ export function HomeShell({
   const replayRun = useSimulationStore((s) => s.replayRun);
 
   const router = useRouter();
+  const pathname = usePathname() ?? "/";
+  const searchParams = useSearchParams();
+  const sharedRunId = searchParams?.get("run") ?? undefined;
   const sharedHandled = useRef(false);
 
   // A shared link (`/?run=<id>`) loads that run and replays it, then strips
-  // the param so a reload doesn't restart it. Deterministic replay means the
-  // visitor sees exactly the run that was shared. A bad or deleted id just
-  // falls through to the normal home screen.
+  // the param so a reload doesn't restart it.
   useEffect(() => {
     if (!sharedRunId || sharedHandled.current) return;
     sharedHandled.current = true;
@@ -58,11 +57,10 @@ export function HomeShell({
   }, [sharedRunId, replayRun, router]);
 
   const paused = started && !running;
+  const section = sectionFromPath(pathname);
+  const isField = section === "world";
 
-  const [section, setSection] = useState<SectionKey>("world");
-  const showChronicle = section === "observers" || section === "log";
   const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultCollapsed);
-
   const toggleSidebar = () =>
     setSidebarCollapsed((v) => {
       const next = !v;
@@ -84,22 +82,9 @@ export function HomeShell({
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar
-          active={section}
-          onSelect={setSection}
-          collapsed={sidebarCollapsed}
-          onToggle={toggleSidebar}
-        />
-        <main className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex flex-1 overflow-hidden">
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <div className="relative flex flex-1 overflow-hidden">
-                <SimulationCanvas running={running} />
-                <FloatingWindows />
-              </div>
-            </div>
-            {showChronicle && <ChroniclePanel />}
-          </div>
+        <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+        <main className="relative flex flex-1 flex-col overflow-hidden">
+          <div className="flex flex-1 overflow-hidden">{children}</div>
           <SiteFooter
             turn={turn}
             agentCount={SCALE_INFO[config.world.scale].agents}
@@ -108,6 +93,7 @@ export function HomeShell({
             observerCount={config.observers.length}
             started={started}
           />
+          {!isField && <MiniSimWindow />}
         </main>
       </div>
 
