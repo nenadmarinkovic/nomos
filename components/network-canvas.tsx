@@ -224,7 +224,10 @@ export function NetworkCanvas() {
             graphData={data}
             backgroundColor="rgba(0,0,0,0)"
             nodeRelSize={4}
-            nodeVal={(n: any) => 1 + Math.log(1 + (n.wealth as number))}
+            nodeVal={(n: any) => {
+              const w = Number(n?.wealth);
+              return 1 + Math.log(1 + (Number.isFinite(w) && w > 0 ? w : 0));
+            }}
             nodeColor={(n: any) =>
               MOTIVATION_COLOR[n.motivation as string] ?? "#E63946"
             }
@@ -233,7 +236,9 @@ export function NetworkCanvas() {
               const label =
                 MOTIVATION_LABEL[n.motivation as string] ??
                 (n.motivation as string);
-              return `#${n.id} · ${label} · w ${(n.wealth as number).toFixed(1)}`;
+              const wRaw = Number(n?.wealth);
+              const w = Number.isFinite(wRaw) ? wRaw : 0;
+              return `#${n.id} · ${label} · w ${w.toFixed(1)}`;
             }}
             linkColor={() => "rgba(180,180,180,0.85)"}
             linkOpacity={0.9}
@@ -251,7 +256,9 @@ export function NetworkCanvas() {
             nodeThreeObject={(n: any) => {
               const motivation = n.motivation as string;
               const color = MOTIVATION_COLOR[motivation] ?? "#E63946";
-              const r = 3 + Math.log(1 + (n.wealth as number));
+              const wRaw = Number(n?.wealth);
+              const w = Number.isFinite(wRaw) && wRaw > 0 ? wRaw : 0;
+              const r = 3 + Math.log(1 + w);
               const geom = motivationGeometry(motivation, r);
               const isSelected = n.id === selectedId;
               const mat = new THREE.MeshLambertMaterial({
@@ -509,11 +516,19 @@ function buildTieGraph(
   const aliveById = new Map<number, RenderAgent>();
   for (const a of alive) aliveById.set(a.id, a);
 
-  const nodes: GraphNode[] = alive.map((a) => ({
-    id: a.id,
-    motivation: a.motivation,
-    wealth: a.sugar + a.spice,
-  }));
+  const nodes: GraphNode[] = alive.map((a) => {
+    // Guard against transient NaN / Infinity / negative holdings before they
+    // reach Three.js, where they would crash the bounding-sphere computation
+    // (`Computed radius is NaN`). The renderer can't tell the difference
+    // between "this agent is broke" and "this agent's wealth is NaN".
+    const w = a.sugar + a.spice;
+    const safeWealth = Number.isFinite(w) && w > 0 ? w : 0;
+    return {
+      id: a.id,
+      motivation: a.motivation,
+      wealth: safeWealth,
+    };
+  });
 
   const raw: GraphLink[] = [];
   for (let i = 0; i < ties.length; i += 3) {
