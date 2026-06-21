@@ -54,6 +54,24 @@ const PRIORITY: Record<EventKind, ObserverKey[]> = {
    *  slow variables, Marx's contradictions resolved by rupture. */
   collapse: ["turchin", "flack", "marx"],
 
+  /** Agents sorting themselves in space — Schelling's tipping dynamics,
+   *  Bourdieu's distinction inscribed in territory, Durkheim's mechanical
+   *  solidarity of the like-with-like. */
+  segregation: ["schelling", "bourdieu", "durkheim"],
+
+  /** One disposition spreading through the population — Bourdieu's habitus
+   *  reproducing, Schelling's preference cascade, Granovetter's contagion
+   *  along ties. */
+  motivation_shift: ["bourdieu", "schelling", "granovetter"],
+
+  /** A burst of expropriation — Marx names it dispossession, Durkheim the
+   *  violated norm, Flack the policing that fails or holds. */
+  coercion_wave: ["marx", "durkheim", "flack"],
+
+  /** The trade web dissolving — Granovetter's structure unravelling,
+   *  Flack's slow variables eroding, Polanyi's disembedding. */
+  network_fracture: ["granovetter", "flack", "polanyi"],
+
   /** Heartbeat reading on a stable society. Cycles through every available
    *  theorist so the user hears a different voice on each passage. */
   passage: [
