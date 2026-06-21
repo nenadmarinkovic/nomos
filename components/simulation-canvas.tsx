@@ -326,7 +326,7 @@ const MOTIVATION_COLOR: Record<string, string> = {
   material: "#E63946",
   symbolic: "#2E5C9E",
   normative: "#FFD23F",
-  power: "#111111",
+  power: "#2A9D5C",
 };
 
 /** Paint one resource field as small dots, nudged so the two goods don't
@@ -398,12 +398,9 @@ function renderWorld(
     const color = MOTIVATION_COLOR[a.motivation] ?? "#E63946";
     const w = a.sugar + a.spice;
     const wealthDim = w > 30 ? 1 : w > 12 ? 0.88 : w > 4 ? 0.7 : 0.5;
-    const isPower = a.motivation === "power";
 
     ctx.fillStyle = applyAlpha(color, wealthDim);
-    ctx.strokeStyle = isPower
-      ? `rgba(245, 245, 245, ${0.85 * wealthDim})`
-      : `rgba(20, 20, 20, ${0.6 * wealthDim})`;
+    ctx.strokeStyle = `rgba(20, 20, 20, ${0.6 * wealthDim})`;
     ctx.lineWidth = outlineWidth;
     drawShape(ctx, a.motivation, cx, cy, agentSize, /* withStroke */ true);
   }
