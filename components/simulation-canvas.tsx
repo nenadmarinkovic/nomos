@@ -239,7 +239,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
                 <Step
                   n="01"
                   title="Set the conditions"
-                  body="How many people. How equal they start. What kind of land. What they want — resources (Marx), status (Bourdieu), belonging (Durkheim), or power (Weber). What kind of minds they have — Herbert Simon&rsquo;s bounded rationality, learners, or imitators."
+                  body="How many people. How equal they start. What kind of land. What they want — resources (Marx), status (Bourdieu), belonging (Durkheim), or domination over others. What kind of minds they have — Herbert Simon&rsquo;s bounded rationality, learners, or imitators."
                 />
                 <Step
                   n="02"
@@ -254,7 +254,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
                 <Step
                   n="04"
                   title="Hear the theorists"
-                  body="AI observers read the same run through different lenses — Marx, Durkheim, Bourdieu, Weber, Turchin, Flack — and narrate what they see in their own vocabulary. Same emergence, multiple readings, side by side."
+                  body="AI observers read the same run through different lenses — Marx, Polanyi, Bourdieu, Durkheim, Granovetter, Schelling, Turchin, Farmer, Epstein, Flack — and narrate what they see in their own vocabulary. Same emergence, multiple readings, side by side."
                 />
               </ol>
             </div>

@@ -1,21 +1,105 @@
-// Persistence for saved simulation runs (v0.2).
+// Persistence for saved simulation runs and (v0.4) user accounts.
 //
 // A run is deterministic given its config and seed, so a saved run stores the
 // config (seed included) and is re-executed identically on replay. The history
 // and chronicle are kept as JSON so the saved run can be browsed — its metric
 // timeline and the observers' readings — without re-running it.
+//
+// Runs are owned by exactly one of:
+//   - a User (when saved while signed in), or
+//   - an anonymous ownerKey (a per-browser cuid in localStorage), so anonymous
+//     saves survive reload and can be claimed when the browser later signs up.
+// `isPublic` opts a run into the gallery; gallery reads bypass ownership.
 
 generator client {
   provider = "prisma-client-js"
 }
 
+// Prisma 7 moved connection config out of schema.prisma. The Postgres URL is
+// read from DATABASE_URL by `prisma.config.ts` (for migrate / studio) and by
+// `lib/db.ts` (for the runtime PrismaClient + pg adapter).
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
 }
+
+// -------- Auth (Better Auth shape) --------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  runs     Run[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+/// OAuth provider links. Unused until we add a social provider (GitHub /
+/// Google), but the table exists so Better Auth can light it up later.
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+/// Email-verification + password-reset tokens (Better Auth managed).
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// -------- Application --------
 
 model Run {
   id          String   @id @default(cuid())
+  /// FK to User. Null means the run was saved anonymously.
+  ownerId     String?
+  /// Opaque per-browser cuid (from localStorage `nomos-anon-id`). Set iff
+  /// `ownerId` is null. On sign-up we reassign these rows to the new user.
+  ownerKey    String?
+  /// Opts the run into the public gallery.
+  isPublic    Boolean  @default(false)
   name        String
   createdAt   DateTime @default(now())
   seed        Int
@@ -23,10 +107,16 @@ model Run {
   alive       Int
   gini        Float
   totalWealth Float
-  /// JSON-encoded SimulationConfig, HistoryPoint[], and ChronicleEntry[].
+  /// JSON-encoded SimulationConfig.
   config      String
+  /// JSON-encoded HistoryPoint[].
   history     String
+  /// JSON-encoded ChronicleEntry[].
   chronicle   String
 
-  @@index([createdAt])
+  owner User? @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+  @@index([ownerKey, createdAt])
+  @@index([isPublic, createdAt])
 }
