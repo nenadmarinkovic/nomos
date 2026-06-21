@@ -75,6 +75,14 @@ export function NetworkCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const lastBuiltTurn = useRef<number>(-9999);
+  // The 3D graph has no built-in auto-fit, so the camera otherwise sits at the
+  // library's fixed default distance. Because the node count and layout spread
+  // differ every time the view (re)mounts — a run that has aged has fewer,
+  // tighter-clustered agents — the graph would occupy an inconsistent, usually
+  // smaller, slice of the frame on each entry. We fit it to the viewport once
+  // the first layout settles, then leave the camera alone so later orbit/zoom
+  // and the periodic rebuilds don't yank the view back.
+  const didFitRef = useRef(false);
   const prevNodeIdsRef = useRef<Set<number>>(new Set());
   const prevLinkKeysRef = useRef<Set<string>>(new Set());
 
@@ -118,6 +126,9 @@ export function NetworkCanvas() {
       prevNodeIdsRef.current = new Set();
       prevLinkKeysRef.current = new Set();
       lastBuiltTurn.current = -9999;
+      // A new run repopulates the graph from scratch — let it reframe once the
+      // fresh layout settles instead of holding the previous run's camera.
+      didFitRef.current = false;
       setEvents([]);
     }
 
@@ -251,6 +262,18 @@ export function NetworkCanvas() {
             warmupTicks={20}
             d3AlphaDecay={0.04}
             d3VelocityDecay={0.4}
+            onEngineStop={() => {
+              // Frame the graph the first time a non-empty layout settles, so
+              // every entry into the view shows the network at a consistent
+              // scale instead of whatever the default camera distance happens
+              // to render for this run's node count.
+              if (didFitRef.current || data.nodes.length === 0) return;
+              const g = graphRef.current;
+              if (g && typeof g.zoomToFit === "function") {
+                didFitRef.current = true;
+                g.zoomToFit(500, 40);
+              }
+            }}
             enableNodeDrag={false}
             controlType="orbit"
             showNavInfo={false}
