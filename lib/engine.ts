@@ -125,6 +125,12 @@ export class Engine {
   private regrowthRate: number;
   private reproduction: boolean;
   private topology: InteractionTopology;
+  /** Carrying capacity — the starting agent count. Births stop once the
+   *  living population reaches this; deaths free up the budget so births
+   *  can fire again. Keeps the simulation performant (no 12 000-agent
+   *  runaway at city scale) and gives demographic dynamics in a bounded
+   *  envelope. */
+  private populationCap: number;
 
   constructor(config: SimulationConfig) {
     this.rng = mulberry32(config.seed || 1);
@@ -157,6 +163,7 @@ export class Engine {
     const requested = AGENT_COUNT[config.world.scale];
     const cap = Math.floor(total * 0.5);
     const count = Math.min(requested, cap);
+    this.populationCap = count;
 
     this.agents = spawnAgents(this, config, count);
     for (const a of this.agents) {
@@ -212,13 +219,19 @@ export class Engine {
   private reproductionPhase(livingIds: number[]): void {
     if (!this.reproduction) return;
 
+    // Cap births at the starting population. While alive < cap, births can
+    // fire; once alive == cap, they stop until a death frees up the slot.
+    // Visible demographic dynamics (line dips and recovers) without runaway.
+    if (livingIds.length >= this.populationCap) return;
+    let budget = this.populationCap - livingIds.length;
+
     /** Base per-tick probability at peak fertility and full wealth factor.
-     *  Tuned so that a healthy mature agent leaves roughly one child over
-     *  their lifetime; lean conditions push it below replacement (population
-     *  shrinks), abundance pushes it above (population grows). */
-    const BASE_RATE = 0.008;
+     *  Generous so the population recovers quickly toward the cap after
+     *  famine; the cap above is what stops overshoot. */
+    const BASE_RATE = 0.04;
 
     for (const id of livingIds) {
+      if (budget <= 0) break;
       const a = this.agents[id];
       if (!a.alive) continue;
 
@@ -238,6 +251,7 @@ export class Engine {
       if (this.rng() >= p) continue;
 
       this.bear(a);
+      budget--;
     }
   }
 
@@ -959,6 +973,16 @@ function spawnAgents(
       lastHoldings: sugar + spice,
     });
   }
+
+  // Stagger initial ages across the population. Without this, every agent
+  // is born at T=0 and reaches the fertile window (≥ 0.15 × maxAge) at the
+  // same time — by then half have starved and the breeding pool is gone.
+  // Seeding ages in [0, 0.6 × maxAge] makes the cohort demographically
+  // mixed from turn one, so births can start immediately.
+  for (const a of agents) {
+    a.age = Math.floor(rng() * a.maxAge * 0.6);
+  }
+
   return agents;
 }
 
