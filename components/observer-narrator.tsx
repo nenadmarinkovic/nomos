@@ -9,12 +9,13 @@ import {
   type ObserverKey,
   type SimulationConfig,
 } from "@/lib/config";
+import { activeWorldRef } from "@/lib/active-world";
 import {
   detectEvent,
   type DetectorState,
   type SignificantEvent,
 } from "@/lib/events";
-import type { WorldSummary } from "@/lib/observers";
+import type { SimContext, WorldSummary } from "@/lib/observers";
 import {
   pickObserver,
   resetObserverRotation,
@@ -50,6 +51,11 @@ export function ObserverNarrator() {
   const historyRef = useRef<
     { turn: number; alive: number; gini: number; tradePrice: number }[]
   >([]);
+  /** Recent events, kept here (not in the chronicle store) so the observer
+   *  prompt sees them even when narration is still pending. Capped at 5. */
+  const recentEventsRef = useRef<
+    { turn: number; kind: string; title: string }[]
+  >([]);
 
   // Reset everything when a new run begins.
   useEffect(() => {
@@ -60,6 +66,7 @@ export function ObserverNarrator() {
     };
     seenRef.current = new Set();
     historyRef.current = [];
+    recentEventsRef.current = [];
     resetObserverRotation();
   }, [runId]);
 
@@ -96,7 +103,15 @@ export function ObserverNarrator() {
     // Open a single chronicle entry for the chosen observer, then dispatch.
     openNarrations(event, [picked]);
     const world = worldSummary(config);
-    void requestNarration(picked, event, world, {
+    const context = buildSimContext(snapshot, recentEventsRef.current);
+    // Push this event to the rolling list *after* the prompt is built so
+    // "earlier this run" actually means earlier — the current event is the
+    // one being narrated, not part of the past.
+    recentEventsRef.current = [
+      ...recentEventsRef.current,
+      { turn: event.turn, kind: event.kind, title: event.title },
+    ].slice(-5);
+    void requestNarration(picked, event, world, context, {
       resolve: resolveNarration,
       fail: failNarration,
     });
@@ -122,6 +137,55 @@ function worldSummary(config: SimulationConfig): WorldSummary {
 }
 
 /**
+ * Assemble the macro signals the observer prompt should see in addition to
+ * the triggering event: motivation mix, recent events, and a snapshot of
+ * the trade-tie graph. Cheap — all data lives in already-computed snapshots
+ * or refs.
+ */
+function buildSimContext(
+  snapshot: { alive: number; motivationCounts: { material: number; symbolic: number; normative: number; power: number } },
+  recentEvents: { turn: number; kind: string; title: string }[],
+): SimContext {
+  const counts = snapshot.motivationCounts;
+  const total =
+    counts.material + counts.symbolic + counts.normative + counts.power;
+  const safeShare = (n: number) => (total > 0 ? n / total : 0);
+
+  // Tie graph stats — derived from the flat triples buffer the worker ships.
+  const world = activeWorldRef.current;
+  let count = 0;
+  let topWeight = 0;
+  let isolatesShare = 0;
+  if (world && world.ties.length > 0) {
+    const ties = world.ties;
+    count = ties.length / 3;
+    const tiedIds = new Set<number>();
+    for (let i = 0; i < ties.length; i += 3) {
+      const w = ties[i + 2];
+      if (w > topWeight) topWeight = w;
+      tiedIds.add(ties[i] | 0);
+      tiedIds.add(ties[i + 1] | 0);
+    }
+    if (snapshot.alive > 0) {
+      isolatesShare = Math.max(0, 1 - tiedIds.size / snapshot.alive);
+    }
+  } else if (world && snapshot.alive > 0) {
+    isolatesShare = 1;
+  }
+
+  return {
+    motivationMix: {
+      material: safeShare(counts.material),
+      symbolic: safeShare(counts.symbolic),
+      normative: safeShare(counts.normative),
+      power: safeShare(counts.power),
+    },
+    recentEvents,
+    ties: { count, topWeight, isolatesShare },
+  };
+}
+
+/**
  * Tidy AI-generated narration text before it lands in the chronicle. Mistral
  * frequently emits em-dashes with no surrounding whitespace ("elite—just");
  * typographically that reads as a hyphen and disrupts the sentence. We force
@@ -138,6 +202,7 @@ async function requestNarration(
   observer: ObserverKey,
   event: SignificantEvent,
   world: WorldSummary,
+  context: SimContext,
   handlers: {
     resolve: (key: string, text: string) => void;
     fail: (key: string, error: string) => void;
@@ -148,7 +213,7 @@ async function requestNarration(
     const res = await fetch("/api/observe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ observer, event, world }),
+      body: JSON.stringify({ observer, event, world, context }),
     });
     const data = (await res.json().catch(() => ({}))) as {
       text?: string;

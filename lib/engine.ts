@@ -185,8 +185,8 @@ export class Engine {
     this.tradePhase();
     this.decayTies();
 
-    // Phase 3: pay metabolism, age, and die (or leave an heir). Capture the
-    // living set first so reproduction's newborns don't act this turn.
+    // Phase 3: pay metabolism, age, and die. Capture the living set first so
+    // any newborns from phase 4 don't act this turn.
     const living: number[] = [];
     for (const a of this.agents) {
       if (a.alive) living.push(a.id);
@@ -197,7 +197,101 @@ export class Engine {
       this.consume(a);
     }
 
+    // Phase 4: fertile agents may reproduce. Births are decoupled from deaths
+    // — they happen when an agent is wealthy and in a fertile age range, not
+    // because somebody else died. Population genuinely fluctuates.
+    this.reproductionPhase(living);
+
     this.turn++;
+  }
+
+  /** Per-tick birth dynamics. Each living agent's odds of reproducing this
+   *  tick scale with wealth (richer agents reproduce more) and age (a bell
+   *  curve peaking mid-life, zero in childhood and at the edge of death).
+   *  A spawned child takes the parent's traits and is placed near them. */
+  private reproductionPhase(livingIds: number[]): void {
+    if (!this.reproduction) return;
+
+    /** Base per-tick probability at peak fertility and full wealth factor.
+     *  Tuned so that a healthy mature agent leaves roughly one child over
+     *  their lifetime; lean conditions push it below replacement (population
+     *  shrinks), abundance pushes it above (population grows). */
+    const BASE_RATE = 0.008;
+
+    for (const id of livingIds) {
+      const a = this.agents[id];
+      if (!a.alive) continue;
+
+      // Triangular bell over normalised age: peak at 0.5, zero at <0.15
+      // or >0.85. Agents are infertile when very young or very old.
+      const ageNorm = a.maxAge > 0 ? a.age / a.maxAge : 0.5;
+      const ageFactor = Math.max(0, 1 - Math.abs(ageNorm - 0.5) * 2.5);
+      if (ageFactor <= 0) continue;
+
+      // Saturating wealth factor: 0 when broke, ~1 at modest holdings,
+      // capped at 2 so a single hoarder can't dominate births.
+      const wealth = a.sugar + a.spice;
+      const wealthFactor = Math.min(2, wealth / 20);
+      if (wealthFactor <= 0) continue;
+
+      const p = BASE_RATE * ageFactor * wealthFactor;
+      if (this.rng() >= p) continue;
+
+      this.bear(a);
+    }
+  }
+
+  /** Place a child of `parent` on a free cell — preferably near the parent,
+   *  falling back to anywhere on the grid if the neighbourhood is full. */
+  private bear(parent: Agent): void {
+    let idx = this.findEmptyCellNear(parent.x, parent.y, parent.vision);
+    if (idx < 0) idx = this.findEmptyCell();
+    if (idx < 0) return;
+    const cx = idx % this.width;
+    const cy = Math.floor(idx / this.width);
+    const child: Agent = {
+      id: this.agents.length,
+      alive: true,
+      x: cx,
+      y: cy,
+      prevX: cx,
+      prevY: cy,
+      sugar: parent.initialSugar,
+      spice: parent.initialSpice,
+      initialSugar: parent.initialSugar,
+      initialSpice: parent.initialSpice,
+      age: 0,
+      vision: parent.vision,
+      sugarMetab: parent.sugarMetab,
+      spiceMetab: parent.spiceMetab,
+      maxAge: parent.maxAge,
+      motivation: parent.motivation,
+      sophistication: parent.sophistication,
+      boldness: 0.5,
+      lastHoldings: parent.initialSugar + parent.initialSpice,
+    };
+    this.agents.push(child);
+    this.occupants[idx] = child.id;
+  }
+
+  /** Sample an empty cell within `radius` of (cx, cy). Returns the grid
+   *  index, or -1 if no free neighbour was found after a bounded search. */
+  private findEmptyCellNear(
+    cx: number,
+    cy: number,
+    radius: number,
+  ): number {
+    const r = Math.max(1, Math.min(radius, 6));
+    for (let attempt = 0; attempt < 16; attempt++) {
+      const dx = Math.floor(this.rng() * (2 * r + 1)) - r;
+      const dy = Math.floor(this.rng() * (2 * r + 1)) - r;
+      const x = cx + dx;
+      const y = cy + dy;
+      if (x < 0 || y < 0 || x >= this.width || y >= this.height) continue;
+      const idx = y * this.width + x;
+      if (this.occupants[idx] === -1) return idx;
+    }
+    return -1;
   }
 
   private regrow(stock: Float32Array, max: Float32Array): void {
@@ -576,37 +670,7 @@ export class Engine {
     a.alive = false;
     this.occupants[a.y * this.width + a.x] = -1;
     this.scrubTies(a.id);
-
-    if (!this.reproduction) return;
-
-    const idx = this.findEmptyCell();
-    if (idx < 0) return;
-
-    const cx = idx % this.width;
-    const cy = Math.floor(idx / this.width);
-    const child: Agent = {
-      id: this.agents.length,
-      alive: true,
-      x: cx,
-      y: cy,
-      prevX: cx,
-      prevY: cy,
-      sugar: a.initialSugar,
-      spice: a.initialSpice,
-      initialSugar: a.initialSugar,
-      initialSpice: a.initialSpice,
-      age: 0,
-      vision: a.vision,
-      sugarMetab: a.sugarMetab,
-      spiceMetab: a.spiceMetab,
-      maxAge: a.maxAge,
-      motivation: a.motivation,
-      sophistication: a.sophistication,
-      boldness: 0.5,
-      lastHoldings: a.initialSugar + a.initialSpice,
-    };
-    this.agents.push(child);
-    this.occupants[idx] = child.id;
+    // Births are no longer triggered by deaths — see `reproductionPhase`.
   }
 
   private findEmptyCell(): number {
