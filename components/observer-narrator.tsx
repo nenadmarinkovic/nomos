@@ -15,13 +15,19 @@ import {
   type SignificantEvent,
 } from "@/lib/events";
 import type { WorldSummary } from "@/lib/observers";
+import {
+  pickObserver,
+  resetObserverRotation,
+} from "@/lib/observer-routing";
 import { useSimulationStore } from "@/lib/store";
 
 /**
- * Headless component. It watches the simulation's macro metrics, detects the
- * rare significant events worth narrating, and dispatches one Mistral request
- * per active observer per event through /api/observe. Results land in the
- * chronicle slice of the store, which the ChroniclePanel renders.
+ * Headless component. Watches the simulation's macro metrics, detects the
+ * rare significant events worth narrating, picks the single best-fit
+ * observer for each event (via `pickObserver`), and dispatches one Mistral
+ * request through /api/observe. Across the run the user still hears every
+ * voice — different events route to different theorists — but no moment
+ * gets buried under N parallel paragraphs.
  *
  * Renders nothing.
  */
@@ -54,6 +60,7 @@ export function ObserverNarrator() {
     };
     seenRef.current = new Set();
     historyRef.current = [];
+    resetObserverRotation();
   }, [runId]);
 
   useEffect(() => {
@@ -83,14 +90,16 @@ export function ObserverNarrator() {
     seenRef.current.add(event.id);
     detector.lastEventTurn = event.turn;
 
-    openNarrations(event, observers);
+    const picked = pickObserver(event.kind, observers);
+    if (!picked) return;
+
+    // Open a single chronicle entry for the chosen observer, then dispatch.
+    openNarrations(event, [picked]);
     const world = worldSummary(config);
-    for (const observer of observers) {
-      void requestNarration(observer, event, world, {
-        resolve: resolveNarration,
-        fail: failNarration,
-      });
-    }
+    void requestNarration(picked, event, world, {
+      resolve: resolveNarration,
+      fail: failNarration,
+    });
   }, [
     started,
     snapshot,
