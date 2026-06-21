@@ -72,6 +72,26 @@ const PRIORITY: Record<EventKind, ObserverKey[]> = {
    *  Flack's slow variables eroding, Polanyi's disembedding. */
   network_fracture: ["granovetter", "flack", "polanyi"],
 
+  /** Inequality that has sat at an extreme level for a long stretch.
+   *  Marx names the calcified class division; Bourdieu reads the
+   *  reproduction; Turchin's elite overproduction has found its host. */
+  extreme_inequality: ["marx", "bourdieu", "turchin"],
+
+  /** A top tier holding most of the wealth indefinitely — oligarchic
+   *  consolidation. Turchin's elite capture; Marx's owners; Flack's
+   *  slow variables holding the asymmetry in place. */
+  oligarchy: ["turchin", "marx", "flack"],
+
+  /** Exogenous land-side shock (blight halving regrowth) — Polanyi reads
+   *  the substrate failing the embedded economy; Epstein the methodological
+   *  shock; Farmer the dynamical perturbation. */
+  shock_blight: ["polanyi", "epstein", "farmer"],
+
+  /** Exogenous mortality shock (a fraction of the population vanishes).
+   *  Turchin reads the secular cycle's mortality phase; Durkheim the
+   *  rupture of the social tissue; Flack the slow variables tested. */
+  shock_plague: ["turchin", "durkheim", "flack"],
+
   /** Heartbeat reading on a stable society. Cycles through every available
    *  theorist so the user hears a different voice on each passage. */
   passage: [

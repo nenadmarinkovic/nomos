@@ -25,6 +25,10 @@ export type EventKind =
   | "motivation_shift"
   | "coercion_wave"
   | "network_fracture"
+  | "extreme_inequality"
+  | "oligarchy"
+  | "shock_blight"
+  | "shock_plague"
   | "passage";
 
 export interface MetricPoint {
@@ -94,6 +98,21 @@ export interface DetectorState {
    *  re-armed only once the index relaxes back below `SEGREGATION_REARM`, so
    *  oscillation around the line doesn't refire every cooldown. */
   segregationArmed: boolean;
+  /** First turn Gini stayed above the extreme threshold without dipping.
+   *  null while below the threshold. Used to fire `extreme_inequality` only
+   *  after a sustained period of high concentration. */
+  giniHighSince: number | null;
+  /** First turn top-decile wealth share stayed above the oligarchy threshold.
+   *  null while below. Used to fire `oligarchy` after sustained capture. */
+  topShareHighSince: number | null;
+  /** Latches so a sustained-state event fires once, then re-arms only after
+   *  the underlying metric relaxes back below the rearm line. */
+  extremeInequalityArmed: boolean;
+  oligarchyArmed: boolean;
+  /** Number of `passage` events fired consecutively (with no other event
+   *  kind in between). Cap on this so a stable world goes silent instead
+   *  of producing N rephrasings of the same fact. */
+  consecutivePassages: number;
 }
 
 /** Turns back we compare against when measuring change. */
@@ -117,6 +136,10 @@ const TITLES: Record<EventKind, string> = {
   motivation_shift: "A way of life spreads",
   coercion_wave: "The strong take",
   network_fracture: "The web of trade frays",
+  extreme_inequality: "Inequality calcifies",
+  oligarchy: "An oligarchy consolidates",
+  shock_blight: "Blight on the land",
+  shock_plague: "Plague sweeps through",
   passage: "The chronicle continues",
 };
 
@@ -133,25 +156,42 @@ const MOTIVATION_LABEL: Record<AgentMotivation, string> = {
  *  stable phases — observers comment on the current state instead of waiting
  *  for the next inflection. */
 const PASSAGE_INTERVAL = 30;
+/** Cap on consecutive passages. Past this, the heartbeat goes silent until
+ *  a dynamic event fires, so the chronicle doesn't fill with 80 rephrasings
+ *  of "the world is still at Gini 0.65." */
+const MAX_CONSECUTIVE_PASSAGES = 3;
 
 /** Trades per turn before we call it a genuine market rather than barter noise. */
 const MARKET_THRESHOLD = 12;
 
 /** Coercion telemetry. A wave is called when seizures in a single turn clear
  *  both an absolute floor and a per-capita rate, so it scales with population
- *  instead of firing constantly at city scale. */
+ *  instead of firing constantly at city scale. Loosened so mid-run combat
+ *  surfaces as a wave instead of staying invisible. */
 const COERCION_FLOOR = 3;
-const COERCION_RATE = 0.012;
+const COERCION_RATE = 0.004;
 
 /** Segregation threshold. The index is noisy turn to turn, so we fire only
  *  when it crosses *up* through a genuinely notable level (having been below
  *  it at the window's start), not on every upward wobble. */
-const SEGREGATION_LINE = 0.25;
-const SEGREGATION_REARM = 0.15;
+const SEGREGATION_LINE = 0.18;
+const SEGREGATION_REARM = 0.12;
 
 /** A motivation must gain at least this much population share over the window
  *  and reach at least this dominance for a takeover to register. */
-const MOTIVATION_SURGE = 0.08;
+const MOTIVATION_SURGE = 0.05;
+
+/** Sustained-state detectors. These watch absolute levels, not deltas — so
+ *  a society that has been at Gini 0.65 for thousands of turns *gets read*
+ *  rather than disappearing behind the heartbeat. */
+const EXTREME_INEQUALITY_LEVEL = 0.6;
+const EXTREME_INEQUALITY_REARM = 0.5;
+const OLIGARCHY_LEVEL = 0.8;
+const OLIGARCHY_REARM = 0.6;
+/** Turns of continuous high before a sustained-state event fires. ~30 sec at
+ *  1× speed: long enough to mean "this is the new normal," short enough to
+ *  fire reliably mid-run. */
+const SUSTAINED_HIGH_DURATION = 80;
 const MOTIVATION_DOMINANCE = 0.4;
 
 /** Isolation must climb this much over the window, to at least this level,
@@ -194,6 +234,20 @@ export function detectEvent(
   const deltaGini = gini - ref.gini;
   const alivePct = ref.alive > 0 ? deltaAlive / ref.alive : 0;
   const shared = { deltaAlive, deltaGini, topWealthShare };
+
+  // Exogenous shocks take priority — they're the engine handing the
+  // observers a moment of "something is happening to us, not by us."
+  // The seenRef dedup in the caller handles "same plague, same turn" so
+  // we don't need a separate latch here.
+  if ((snapshot.plagueDeathsThisTurn ?? 0) > 0) {
+    return makeEvent("shock_plague", "major", snapshot, {
+      ...shared,
+      deltaAlive: -(snapshot.plagueDeathsThisTurn ?? 0),
+    });
+  }
+  if (snapshot.blightActive && snapshot.blightStartedTurn === turn) {
+    return makeEvent("shock_blight", "major", snapshot, shared);
+  }
 
   // The first time trade thickens into a real market.
   if (!state.marketFormed && tradeVolume >= MARKET_THRESHOLD) {
@@ -292,12 +346,49 @@ export function detectEvent(
     return makeEvent("network_fracture", "minor", snapshot, shared);
   }
 
-  // Heartbeat — if the society has been quietly stable for long enough,
-  // emit a passage event so the chronicle keeps moving. Routed observer
-  // rotates so the user hears different voices on the same stable world.
+  // --- Sustained-state detectors. Fire when a metric has *been* extreme for
+  // long enough, even if it's no longer changing. Each uses a hysteresis
+  // latch so the event fires once, then re-arms only when the metric relaxes
+  // back below the rearm line. This is what was missing for late-run reads:
+  // when a society sits at Gini 0.65 for 3,000 turns, *that fact* should be
+  // surfaced, not buried under generic passage heartbeats.
+  if (gini >= EXTREME_INEQUALITY_LEVEL) {
+    if (state.giniHighSince === null) state.giniHighSince = turn;
+    if (
+      state.extremeInequalityArmed &&
+      state.giniHighSince !== null &&
+      turn - state.giniHighSince >= SUSTAINED_HIGH_DURATION
+    ) {
+      state.extremeInequalityArmed = false;
+      return makeEvent("extreme_inequality", "major", snapshot, shared);
+    }
+  } else {
+    state.giniHighSince = null;
+    if (gini <= EXTREME_INEQUALITY_REARM) state.extremeInequalityArmed = true;
+  }
+
+  if (topWealthShare >= OLIGARCHY_LEVEL) {
+    if (state.topShareHighSince === null) state.topShareHighSince = turn;
+    if (
+      state.oligarchyArmed &&
+      state.topShareHighSince !== null &&
+      turn - state.topShareHighSince >= SUSTAINED_HIGH_DURATION
+    ) {
+      state.oligarchyArmed = false;
+      return makeEvent("oligarchy", "major", snapshot, shared);
+    }
+  } else {
+    state.topShareHighSince = null;
+    if (topWealthShare <= OLIGARCHY_REARM) state.oligarchyArmed = true;
+  }
+
+  // Heartbeat — passage events only fire if we haven't been emitting them in
+  // a row. After MAX_CONSECUTIVE_PASSAGES, the chronicle goes silent until
+  // a real dynamic event happens.
   if (
     state.lastEventTurn !== null &&
-    turn - state.lastEventTurn >= PASSAGE_INTERVAL
+    turn - state.lastEventTurn >= PASSAGE_INTERVAL &&
+    state.consecutivePassages < MAX_CONSECUTIVE_PASSAGES
   ) {
     return makeEvent("passage", "minor", snapshot, shared);
   }
@@ -440,6 +531,14 @@ function summarize(kind: EventKind, m: EventMetrics): string {
     }
     case "passage":
       return `Turn ${m.turn}. ${alive} agents are alive, holding a combined ${wealth} in wealth. The Gini coefficient stands at ${gini}; the wealthiest tier holds ${topPct}% of the population's standing.${m.tradePrice > 0 ? ` Trade clears at about ${price} units of sugar per unit of spice.` : " No active market this turn."} Nothing has lurched, but the society continues.`;
+    case "extreme_inequality":
+      return `By turn ${m.turn} extreme inequality is no longer a passing phase but the settled order: the Gini coefficient has held at or above 0.60 for a long stretch, currently ${gini}, with the wealthiest tier holding ${topPct}% of the standing. ${alive} agents are alive; this is not the surge but the calcification.`;
+    case "oligarchy":
+      return `By turn ${m.turn} the top wealth tier has held more than 80% of the population's standing for a sustained period (now ${topPct}%). A small elite has consolidated; the rest of the ${alive} living agents share the remainder. Gini sits at ${gini}.`;
+    case "shock_blight":
+      return `At turn ${m.turn} a blight has fallen on the land: sugar regrowth has been cut sharply for a stretch. ${alive} agents are alive; Gini ${gini}. The lean about to fall on the population is exogenous — not produced by the society's own choices but by the substrate beneath it.`;
+    case "shock_plague":
+      return `At turn ${m.turn} a wave of mortality sweeps the population: ${dAlive} agents died at random in a single turn, leaving ${alive} alive. Gini sits at ${gini}. This is not famine or starvation — it is contingency, the world reminding the society that it is not its own master.`;
   }
 }
 

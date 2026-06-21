@@ -26,6 +26,9 @@ const EMPTY_SNAPSHOT: EngineSnapshot = {
   shamingCount: 0,
   tieCount: 0,
   isolateShare: 0,
+  blightActive: false,
+  blightStartedTurn: -9999,
+  plagueDeathsThisTurn: 0,
 };
 
 export interface HistoryPoint {
@@ -53,20 +56,68 @@ export type ViewKey =
   | "narrator"
   | "network";
 
+export type WindowAnchor = "tl" | "tr" | "bl" | "br";
+
+/** Window positions are stored as offsets from an anchored corner so they
+ * follow the container when it reflows — sidebar collapse, viewport resize,
+ * or DPR changes can't shake a top-right window loose from the top-right
+ * corner. Offsets are measured from the anchored edges, not the origin. */
 export interface WindowPosition {
-  x: number;
-  y: number;
+  anchor: WindowAnchor;
+  offsetX: number;
+  offsetY: number;
 }
 
-export const DEFAULT_WINDOW_POSITIONS: Record<ViewKey, WindowPosition> = {
-  gini: { x: 20, y: 20 },
-  alive: { x: 20, y: 230 },
-  wealth: { x: 20, y: 440 },
-  price: { x: 20, y: 650 },
-  stream: { x: 320, y: 280 },
-  narrator: { x: 320, y: 20 },
-  network: { x: 320, y: 560 },
+export const WIN_WIDTH = 288;
+
+/** Measured rendered heights, used so the default-stack and align-stack
+ * produce the same visual gap horizontally and vertically. Chart windows
+ * (header 37 + body 145) are ~182px; the stream legend adds ~20px; the
+ * narrator is pinned to the chart height via min-h so it stays predictable
+ * regardless of how long the latest reading is. */
+export const WIN_HEIGHTS: Record<ViewKey, number> = {
+  gini: 182,
+  alive: 182,
+  wealth: 182,
+  price: 182,
+  stream: 202,
+  narrator: 182,
+  network: 380,
 };
+
+export const DEFAULT_WINDOW_POSITIONS: Record<ViewKey, WindowPosition> = {
+  gini: { anchor: "tl", offsetX: 10, offsetY: 10 },
+  alive: { anchor: "tl", offsetX: 10, offsetY: 202 },
+  wealth: { anchor: "tl", offsetX: 10, offsetY: 394 },
+  price: { anchor: "tl", offsetX: 10, offsetY: 586 },
+  narrator: { anchor: "tr", offsetX: 10, offsetY: 10 },
+  stream: { anchor: "tr", offsetX: 10, offsetY: 202 },
+  network: { anchor: "tr", offsetX: 10, offsetY: 414 },
+};
+
+export function resolveWindowPosition(
+  pos: WindowPosition,
+  key: ViewKey,
+  container: { width: number; height: number },
+): { x: number; y: number } {
+  const W = container.width || 800;
+  const H = container.height || 600;
+  const winH = WIN_HEIGHTS[key];
+  const x =
+    pos.anchor === "tr" || pos.anchor === "br"
+      ? W - WIN_WIDTH - pos.offsetX
+      : pos.offsetX;
+  const y =
+    pos.anchor === "bl" || pos.anchor === "br"
+      ? H - winH - pos.offsetY
+      : pos.offsetY;
+  // Keep at least a sliver of the window on-screen so a too-small container
+  // can't push it fully outside the draggable surface.
+  return {
+    x: Math.max(0, Math.min(Math.max(0, W - 40), x)),
+    y: Math.max(0, Math.min(Math.max(0, H - 40), y)),
+  };
+}
 
 export type NarrationStatus = "pending" | "done" | "error";
 
@@ -204,70 +255,30 @@ export const useSimulationStore = create<SimulationState>()(
             "network",
           ];
           const visible = order.filter((k) => s.views[k]);
-          const W = s.canvasSize.width || 800;
-          const H = s.canvasSize.height || 600;
-          const winW = 288;
           const margin = 10;
           const gap = 10;
-
-          /** Conservative rendered-height upper bounds per window. The
-           * narrator and network bodies in particular can stretch past
-           * the chart-window default, so we leave headroom. */
-          const WIN_HEIGHTS: Record<ViewKey, number> = {
-            gini: 200,
-            alive: 200,
-            wealth: 200,
-            price: 200,
-            stream: 220,
-            narrator: 360,
-            network: 380,
-          };
 
           const cols = visible.length <= 2 ? 1 : 2;
 
           // Row-major assignment: window i goes to column i % cols.
-          // Then each column stacks independently using actual heights.
+          // Each column stacks independently using actual heights.
           const columns: ViewKey[][] = Array.from({ length: cols }, () => []);
           visible.forEach((key, i) => {
             const col = i % cols;
             columns[col].push(key);
           });
 
-          const isRight = corner === "tr" || corner === "br";
-          const isBottom = corner === "bl" || corner === "br";
-
           const positions = { ...s.windowPositions };
 
+          // With anchor-relative offsets, the only thing that flips with the
+          // corner choice is the anchor itself — the math is identical for
+          // all four corners (distance from the anchored edges).
           columns.forEach((colKeys, colIdx) => {
-            const x = isRight
-              ? W - margin - winW - colIdx * (winW + gap)
-              : margin + colIdx * (winW + gap);
-
-            if (isBottom) {
-              let yBottom = H - margin;
-              for (let i = colKeys.length - 1; i >= 0; i--) {
-                const key = colKeys[i];
-                const h = WIN_HEIGHTS[key];
-                // Clamp so the window's top never goes above the canvas
-                // top margin, and its bottom never goes past H - margin.
-                const y = Math.max(
-                  margin,
-                  Math.min(H - margin - h, yBottom - h),
-                );
-                positions[key] = { x: Math.max(0, x), y };
-                yBottom = y - gap;
-              }
-            } else {
-              let yTop = margin;
-              for (const key of colKeys) {
-                const h = WIN_HEIGHTS[key];
-                const y = Math.max(
-                  margin,
-                  Math.min(H - margin - h, yTop),
-                );
-                positions[key] = { x: Math.max(0, x), y };
-                yTop = y + h + gap;
-              }
+            const offsetX = margin + colIdx * (WIN_WIDTH + gap);
+            let offsetY = margin;
+            for (const key of colKeys) {
+              positions[key] = { anchor: corner, offsetX, offsetY };
+              offsetY += WIN_HEIGHTS[key] + gap;
             }
           });
 
@@ -332,7 +343,7 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 11,
+      version: 16,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         config: s.config,

@@ -48,6 +48,11 @@ export function ObserverNarrator() {
     lastEventTurn: null,
     marketFormed: false,
     segregationArmed: true,
+    giniHighSince: null,
+    topShareHighSince: null,
+    extremeInequalityArmed: true,
+    oligarchyArmed: true,
+    consecutivePassages: 0,
   });
   const seenRef = useRef<Set<string>>(new Set());
   const historyRef = useRef<MetricPoint[]>([]);
@@ -64,6 +69,11 @@ export function ObserverNarrator() {
       lastEventTurn: null,
       marketFormed: false,
       segregationArmed: true,
+      giniHighSince: null,
+      topShareHighSince: null,
+      extremeInequalityArmed: true,
+      oligarchyArmed: true,
+      consecutivePassages: 0,
     };
     seenRef.current = new Set();
     historyRef.current = [];
@@ -107,6 +117,13 @@ export function ObserverNarrator() {
 
     seenRef.current.add(event.id);
     detector.lastEventTurn = event.turn;
+    // Track consecutive passages so the detector can throttle the heartbeat
+    // when the world has truly settled. Any non-passage event resets it.
+    if (event.kind === "passage") {
+      detector.consecutivePassages += 1;
+    } else {
+      detector.consecutivePassages = 0;
+    }
 
     const picked = pickObserver(event.kind, observers);
     if (!picked) return;
