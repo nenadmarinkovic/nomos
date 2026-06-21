@@ -31,7 +31,6 @@ export type ObserverKey =
   | "weber"
   | "durkheim"
   | "luhmann"
-  | "ibn_khaldun"
   | "turchin"
   | "schelling"
   | "ostrom"
@@ -436,15 +435,6 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
     sees: "Society as a network of autopoietic subsystems — law, economy, politics, science — each operating on its own binary code and unable to fully translate the others.",
     watches:
       "How subsystems differentiate, draw boundaries, and communicate through structural couplings. Where one code colonizes another.",
-  },
-  ibn_khaldun: {
-    label: "Ibn Khaldun",
-    name: "Ibn Khaldun",
-    era: "1332–1406",
-    lens: "asabiyyah, cycles",
-    sees: "Civilization as a cycle. Group solidarity ('asabiyyah') is forged on the periphery, conquers the centre, then dissolves into luxury within three generations.",
-    watches:
-      "Cohesion vs. decadence. The slow erosion of solidarity once a dynasty grows comfortable, and the next periphery rising to replace it.",
   },
   turchin: {
     label: "Turchin",

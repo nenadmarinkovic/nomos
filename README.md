@@ -9,7 +9,7 @@ A society simulation where agents follow simple rules and AI theorists observe w
 1. **Initial conditions** — population, resource landscape, starting equality, reproduction. Kept as minimal as defensible (Epstein's Rawlsian commitment).
 2. **Agent model** — simple rules for movement, exchange, harvest, and metabolism. Each agent carries a _motivation_ (material, symbolic, normative, power) and a _sophistication_ (minimal, bounded-rational, adaptive, social) drawn from the mix set on the setup screen. Sophistication decides how an agent chooses where to move: minimal optimises greedily, bounded satisfices over a short horizon, adaptive learns how far to range from whether ranging pays off, and social follows and imitates its wealthiest neighbour.
 3. **Simulation engine** — agents follow rules, society emerges. Trade, law, states, politics, conflict aren't programmed — they emerge or don't.
-4. **Observers** — AI theorists (Bourdieu, Durkheim, Marx, Luhmann, Ibn Khaldun, Turchin, Schelling, Epstein, Flack) watch the same field and describe what they see in their own vocabulary.
+4. **Observers** — AI theorists (Bourdieu, Durkheim, Marx, Luhmann, Turchin, Schelling, Epstein, Flack) watch the same field and describe what they see in their own vocabulary.
 
 ## Stack
 
