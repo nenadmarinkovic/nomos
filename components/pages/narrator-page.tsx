@@ -58,28 +58,23 @@ export function NarratorPage() {
         steps={[
           {
             n: "01",
-            title: "Marx & Bourdieu",
-            body: "<em>Capital, classes, distinction.</em> Who owns what, who reproduces their advantage across generations, whose taste tracks whose holdings. The economic infrastructure and its cultural superstructure.",
+            title: "Marx, Bourdieu & Polanyi",
+            body: "<em>Capital, distinction, the great transformation.</em> Who owns what and who reproduces their advantage (Marx); whose taste tracks whose holdings (Bourdieu); when the trade loop disembeds from kinship and locality into a self-regulating market (Polanyi).",
           },
           {
             n: "02",
-            title: "Durkheim & Luhmann",
-            body: "<em>Solidarity, anomie, subsystems.</em> When the social tissue is dense and shared, when it&rsquo;s fraying into normlessness, when subsystems — economy, law, politics — split into their own codes and stop speaking the same language.",
+            title: "Durkheim & Granovetter",
+            body: "<em>Solidarity and embeddedness.</em> Durkheim reads ritual and anomie — when shared norms bind the group, when they fray. Granovetter reads the trade-tie graph directly: who brokers between clusters, which weak ties carry the information that strong ones can&rsquo;t.",
           },
           {
             n: "03",
-            title: "Butler & Ostrom",
-            body: "<em>Performativity and the commons.</em> Judith Butler reads identity as repeated acts citing norms into existence — gender, status, selfhood as performance. Elinor Ostrom reads shared resources as governable by rules a community crafts for itself, between market and state. Both watch social order produced from below.",
+            title: "Schelling & Turchin",
+            body: "<em>Cascades and secular cycles.</em> The persistent structures behind the daily motion — small preference shifts compounding into tipping points; multi-generation elite overproduction tipping into crisis.",
           },
           {
             n: "04",
-            title: "Weber, Schelling, Turchin",
-            body: "<em>Domination, segregation cascades, secular cycles.</em> The persistent structures behind the daily motion — legitimate power, sorting under preference thresholds, multi-generation elite overproduction and collapse.",
-          },
-          {
-            n: "05",
-            title: "Epstein & Jessica Flack",
-            body: "<em>Methodological mirrors.</em> Joshua Epstein reads emergence as a Sugarscape modeller — &lsquo;if you didn&rsquo;t grow it, you didn&rsquo;t explain it.&rsquo; Jessica Flack reads it as a complexity ethologist watching animal politics: hierarchy as a computation, slow variables as a society&rsquo;s memory.",
+            title: "Farmer, Epstein & Flack",
+            body: "<em>The methodological mirrors.</em> Doyne Farmer reads the emergent price as complexity economics. Joshua Epstein reads it as a Sugarscape modeller — &lsquo;if you didn&rsquo;t grow it, you didn&rsquo;t explain it.&rsquo; Jessica Flack reads it as a complexity ethologist: hierarchy as a computation, slow variables as a society&rsquo;s memory.",
           },
         ]}
       />

@@ -9,7 +9,7 @@ A society simulation where agents follow simple rules and AI theorists observe w
 1. **Initial conditions** — population, resource landscape, starting equality, reproduction. Kept as minimal as defensible (Epstein's Rawlsian commitment).
 2. **Agent model** — simple rules for movement, exchange, harvest, and metabolism. Each agent carries a _motivation_ (material, symbolic, normative, power) and a _sophistication_ (minimal, bounded-rational, adaptive, social) drawn from the mix set on the setup screen. Sophistication decides how an agent chooses where to move: minimal optimises greedily, bounded satisfices over a short horizon, adaptive learns how far to range from whether ranging pays off, and social follows and imitates its wealthiest neighbour.
 3. **Simulation engine** — agents follow rules, society emerges. Trade, law, states, politics, conflict aren't programmed — they emerge or don't.
-4. **Observers** — AI theorists (Bourdieu, Durkheim, Marx, Luhmann, Turchin, Schelling, Epstein, Flack) watch the same field and describe what they see in their own vocabulary.
+4. **Observers** — AI theorists (Marx, Polanyi, Bourdieu, Durkheim, Granovetter, Schelling, Turchin, Farmer, Epstein, Flack) watch the same field and describe what they see in their own vocabulary.
 
 ## Stack
 
@@ -68,7 +68,7 @@ A society simulation where agents follow simple rules and AI theorists observe w
   - Better Auth, Postgres, and a public gallery of saved runs.
 - **Later**
   - Phase-space plot (e.g. Gini × Alive trajectory) and Sankey of agent state transitions for macro-behaviour reading.
-  - Territory contours and a Luhmann-style subsystem graph.
+  - Territory contours.
   - Additional agent models beyond `epstein_minimal`.
 
 ## What still needs to be done
@@ -79,7 +79,7 @@ Near term, in rough priority:
 2. **Phase-space plot** — a small window plotting (Gini, alive) over time as a single moving point with a fading trail. Shows the society's trajectory through stability/collapse.
 3. **Accounts and sharing (v0.4)** — Better Auth + Postgres, public run gallery.
 4. **Optional Sankey / state-transition view** — only worth doing once agents actually change motivation under the engine rules; today they don't, so this is parked.
-5. **Territory contours and Luhmann subsystem graph** — long-tail nice-to-have.
+5. **Territory contours** — long-tail nice-to-have.
 
 ## Develop
 
