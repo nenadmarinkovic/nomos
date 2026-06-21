@@ -21,6 +21,11 @@ const EMPTY_SNAPSHOT: EngineSnapshot = {
   tradePrice: 0,
   tradeVolume: 0,
   motivationCounts: { material: 0, symbolic: 0, normative: 0, power: 0 },
+  segregation: 0,
+  coercionCount: 0,
+  shamingCount: 0,
+  tieCount: 0,
+  isolateShare: 0,
 };
 
 export interface HistoryPoint {

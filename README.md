@@ -36,7 +36,7 @@ A society simulation where agents follow simple rules and AI theorists observe w
 
 - Mistral API (`mistral-small`) for per-theorist narration on significant events
 - One Mistral call per active observer per significant event — not per tick
-- The browser detects significant events (foundings, inequality surges, crashes, collapses) and posts them to `app/api/observe`, which builds a per-theorist prompt and calls Mistral. Readings stream into the **Chronicle** panel (Observers / Chronicle in the sidebar).
+- The browser detects significant events and posts them to `app/api/observe`, which builds a per-theorist prompt and calls Mistral. Readings stream into the **Chronicle** panel (Observers / Chronicle in the sidebar). Detection spans the macro economy (foundings, inequality surges and levelings, stratification, population booms and crashes, market formation, price shocks, collapse) **and** the social structure the engine now grows — spatial **segregation** (motivation clustering, a Schelling index), **cultural takeovers** (one motivation's share surging), **coercion waves** (bursts of predation, with community sanction), and **trade-web fracture** (ties dissolving into isolation). Each event kind routes to the theorist whose lens has the most purchase on it.
 - Without a `MISTRAL_API_KEY` the simulation still runs; the observers simply stay silent.
 
 **Infrastructure**
