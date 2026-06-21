@@ -2,13 +2,13 @@
 
 A society simulation where agents follow simple rules and AI theorists observe what emerges.
 
-> **Status:** v0.1.0 — the simulation core and observers are working. See the [roadmap](#roadmap).
+> **Status:** the simulation core, the engine's social mechanics, and the observers are working; scale/performance (PixiJS) and accounts are the open fronts. See the [roadmap](#roadmap).
 
 ## Architecture
 
 1. **Initial conditions** — population, resource landscape, starting equality, reproduction. Kept as minimal as defensible (Epstein's Rawlsian commitment).
-2. **Agent model** — simple rules for movement, exchange, harvest, and metabolism. Each agent carries a _motivation_ (material, symbolic, normative, power) and a _sophistication_ (minimal, bounded-rational, adaptive, social) drawn from the mix set on the setup screen. Sophistication decides how an agent chooses where to move: minimal optimises greedily, bounded satisfices over a short horizon, adaptive learns how far to range from whether ranging pays off, and social follows and imitates its wealthiest neighbour.
-3. **Simulation engine** — agents follow rules, society emerges. Trade, law, states, politics, conflict aren't programmed — they emerge or don't.
+2. **Agent model** — simple rules for movement, exchange, harvest, and metabolism. Each agent carries a _motivation_ (material, symbolic, normative, power) and a _sophistication_ (minimal, bounded-rational, adaptive, social) drawn from the mix set on the setup screen. Sophistication decides how an agent chooses where to move: minimal optimises greedily, bounded satisfices over a short horizon, adaptive learns how far to range from whether ranging pays off, and social follows and imitates its wealthiest neighbour. Motivation isn't fixed for life — through cultural transmission an agent can take on the motivation of a wealthier neighbour, so a dominant strain can spread horizontally across the field.
+3. **Simulation engine** — agents follow their local rules and macro-structure emerges. The engine programs only _local primitives_: harvest, bilateral exchange, predation by power-seekers, imitation of richer neighbours, community sanction of coercion, and inheritance along trade ties. What those primitives add up to — a market and its price, inequality, spatial segregation, elite capture, demographic boom and bust, collapse — isn't scripted anywhere; it emerges from the interactions, or it doesn't. (This is a deliberate shift from the v0.1 "nothing but harvest and trade" engine: conflict and norms are now primitives rather than hoped-for emergents, which buys richer dynamics at the cost of a little of the original Rawlsian minimalism.)
 4. **Observers** — AI theorists (Marx, Polanyi, Bourdieu, Durkheim, Granovetter, Schelling, Turchin, Farmer, Epstein, Flack) watch the same field and describe what they see in their own vocabulary.
 
 ## Stack
@@ -46,7 +46,7 @@ A society simulation where agents follow simple rules and AI theorists observe w
 
 ## Roadmap
 
-- **v0.1.0 — Simulation core + observers** _(current)_
+- **v0.1.0 — Simulation core + observers** _(done)_
   - Epstein-minimal agents on a two-good (sugar/spice) landscape: move, harvest, trade, metabolise, reproduce.
   - Emergent market: a price and trade volume that arise from local exchange, not from any global rule.
   - Four agent motivations and four sophistications, mixed per the setup screen and acted on by the engine.
@@ -64,6 +64,13 @@ A society simulation where agents follow simple rules and AI theorists observe w
   - Orbit / zoom / drag camera; click-to-inspect side panel with live wealth, sugar/spice, age, vision, metabolism, embeddedness, and the agent's top six trade partners.
   - **Motivation streamgraph** window: stacked-area share of material/symbolic/normative/power motivations over time.
   - Sidebar **Canvas** menu (Field ↔ Network) replaces the old floating overlay.
+- **v0.5 — Engine social mechanics** _(done)_
+  - **Conflict**: power-motivated agents seize a share of a weaker neighbour's holdings. A witnessing Normative agent shames the aggressor, who is then refused trade by the community for a spell — coercion carries a real economic cost, not just a tag.
+  - **Cultural transmission**: agents occasionally adopt the motivation of a wealthier neighbour, so motivations spread horizontally and a strain can colonise a neighbourhood by example, not only by birth.
+  - **Inheritance**: a dying agent bequeaths its holdings to surviving trade-tie partners, weighted by tie strength, so wealth concentrates across generations instead of vanishing.
+  - **Demographic dynamics**: wealth- and age-gated reproduction under a population cap, with a mutation / extinction guard so rare motivations always have a path back.
+  - **Seasonal substrate**: regrowth breathes on a slow cycle, so booms and famines become inevitable rather than purely the product of internal shocks.
+  - **Richer event detection**: alongside the macro-economic events, the detector now surfaces the social structure the engine grows — spatial **segregation**, **cultural takeovers**, **coercion waves**, and **trade-web fracture** — each routed to the best-fit theorist.
 - **v0.4 — Accounts & sharing**
   - Better Auth, Postgres, and a public gallery of saved runs.
 - **Later**
@@ -78,7 +85,7 @@ Near term, in rough priority:
 1. **PixiJS WebGL field renderer** — replace the Canvas2D agent layer to push the geographic Field toward 100k agents at 60fps. Tick loop already lives in a worker, so this is a renderer-only swap.
 2. **Phase-space plot** — a small window plotting (Gini, alive) over time as a single moving point with a fading trail. Shows the society's trajectory through stability/collapse.
 3. **Accounts and sharing (v0.4)** — Better Auth + Postgres, public run gallery.
-4. **Optional Sankey / state-transition view** — only worth doing once agents actually change motivation under the engine rules; today they don't, so this is parked.
+4. **Optional Sankey / state-transition view** — now that motivations change at runtime (cultural transmission and imitation), a Sankey of motivation transitions would have real flows to show. Worth doing once the macro views settle.
 5. **Territory contours** — long-tail nice-to-have.
 
 ## Develop
