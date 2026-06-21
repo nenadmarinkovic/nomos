@@ -53,6 +53,21 @@ const PRIORITY: Record<EventKind, ObserverKey[]> = {
   /** Society all but gone — Turchin's collapse phase, Flack's eroded
    *  slow variables, Marx's contradictions resolved by rupture. */
   collapse: ["turchin", "flack", "marx"],
+
+  /** Heartbeat reading on a stable society. Cycles through every available
+   *  theorist so the user hears a different voice on each passage. */
+  passage: [
+    "epstein",
+    "marx",
+    "durkheim",
+    "bourdieu",
+    "polanyi",
+    "granovetter",
+    "schelling",
+    "turchin",
+    "farmer",
+    "flack",
+  ],
 };
 
 /** Module-scoped rotation counter: keys are event kinds, values are the

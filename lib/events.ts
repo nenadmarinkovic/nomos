@@ -19,7 +19,8 @@ export type EventKind =
   | "population_boom"
   | "market_forming"
   | "price_shock"
-  | "collapse";
+  | "collapse"
+  | "passage";
 
 export interface MetricPoint {
   turn: number;
@@ -69,11 +70,10 @@ export interface DetectorState {
 
 /** Turns back we compare against when measuring change. */
 const WINDOW = 8;
-/** Minimum turns between non-founding events. Tuned so a reader has time to
- *  finish one reading before the next one appears: at 1× speed that's about
- *  four seconds between events; at 2× still readable. Bump again if
- *  high-speed runs feel rushed. */
-const COOLDOWN = 20;
+/** Minimum turns between non-founding events. At 1× speed (5 turns/sec)
+ *  that's a little over two seconds between events — fast enough to keep
+ *  the chronicle moving, slow enough that each reading still has weight. */
+const COOLDOWN = 12;
 
 const TITLES: Record<EventKind, string> = {
   founding: "The founding",
@@ -85,7 +85,14 @@ const TITLES: Record<EventKind, string> = {
   market_forming: "A market emerges",
   price_shock: "Prices convulse",
   collapse: "Collapse",
+  passage: "The chronicle continues",
 };
+
+/** Turns of silence after which a heartbeat `passage` event fires regardless
+ *  of whether anything notable happened. Keeps the chronicle alive during
+ *  stable phases — observers comment on the current state instead of waiting
+ *  for the next inflection. */
+const PASSAGE_INTERVAL = 30;
 
 /** Trades per turn before we call it a genuine market rather than barter noise. */
 const MARKET_THRESHOLD = 12;
@@ -141,7 +148,7 @@ export function detectEvent(
     return makeEvent("population_crash", "major", snapshot, shared);
   }
 
-  if (deltaGini >= 0.08) {
+  if (deltaGini >= 0.05) {
     return makeEvent("inequality_surge", "major", snapshot, shared);
   }
 
@@ -163,12 +170,22 @@ export function detectEvent(
     }
   }
 
-  if (deltaGini <= -0.08) {
+  if (deltaGini <= -0.05) {
     return makeEvent("leveling", "minor", snapshot, shared);
   }
 
   if (alivePct >= 0.35 && deltaAlive >= 15) {
     return makeEvent("population_boom", "minor", snapshot, shared);
+  }
+
+  // Heartbeat — if the society has been quietly stable for long enough,
+  // emit a passage event so the chronicle keeps moving. Routed observer
+  // rotates so the user hears different voices on the same stable world.
+  if (
+    state.lastEventTurn !== null &&
+    turn - state.lastEventTurn >= PASSAGE_INTERVAL
+  ) {
+    return makeEvent("passage", "minor", snapshot, shared);
   }
 
   return null;
@@ -243,6 +260,8 @@ function summarize(kind: EventKind, m: EventMetrics): string {
       return `At turn ${m.turn} the exchange rate has swung sharply to about ${price} units of sugar per unit of spice across ${m.tradeVolume} trades, while ${alive} agents remain alive and the Gini coefficient sits at ${gini}.`;
     case "collapse":
       return `By turn ${m.turn} the society has all but collapsed: only ${alive} agents remain alive, with a Gini coefficient of ${gini}.`;
+    case "passage":
+      return `Turn ${m.turn}. ${alive} agents are alive, holding a combined ${wealth} in wealth. The Gini coefficient stands at ${gini}; the wealthiest tier holds ${topPct}% of the population's standing.${m.tradePrice > 0 ? ` Trade clears at about ${price} units of sugar per unit of spice.` : " No active market this turn."} Nothing has lurched, but the society continues.`;
   }
 }
 
