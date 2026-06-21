@@ -58,6 +58,13 @@ const REBUILD_EVERY_N_TURNS = 20;
  * graph. Cuts the hairball down to each agent's strongest social ego-network. */
 const TOP_K_PER_AGENT = 3;
 
+/** Module-scoped flag for "has the first auto-fit run this session." A fresh
+ *  `useRef` would reset to `false` on every remount, which made every
+ *  Field → Network → Field round-trip re-fit the camera against a different
+ *  layout state and visibly resize the graph. We persist it across mounts
+ *  and only clear it when a new run starts (turn 0). */
+let hasFitCamera = false;
+
 // The 3D force graph is a Three.js-backed client component — no SSR.
 const ForceGraph3D = dynamic(
   async () => (await import("react-force-graph-3d")).default,
@@ -75,14 +82,10 @@ export function NetworkCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const lastBuiltTurn = useRef<number>(-9999);
-  // The 3D graph has no built-in auto-fit, so the camera otherwise sits at the
-  // library's fixed default distance. Because the node count and layout spread
-  // differ every time the view (re)mounts — a run that has aged has fewer,
-  // tighter-clustered agents — the graph would occupy an inconsistent, usually
-  // smaller, slice of the frame on each entry. We fit it to the viewport once
-  // the first layout settles, then leave the camera alone so later orbit/zoom
-  // and the periodic rebuilds don't yank the view back.
-  const didFitRef = useRef(false);
+  // The 3D graph has no built-in auto-fit. We do it once per session via the
+  // module-level `hasFitCamera` flag (not a `useRef`, so it survives remounts
+  // — switching Field ↔ Network doesn't trigger a refit at a different layout
+  // state). The flag is cleared on new-run detection below.
   const prevNodeIdsRef = useRef<Set<number>>(new Set());
   const prevLinkKeysRef = useRef<Set<string>>(new Set());
 
@@ -128,7 +131,7 @@ export function NetworkCanvas() {
       lastBuiltTurn.current = -9999;
       // A new run repopulates the graph from scratch — let it reframe once the
       // fresh layout settles instead of holding the previous run's camera.
-      didFitRef.current = false;
+      hasFitCamera = false;
       setEvents([]);
     }
 
@@ -236,10 +239,7 @@ export function NetworkCanvas() {
             graphData={data}
             backgroundColor="rgba(0,0,0,0)"
             nodeRelSize={4}
-            nodeVal={(n: any) => {
-              const w = Number(n?.wealth);
-              return 1 + Math.log(1 + (Number.isFinite(w) && w > 0 ? w : 0));
-            }}
+            nodeVal={() => 1}
             nodeColor={(n: any) =>
               MOTIVATION_COLOR[n.motivation as string] ?? "#E63946"
             }
@@ -263,14 +263,13 @@ export function NetworkCanvas() {
             d3AlphaDecay={0.04}
             d3VelocityDecay={0.4}
             onEngineStop={() => {
-              // Frame the graph the first time a non-empty layout settles, so
-              // every entry into the view shows the network at a consistent
-              // scale instead of whatever the default camera distance happens
-              // to render for this run's node count.
-              if (didFitRef.current || data.nodes.length === 0) return;
+              // Frame the graph once per session, the first time a non-empty
+              // layout settles. The module-level flag survives remounts so
+              // Field ↔ Network round-trips don't refit each time.
+              if (hasFitCamera || data.nodes.length === 0) return;
               const g = graphRef.current;
               if (g && typeof g.zoomToFit === "function") {
-                didFitRef.current = true;
+                hasFitCamera = true;
                 g.zoomToFit(500, 40);
               }
             }}
@@ -280,10 +279,14 @@ export function NetworkCanvas() {
             nodeThreeObject={(n: any) => {
               const motivation = n.motivation as string;
               const color = MOTIVATION_COLOR[motivation] ?? "#E63946";
-              const wRaw = Number(n?.wealth);
-              const w = Number.isFinite(wRaw) && wRaw > 0 ? wRaw : 0;
-              const r = 3 + Math.log(1 + w);
-              const geom = motivationGeometry(motivation, r);
+              // Uniform size, full saturation. Wealth is not encoded visually
+              // here — it would otherwise dim most of the population once
+              // concentration sets in, which made the Network view look pale
+              // mid-run while the Field still showed bright newly-spawned
+              // agents. Brightness should be a property of the agent's
+              // identity, not its current wealth.
+              const NODE_RADIUS = 6;
+              const geom = motivationGeometry(motivation, NODE_RADIUS);
               const isSelected = n.id === selectedId;
               const mat = new THREE.MeshLambertMaterial({
                 color,
