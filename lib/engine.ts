@@ -131,6 +131,10 @@ export class Engine {
    *  runaway at city scale) and gives demographic dynamics in a bounded
    *  envelope. */
   private populationCap: number;
+  /** Mutation picker over the *original* configured motivation mix. Used at
+   *  birth to occasionally hand a child a different motivation than the
+   *  parent's — keeps rare motivations from going permanently extinct. */
+  private mutationMotivation: () => AgentMotivation;
 
   constructor(config: SimulationConfig) {
     this.rng = mulberry32(config.seed || 1);
@@ -164,6 +168,14 @@ export class Engine {
     const cap = Math.floor(total * 0.5);
     const count = Math.min(requested, cap);
     this.populationCap = count;
+
+    // Sampler over the original motivation mix, used for birth mutations.
+    // Built off the same RNG as everything else so the run stays deterministic.
+    this.mutationMotivation = buildWeightedPicker(
+      config.agents.motivation,
+      "material",
+      this.rng,
+    );
 
     this.agents = spawnAgents(this, config, count);
     for (const a of this.agents) {
@@ -225,6 +237,19 @@ export class Engine {
     if (livingIds.length >= this.populationCap) return;
     let budget = this.populationCap - livingIds.length;
 
+    // Count alive motivations once — bear() uses this to bias mutation
+    // toward any extinct motivation so diversity can recover.
+    const motivationCounts: Record<AgentMotivation, number> = {
+      material: 0,
+      symbolic: 0,
+      normative: 0,
+      power: 0,
+    };
+    for (const id of livingIds) {
+      const a = this.agents[id];
+      if (a.alive) motivationCounts[a.motivation]++;
+    }
+
     /** Base per-tick probability at peak fertility and full wealth factor.
      *  Generous so the population recovers quickly toward the cap after
      *  famine; the cap above is what stops overshoot. */
@@ -250,19 +275,47 @@ export class Engine {
       const p = BASE_RATE * ageFactor * wealthFactor;
       if (this.rng() >= p) continue;
 
-      this.bear(a);
+      this.bear(a, motivationCounts);
       budget--;
     }
   }
 
   /** Place a child of `parent` on a free cell — preferably near the parent,
-   *  falling back to anywhere on the grid if the neighbourhood is full. */
-  private bear(parent: Agent): void {
+   *  falling back to anywhere on the grid if the neighbourhood is full.
+   *
+   *  Motivation inheritance is mostly parental, with a small mutation rate
+   *  drawing from the original mix — and an *extinction guard* on top: if
+   *  any motivation has zero living agents in the population this tick,
+   *  every mutation forces a draw from those extinct strains so diversity
+   *  always has a path back. */
+  private bear(
+    parent: Agent,
+    motivationCounts: Record<AgentMotivation, number>,
+  ): void {
     let idx = this.findEmptyCellNear(parent.x, parent.y, parent.vision);
     if (idx < 0) idx = this.findEmptyCell();
     if (idx < 0) return;
     const cx = idx % this.width;
     const cy = Math.floor(idx / this.width);
+
+    const MUTATION_RATE = 0.04;
+    let motivation = parent.motivation;
+    if (this.rng() < MUTATION_RATE) {
+      // Extinction guard — if any strain is gone, revive one of them.
+      const extinct = (
+        Object.keys(motivationCounts) as AgentMotivation[]
+      ).filter((k) => motivationCounts[k] === 0);
+      if (extinct.length > 0) {
+        motivation =
+          extinct[Math.floor(this.rng() * extinct.length)];
+      } else {
+        motivation = this.mutationMotivation();
+      }
+    }
+    // Keep the live counts current so subsequent births in the same tick
+    // see this newborn and don't double-revive the same strain.
+    motivationCounts[motivation]++;
+
     const child: Agent = {
       id: this.agents.length,
       alive: true,
@@ -279,7 +332,7 @@ export class Engine {
       sugarMetab: parent.sugarMetab,
       spiceMetab: parent.spiceMetab,
       maxAge: parent.maxAge,
-      motivation: parent.motivation,
+      motivation,
       sophistication: parent.sophistication,
       boldness: 0.5,
       lastHoldings: parent.initialSugar + parent.initialSpice,
@@ -871,6 +924,35 @@ function fillGaussian(
   }
 }
 
+/** Weighted draw factory. Sums the (non-zero) weights once and returns a
+ *  function that, on each call, picks a key in proportion to those weights
+ *  using the supplied RNG. Falls back to `fallback` if every weight is 0. */
+function buildWeightedPicker<K extends string>(
+  weights: WeightedSelection<K>,
+  fallback: K,
+  rng: () => number,
+): () => K {
+  const keys: K[] = [];
+  const cumWeights: number[] = [];
+  let acc = 0;
+  for (const [k, w] of Object.entries(weights) as [K, number | undefined][]) {
+    if (w === undefined || w <= 0) continue;
+    keys.push(k);
+    acc += w;
+    cumWeights.push(acc);
+  }
+  const total = acc;
+  return () => {
+    if (keys.length === 0) return fallback;
+    if (keys.length === 1) return keys[0];
+    const r = rng() * total;
+    for (let i = 0; i < cumWeights.length; i++) {
+      if (r < cumWeights[i]) return keys[i];
+    }
+    return keys[keys.length - 1];
+  };
+}
+
 function spawnAgents(
   engine: Engine,
   config: SimulationConfig,
@@ -891,27 +973,7 @@ function spawnAgents(
   const buildPicker = <K extends string>(
     weights: WeightedSelection<K>,
     fallback: K,
-  ): (() => K) => {
-    const keys: K[] = [];
-    const cumWeights: number[] = [];
-    let acc = 0;
-    for (const [k, w] of Object.entries(weights) as [K, number | undefined][]) {
-      if (w === undefined || w <= 0) continue;
-      keys.push(k);
-      acc += w;
-      cumWeights.push(acc);
-    }
-    const total = acc;
-    return () => {
-      if (keys.length === 0) return fallback;
-      if (keys.length === 1) return keys[0];
-      const r = rng() * total;
-      for (let i = 0; i < cumWeights.length; i++) {
-        if (r < cumWeights[i]) return keys[i];
-      }
-      return keys[keys.length - 1];
-    };
-  };
+  ): (() => K) => buildWeightedPicker(weights, fallback, rng);
 
   const pickMotivation = buildPicker(config.agents.motivation, "material");
   const pickSophistication = buildPicker(
