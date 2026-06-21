@@ -149,8 +149,8 @@ function FloatingWindow({
       ref={setNodeRef}
       style={{ transform: `translate3d(${x}px, ${y}px, 0)` }}
       className={cn(
-        "pointer-events-auto absolute left-0 top-0 w-72 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground shadow-xl backdrop-blur-md",
-        isDragging && "cursor-grabbing shadow-2xl",
+        "pointer-events-auto absolute left-0 top-0 w-72 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground backdrop-blur-md",
+        isDragging && "cursor-grabbing",
       )}
     >
       <div
