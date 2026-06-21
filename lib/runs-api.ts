@@ -82,3 +82,18 @@ export async function deleteRun(id: string): Promise<void> {
   });
   if (!res.ok) throw new Error(`Delete failed (${res.status})`);
 }
+
+/**
+ * Reassign any runs saved under this browser's anonymous `ownerKey` to the
+ * currently-authenticated user. Safe to call multiple times; safe to call
+ * when no anon id exists (the server returns `{ claimed: 0 }`).
+ */
+export async function claimAnonRuns(): Promise<number> {
+  const res = await fetch("/api/runs/claim", {
+    method: "POST",
+    headers: anonIdHeaders(false),
+  });
+  if (!res.ok) throw new Error(`Claim failed (${res.status})`);
+  const body = (await res.json()) as { claimed: number };
+  return body.claimed;
+}

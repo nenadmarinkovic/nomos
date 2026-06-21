@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { clearAnonId } from "@/lib/anon-id";
 import { signUp } from "@/lib/auth-client";
+import { claimAnonRuns } from "@/lib/runs-api";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -27,13 +29,22 @@ export default function SignUpPage() {
       password,
       name: name.trim() || email.split("@")[0],
     });
-    setPending(false);
     if (res.error) {
+      setPending(false);
       setError(res.error.message ?? "Sign-up failed.");
       return;
     }
-    // TODO step 5: POST /api/runs/claim here so the user's anonymous runs
-    // follow them into the account before we navigate away.
+
+    // Auto-signed-in by Better Auth. Try to migrate this browser's anonymous
+    // runs into the new account; best-effort — if it fails we still continue.
+    try {
+      const claimed = await claimAnonRuns();
+      if (claimed > 0) clearAnonId();
+    } catch {
+      /* claim is best-effort; sign-up succeeded */
+    }
+
+    setPending(false);
     router.push(next);
     router.refresh();
   }

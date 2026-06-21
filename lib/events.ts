@@ -69,8 +69,11 @@ export interface DetectorState {
 
 /** Turns back we compare against when measuring change. */
 const WINDOW = 8;
-/** Minimum turns between non-founding events, to keep narration sparse. */
-const COOLDOWN = 6;
+/** Minimum turns between non-founding events. Tuned so a reader has time to
+ *  finish one reading before the next one appears: at 1× speed that's about
+ *  four seconds between events; at 2× still readable. Bump again if
+ *  high-speed runs feel rushed. */
+const COOLDOWN = 20;
 
 const TITLES: Record<EventKind, string> = {
   founding: "The founding",

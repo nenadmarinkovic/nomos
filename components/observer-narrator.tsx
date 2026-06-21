@@ -121,6 +121,19 @@ function worldSummary(config: SimulationConfig): WorldSummary {
   };
 }
 
+/**
+ * Tidy AI-generated narration text before it lands in the chronicle. Mistral
+ * frequently emits em-dashes with no surrounding whitespace ("elite—just");
+ * typographically that reads as a hyphen and disrupts the sentence. We force
+ * the en-/em-dash convention with a single space on either side.
+ */
+function normalizeNarrationText(text: string): string {
+  return text
+    .replace(/\s*—\s*/g, " — ")
+    .replace(/\s*–\s*/g, " – ")
+    .trim();
+}
+
 async function requestNarration(
   observer: ObserverKey,
   event: SignificantEvent,
@@ -145,7 +158,7 @@ async function requestNarration(
       handlers.fail(entryKey, data.error ?? `Request failed (${res.status})`);
       return;
     }
-    handlers.resolve(entryKey, data.text);
+    handlers.resolve(entryKey, normalizeNarrationText(data.text));
   } catch (err) {
     handlers.fail(
       entryKey,

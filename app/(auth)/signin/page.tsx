@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { clearAnonId } from "@/lib/anon-id";
 import { signIn } from "@/lib/auth-client";
+import { claimAnonRuns } from "@/lib/runs-api";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -22,11 +24,22 @@ export default function SignInPage() {
     setError(null);
     setPending(true);
     const res = await signIn.email({ email, password });
-    setPending(false);
     if (res.error) {
+      setPending(false);
       setError(res.error.message ?? "Sign-in failed.");
       return;
     }
+
+    // Claim any anonymous runs sitting in this browser's localStorage.
+    // Best-effort — don't block sign-in if the claim call fails.
+    try {
+      const claimed = await claimAnonRuns();
+      if (claimed > 0) clearAnonId();
+    } catch {
+      /* claim is best-effort; sign-in succeeded */
+    }
+
+    setPending(false);
     router.push(next);
     router.refresh();
   }

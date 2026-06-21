@@ -84,7 +84,7 @@ export function NarratorPage() {
   return (
     <div className="flex flex-1 overflow-hidden">
       <ScrollArea className="flex-1">
-        <div className="mx-auto w-full max-w-3xl px-6 py-8">
+        <div className="mx-auto w-full max-w-3xl px-6 pb-16 pt-8">
           <Header />
 
           {groups.length === 0 ? (
@@ -97,7 +97,7 @@ export function NarratorPage() {
               }
             />
           ) : (
-            <div className="mt-8 space-y-10">
+            <div className="mt-10 space-y-14">
               {groups.map((g) => (
                 <EventSection key={g.eventId} group={g} />
               ))}
@@ -203,16 +203,16 @@ function FilterRow({
 
 function EventSection({ group }: { group: EventGroup }) {
   return (
-    <section className="space-y-3">
-      <div className="flex items-baseline justify-between gap-2 border-b border-foreground/10 pb-2">
-        <h2 className="font-serif text-xl leading-tight text-foreground">
+    <section className="space-y-6">
+      <header className="flex items-baseline justify-between gap-3">
+        <h2 className="font-serif text-2xl leading-tight tracking-tight text-foreground">
           {group.title}
         </h2>
-        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="shrink-0 font-sans text-[12px] tabular-nums text-muted-foreground">
           Turn {group.turn}
         </span>
-      </div>
-      <div className="space-y-3">
+      </header>
+      <div className="space-y-7">
         {group.entries.map((entry, i) => (
           <NarrationCard key={`${entry.key}:${i}`} entry={entry} />
         ))}
@@ -224,28 +224,21 @@ function EventSection({ group }: { group: EventGroup }) {
 function NarrationCard({ entry }: { entry: ChronicleEntry }) {
   const info = OBSERVER_INFO[entry.observer];
   return (
-    <article className="rounded-lg border border-foreground/10 bg-card px-4 py-3.5">
-      <div className="flex items-baseline justify-between gap-2 border-b border-foreground/10 pb-2">
-        <span className="font-sans text-[13px] font-medium text-foreground">
-          {info?.name ?? entry.observer}
-        </span>
-        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-          {info?.lens ?? ""}
-        </span>
-      </div>
-      <div className="mt-3">
-        {entry.status === "pending" && <PendingLines />}
-        {entry.status === "done" && entry.text && (
-          <p className="font-serif text-[14.5px] leading-relaxed text-foreground/90">
-            &ldquo;{entry.text}&rdquo;
-          </p>
-        )}
-        {entry.status === "error" && (
-          <p className="font-sans text-[12px] leading-snug text-muted-foreground">
-            {entry.error ?? "The observer could not be reached."}
-          </p>
-        )}
-      </div>
+    <article className="space-y-2">
+      {entry.status === "pending" && <PendingLines />}
+      {entry.status === "done" && entry.text && (
+        <p className="font-serif text-[16px] leading-relaxed text-foreground">
+          {entry.text}
+        </p>
+      )}
+      {entry.status === "error" && (
+        <p className="font-sans text-[13px] leading-snug text-muted-foreground">
+          {entry.error ?? "The observer could not be reached."}
+        </p>
+      )}
+      <p className="font-sans text-[12px] text-muted-foreground">
+        — {info?.name ?? entry.observer}
+      </p>
     </article>
   );
 }
@@ -268,9 +261,11 @@ function PendingLines() {
 
 function EmptyState({ title, hint }: { title: string; hint: string }) {
   return (
-    <div className="mt-10 rounded-lg border border-dashed border-foreground/10 px-6 py-10 text-center">
-      <p className="font-serif text-lg italic text-foreground/80">{title}</p>
-      <p className="mt-2 font-sans text-[13px] text-muted-foreground">{hint}</p>
+    <div className="mt-12 space-y-2 text-center">
+      <p className="font-serif text-xl text-foreground/85">{title}</p>
+      <p className="font-sans text-[13px] leading-relaxed text-muted-foreground">
+        {hint}
+      </p>
     </div>
   );
 }
