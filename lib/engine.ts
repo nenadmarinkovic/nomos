@@ -147,6 +147,12 @@ export interface EngineSnapshot {
   tieCount: number;
   /** Share (0..1) of the living population with no surviving trade tie. */
   isolateShare: number;
+  /** True iff a blight is currently dampening sugar regrowth this turn. */
+  blightActive: boolean;
+  /** Turn the most recent blight began, or -9999 if none yet. */
+  blightStartedTurn: number;
+  /** Deaths attributed to a plague *this turn* (0 in non-plague turns). */
+  plagueDeathsThisTurn: number;
 }
 
 export class Engine {
@@ -169,6 +175,14 @@ export class Engine {
   /** Conflict telemetry for the most recent tick. */
   private lastCoercionCount = 0;
   private lastShamingCount = 0;
+
+  /** Exogenous shock state. Blight halves sugar regrowth while active;
+   *  plague culls a random fraction in a single tick. Both surface as
+   *  significant events the AI observers narrate. */
+  private blightUntilTurn = 0;
+  private lastBlightTurn = -9999;
+  private lastPlagueTurn = -9999;
+  private lastPlagueDeaths = 0;
 
   /** Sparse dyadic trade-tie weights. Outer key = lower agent id, inner key =
    * higher id. Decays each tick; bumps on each successful trade. */
@@ -248,8 +262,9 @@ export class Engine {
   tick(): void {
     this.lastCoercionCount = 0;
     this.lastShamingCount = 0;
-    this.regrow(this.cells, this.maxCells);
-    this.regrow(this.spice, this.maxSpice);
+    this.rollShocks();
+    this.regrow(this.cells, this.maxCells, true);
+    this.regrow(this.spice, this.maxSpice, false);
 
     const order: number[] = [];
     for (const a of this.agents) {
@@ -577,22 +592,58 @@ export class Engine {
     return -1;
   }
 
-  private regrow(stock: Float32Array, max: Float32Array): void {
-    // Slow seasonal cycle modulates regrowth between ~60 % and ~140 % of the
-    // base rate over an 80-turn period. The substrate breathes — booms and
-    // famines become inevitable, not just the consequence of internal
-    // economic shocks. Turchin's secular cycles get a substrate to ride on.
-    const SEASON_PERIOD = 80;
-    const SEASON_AMPLITUDE = 0.4;
+  private regrow(stock: Float32Array, max: Float32Array, isSugar: boolean): void {
+    // Seasonal cycle: regrowth swings between ~30 % and ~170 % of the base
+    // rate over a 60-turn period. Famines and booms are real, not gentle.
+    const SEASON_PERIOD = 60;
+    const SEASON_AMPLITUDE = 0.7;
     const seasonal =
       1 + SEASON_AMPLITUDE * Math.sin((this.turn * 2 * Math.PI) / SEASON_PERIOD);
-    const rate = this.regrowthRate * seasonal;
+    // Blight shock — sugar regrowth halved while active. Exogenous, not the
+    // society's own doing; gives the chronicle something genuinely new to
+    // read late in a run.
+    const blightActive = isSugar && this.turn < this.blightUntilTurn;
+    const blightFactor = blightActive ? 0.4 : 1;
+    const rate = this.regrowthRate * seasonal * blightFactor;
     for (let i = 0; i < stock.length; i++) {
       const m = max[i];
       if (m > 0) {
         const next = stock[i] + rate * m;
         stock[i] = next > m ? m : next;
       }
+    }
+  }
+
+  /** Roll for rare exogenous shocks each tick. Blight halves sugar regrowth
+   *  for a stretch; plague kills a random fraction of the population. Both
+   *  are independent of internal economic dynamics — they keep the world
+   *  from settling into a permanent quasi-equilibrium. */
+  private rollShocks(): void {
+    // Don't fire shocks too early — let the society establish itself first.
+    if (this.turn < 100) return;
+    // Suppress new shocks if the previous one is still active.
+    if (this.turn < this.blightUntilTurn) return;
+    if (this.turn - this.lastPlagueTurn < 60) return;
+
+    const BLIGHT_RATE = 0.002; // ~once per 500 turns
+    const PLAGUE_RATE = 0.001; // ~once per 1000 turns
+
+    const r = this.rng();
+    if (r < BLIGHT_RATE) {
+      this.blightUntilTurn = this.turn + 25;
+      this.lastBlightTurn = this.turn;
+    } else if (r < BLIGHT_RATE + PLAGUE_RATE) {
+      // Kill ~5 % of the living population, sampled uniformly.
+      const PLAGUE_SHARE = 0.05;
+      this.lastPlagueDeaths = 0;
+      for (const a of this.agents) {
+        if (!a.alive) continue;
+        if (this.rng() < PLAGUE_SHARE) {
+          this.killAgent(a);
+          this.lastPlagueDeaths++;
+        }
+      }
+      this.lastPlagueTurn = this.turn;
     }
   }
 
@@ -1136,6 +1187,10 @@ export class Engine {
       shamingCount: this.lastShamingCount,
       tieCount,
       isolateShare: alive > 0 ? isolates / alive : 0,
+      blightActive: this.turn < this.blightUntilTurn,
+      blightStartedTurn: this.lastBlightTurn,
+      plagueDeathsThisTurn:
+        this.turn === this.lastPlagueTurn ? this.lastPlagueDeaths : 0,
     };
   }
 
