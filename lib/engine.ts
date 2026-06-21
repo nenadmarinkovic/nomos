@@ -134,6 +134,19 @@ export interface EngineSnapshot {
     normative: number;
     power: number;
   };
+  /** Spatial assortativity of motivation, 0..1. 0 = neighbours are a random
+   *  draw of the population; 1 = every agent sits only beside its own kind.
+   *  Schelling's sorting made measurable. */
+  segregation: number;
+  /** Successful coercive seizures (power agents taking from weaker
+   *  neighbours) executed this turn. */
+  coercionCount: number;
+  /** Coercions this turn that a Normative agent witnessed and sanctioned. */
+  shamingCount: number;
+  /** Number of surviving dyadic trade ties. */
+  tieCount: number;
+  /** Share (0..1) of the living population with no surviving trade tie. */
+  isolateShare: number;
 }
 
 export class Engine {
@@ -152,6 +165,10 @@ export class Engine {
   /** Trade telemetry for the most recent tick. */
   private lastTradePrice = 0;
   private lastTradeVolume = 0;
+
+  /** Conflict telemetry for the most recent tick. */
+  private lastCoercionCount = 0;
+  private lastShamingCount = 0;
 
   /** Sparse dyadic trade-tie weights. Outer key = lower agent id, inner key =
    * higher id. Decays each tick; bumps on each successful trade. */
@@ -229,6 +246,8 @@ export class Engine {
   }
 
   tick(): void {
+    this.lastCoercionCount = 0;
+    this.lastShamingCount = 0;
     this.regrow(this.cells, this.maxCells);
     this.regrow(this.spice, this.maxSpice);
 
@@ -338,6 +357,7 @@ export class Engine {
       bestTarget.spice -= spiceTaken;
       a.sugar += sugarTaken;
       a.spice += spiceTaken;
+      this.lastCoercionCount++;
 
       // Norm enforcement. If any Normative agent witnessed the act from
       // within their vision of the victim, the attacker is marked shamed
@@ -363,6 +383,7 @@ export class Engine {
       }
       if (witnessed) {
         a.shamedUntilTurn = this.turn + SHAME_TURNS;
+        this.lastShamingCount++;
       }
     }
   }
@@ -1041,10 +1062,30 @@ export class Engine {
       normative: 0,
       power: 0,
     };
+
+    // Set of agent ids that hold at least one surviving trade tie. Dead ids
+    // are scrubbed on death, so every id here belongs to a living agent.
+    const tied = new Set<number>();
+    let tieCount = 0;
+    for (const [lo, row] of this.tiesMap) {
+      for (const hi of row.keys()) {
+        tied.add(lo);
+        tied.add(hi);
+        tieCount++;
+      }
+    }
+
+    // Adjacency counters for the segregation index: how many neighbouring
+    // (agent, agent) pairs share a motivation, out of all such pairs.
+    let neighbourPairs = 0;
+    let sameMotivationPairs = 0;
+    let isolates = 0;
+
     for (const a of this.agents) {
       if (!a.alive) continue;
       alive++;
       motivationCounts[a.motivation]++;
+      if (!tied.has(a.id)) isolates++;
       const w = holdings(a);
       totalWealth += w;
       wealths.push(w);
@@ -1057,7 +1098,25 @@ export class Engine {
         }
       }
       if (!placed) wealthBins[wealthBins.length - 1]++;
+
+      // Scan the 8 surrounding cells; each occupied one is a neighbour pair.
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = a.y + dy;
+        if (ny < 0 || ny >= this.height) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = a.x + dx;
+          if (nx < 0 || nx >= this.width) continue;
+          const occ = this.occupants[ny * this.width + nx];
+          if (occ === -1) continue;
+          const n = this.agents[occ];
+          if (!n.alive) continue;
+          neighbourPairs++;
+          if (n.motivation === a.motivation) sameMotivationPairs++;
+        }
+      }
     }
+
     return {
       turn: this.turn,
       alive,
@@ -1067,6 +1126,16 @@ export class Engine {
       tradePrice: this.lastTradePrice,
       tradeVolume: this.lastTradeVolume,
       motivationCounts,
+      segregation: segregationIndex(
+        sameMotivationPairs,
+        neighbourPairs,
+        motivationCounts,
+        alive,
+      ),
+      coercionCount: this.lastCoercionCount,
+      shamingCount: this.lastShamingCount,
+      tieCount,
+      isolateShare: alive > 0 ? isolates / alive : 0,
     };
   }
 
@@ -1109,6 +1178,31 @@ function shuffle<T>(arr: T[], rng: () => number): void {
     arr[i] = arr[j];
     arr[j] = tmp;
   }
+}
+
+/**
+ * Spatial assortativity of motivation, normalised to 0..1. Compares the share
+ * of adjacent agent pairs that share a motivation against the share expected
+ * if neighbours were a random draw of the population (Σ pₘ²). Zero means no
+ * sorting; one means agents sit only beside their own kind. This is Schelling's
+ * segregation made into a single legible number the event layer can watch.
+ */
+function segregationIndex(
+  samePairs: number,
+  totalPairs: number,
+  counts: Record<AgentMotivation, number>,
+  alive: number,
+): number {
+  if (totalPairs === 0 || alive === 0) return 0;
+  const observed = samePairs / totalPairs;
+  let expected = 0;
+  for (const k of Object.keys(counts) as AgentMotivation[]) {
+    const p = counts[k] / alive;
+    expected += p * p;
+  }
+  if (expected >= 1) return 0;
+  const idx = (observed - expected) / (1 - expected);
+  return idx < 0 ? 0 : idx > 1 ? 1 : idx;
 }
 
 function giniCoefficient(values: number[]): number {

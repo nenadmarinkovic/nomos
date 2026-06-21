@@ -13,6 +13,7 @@ import { activeWorldRef } from "@/lib/active-world";
 import {
   detectEvent,
   type DetectorState,
+  type MetricPoint,
   type SignificantEvent,
 } from "@/lib/events";
 import type { SimContext, WorldSummary } from "@/lib/observers";
@@ -46,11 +47,10 @@ export function ObserverNarrator() {
     peakAlive: 0,
     lastEventTurn: null,
     marketFormed: false,
+    segregationArmed: true,
   });
   const seenRef = useRef<Set<string>>(new Set());
-  const historyRef = useRef<
-    { turn: number; alive: number; gini: number; tradePrice: number }[]
-  >([]);
+  const historyRef = useRef<MetricPoint[]>([]);
   /** Recent events, kept here (not in the chronicle store) so the observer
    *  prompt sees them even when narration is still pending. Capped at 5. */
   const recentEventsRef = useRef<
@@ -63,6 +63,7 @@ export function ObserverNarrator() {
       peakAlive: 0,
       lastEventTurn: null,
       marketFormed: false,
+      segregationArmed: true,
     };
     seenRef.current = new Set();
     historyRef.current = [];
@@ -79,11 +80,21 @@ export function ObserverNarrator() {
     // store's render-time slicing.
     const hist = historyRef.current;
     if (hist.length === 0 || hist[hist.length - 1].turn !== snapshot.turn) {
+      const counts = snapshot.motivationCounts;
+      const total = snapshot.alive > 0 ? snapshot.alive : 1;
       hist.push({
         turn: snapshot.turn,
         alive: snapshot.alive,
         gini: snapshot.gini,
         tradePrice: snapshot.tradePrice,
+        segregation: snapshot.segregation,
+        isolateShare: snapshot.isolateShare,
+        motivationShares: {
+          material: counts.material / total,
+          symbolic: counts.symbolic / total,
+          normative: counts.normative / total,
+          power: counts.power / total,
+        },
       });
       if (hist.length > 300) hist.shift();
     }
