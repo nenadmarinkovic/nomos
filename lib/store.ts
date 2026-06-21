@@ -214,7 +214,7 @@ export const useSimulationStore = create<SimulationState>()(
             wealth: 200,
             price: 200,
             stream: 220,
-            narrator: 280,
+            narrator: 360,
             network: 380,
           };
 
@@ -285,18 +285,25 @@ export const useSimulationStore = create<SimulationState>()(
       openNarrations: (event, observers) =>
         set((s) => {
           const now = Date.now();
-          const pending: ChronicleEntry[] = observers.map((observer) => ({
-            key: `${event.id}:${observer}`,
-            eventId: event.id,
-            turn: event.turn,
-            observer,
-            eventKind: event.kind,
-            eventTitle: event.title,
-            status: "pending",
-            text: null,
-            error: null,
-            createdAt: now,
-          }));
+          // Idempotent on `key`: dev's strict-mode double-mount and any
+          // future race condition both call this with the same event +
+          // observer set. Skip pairs we've already opened.
+          const existing = new Set(s.chronicle.map((e) => e.key));
+          const pending: ChronicleEntry[] = observers
+            .map((observer) => ({
+              key: `${event.id}:${observer}`,
+              eventId: event.id,
+              turn: event.turn,
+              observer,
+              eventKind: event.kind,
+              eventTitle: event.title,
+              status: "pending" as const,
+              text: null,
+              error: null,
+              createdAt: now,
+            }))
+            .filter((entry) => !existing.has(entry.key));
+          if (pending.length === 0) return {};
           const merged = [...s.chronicle, ...pending];
           return {
             chronicle:
