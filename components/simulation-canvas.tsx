@@ -396,11 +396,14 @@ function renderWorld(
     const cx = ix * cellW + cellW / 2;
     const cy = iy * cellH + cellH / 2;
     const color = MOTIVATION_COLOR[a.motivation] ?? "#E63946";
-    const w = a.sugar + a.spice;
-    const wealthDim = w > 30 ? 1 : w > 12 ? 0.88 : w > 4 ? 0.7 : 0.5;
-
-    ctx.fillStyle = applyAlpha(color, wealthDim);
-    ctx.strokeStyle = `rgba(20, 20, 20, ${0.6 * wealthDim})`;
+    // Agents render at full brightness regardless of wealth. The wealth-dim
+    // step function used previously made the field look pale once
+    // concentration set in — and switching to the Network view (which is
+    // always bright) read as "agents are wrong / different." Now both views
+    // show identical, full-brightness agents; wealth is read off the
+    // metrics windows instead.
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "rgba(20, 20, 20, 0.6)";
     ctx.lineWidth = outlineWidth;
     drawShape(ctx, a.motivation, cx, cy, agentSize, /* withStroke */ true);
   }
@@ -523,17 +526,6 @@ function neighborsInVision(world: WorldView, a: RenderAgent): number[] {
     }
   }
   return out;
-}
-
-function applyAlpha(color: string, alpha: number): string {
-  if (color.startsWith("#")) {
-    const h = color.replace("#", "");
-    const r = parseInt(h.substring(0, 2), 16);
-    const g = parseInt(h.substring(2, 4), 16);
-    const b = parseInt(h.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-  return color;
 }
 
 interface AgentSnapshot {
