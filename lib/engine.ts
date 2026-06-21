@@ -47,6 +47,10 @@ export interface Agent {
   boldness: number;
   /** Adaptive agents only: holdings at the previous tick, to sense gain or loss. */
   lastHoldings: number;
+  /** Turn until which Normative agents refuse to trade with this agent.
+   *  Set when a coercive act lands within sight of a Normative — the
+   *  community sanction is real, not just a tag. */
+  shamedUntilTurn: number;
 }
 
 /** Combined holdings — the scalar "wealth" used for Gini, tiers, and display. */
@@ -68,6 +72,38 @@ export function mrs(a: Agent): number {
 function welfare(sugar: number, spice: number, ms: number, msp: number): number {
   const mt = ms + msp;
   return Math.pow(sugar, ms / mt) * Math.pow(spice, msp / mt);
+}
+
+/** Sugar harvest multiplier per motivation. Material agents are the
+ *  productive subject (Marx); Symbolic agents care for luxury goods and
+ *  collect food poorly; Normatives gather at base rate; Power agents harvest
+ *  badly but supplement through coercion (`combatPhase`). */
+function sugarYieldFactor(m: AgentMotivation): number {
+  switch (m) {
+    case "material":
+      return 1.3;
+    case "symbolic":
+      return 0.9;
+    case "normative":
+      return 1.0;
+    case "power":
+      return 0.6;
+  }
+}
+
+/** Spice harvest multiplier per motivation. Symbolic agents are the
+ *  luxury-good specialists; otherwise mostly the inverse of sugar. */
+function spiceYieldFactor(m: AgentMotivation): number {
+  switch (m) {
+    case "material":
+      return 0.9;
+    case "symbolic":
+      return 1.3;
+    case "normative":
+      return 1.0;
+    case "power":
+      return 0.6;
+  }
 }
 
 export const WEALTH_BIN_EDGES = [5, 10, 20, 40, 80] as const;
@@ -124,6 +160,9 @@ export class Engine {
   private rng: () => number;
   private regrowthRate: number;
   private reproduction: boolean;
+  private culturalTransmission: boolean;
+  private inheritance: boolean;
+  private conflict: boolean;
   private topology: InteractionTopology;
   /** Carrying capacity — the starting agent count. Births stop once the
    *  living population reaches this; deaths free up the budget so births
@@ -140,6 +179,12 @@ export class Engine {
     this.rng = mulberry32(config.seed || 1);
     this.regrowthRate = config.world.physics.regrowthRate;
     this.reproduction = config.world.reproduction;
+    // Default the v0.5 toggles to `true` when reading legacy configs (saved
+    // runs from before these fields existed): the new dynamics are part of
+    // the engine's intended behaviour, not opt-in.
+    this.culturalTransmission = config.world.culturalTransmission ?? true;
+    this.inheritance = config.world.inheritance ?? true;
+    this.conflict = config.world.conflict ?? true;
     this.topology = config.agents.topology;
 
     const size = GRID_SIZE[config.world.scale];
@@ -200,9 +245,20 @@ export class Engine {
       this.moveAndHarvest(a);
     }
 
-    // Phase 2: trade with neighbours. A market — and a price — emerges here.
+    // Phase 2a: power agents may take from weaker neighbours — the engine
+    // expression of domination. Runs before trade so a successful coercion
+    // shifts the wealth landscape the market then prices in.
+    this.combatPhase();
+
+    // Phase 2b: trade with neighbours. A market — and a price — emerges here.
     this.tradePhase();
     this.decayTies();
+
+    // Phase 2c: cultural transmission — agents occasionally adopt the
+    // motivation of a wealthier neighbour (Bourdieusian imitation up the
+    // ladder). Runs after trade so the wealth that drives the imitation is
+    // the current market-clearing wealth.
+    this.culturalPhase();
 
     // Phase 3: pay metabolism, age, and die. Capture the living set first so
     // any newborns from phase 4 don't act this turn.
@@ -222,6 +278,144 @@ export class Engine {
     this.reproductionPhase(living);
 
     this.turn++;
+  }
+
+  /** Combat phase — power-motivated agents may take a share of a weaker
+   *  neighbour's holdings. The engine expression of Weberian domination.
+   *
+   *  Rules: a power agent acts at most once per tick (small RNG gate), looks
+   *  within its vision for the wealthiest non-power neighbour whose total
+   *  wealth is well below the attacker's, and if it finds one, transfers a
+   *  fixed fraction of the victim's holdings to itself. Power doesn't attack
+   *  other power agents — keeps the dynamic from collapsing into a
+   *  free-for-all. */
+  private combatPhase(): void {
+    if (!this.conflict) return;
+
+    /** Per-tick probability a power agent attempts to dominate. Kept low so
+     *  combat is an occasional shock, not a constant grind. */
+    const ATTEMPT_RATE = 0.06;
+    /** Wealth gap required before an attack is considered worth attempting.
+     *  Prevents broke power agents from picking on similarly-broke targets. */
+    const MIN_GAP = 4;
+    /** Share of the victim's holdings the attacker seizes. */
+    const TAKE_FRACTION = 0.3;
+
+    for (const a of this.agents) {
+      if (!a.alive || a.motivation !== "power") continue;
+      if (this.rng() >= ATTEMPT_RATE) continue;
+
+      const myWealth = a.sugar + a.spice;
+      if (myWealth <= 1) continue;
+
+      let bestTarget: Agent | null = null;
+      let bestGap = MIN_GAP;
+      const v = Math.min(a.vision, 3);
+      for (let dy = -v; dy <= v; dy++) {
+        const ny = a.y + dy;
+        if (ny < 0 || ny >= this.height) continue;
+        for (let dx = -v; dx <= v; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = a.x + dx;
+          if (nx < 0 || nx >= this.width) continue;
+          const occ = this.occupants[ny * this.width + nx];
+          if (occ === -1) continue;
+          const t = this.agents[occ];
+          if (!t.alive || t.motivation === "power") continue;
+          const gap = myWealth - (t.sugar + t.spice);
+          if (gap > bestGap) {
+            bestGap = gap;
+            bestTarget = t;
+          }
+        }
+      }
+
+      if (!bestTarget) continue;
+
+      const sugarTaken = bestTarget.sugar * TAKE_FRACTION;
+      const spiceTaken = bestTarget.spice * TAKE_FRACTION;
+      bestTarget.sugar -= sugarTaken;
+      bestTarget.spice -= spiceTaken;
+      a.sugar += sugarTaken;
+      a.spice += spiceTaken;
+
+      // Norm enforcement. If any Normative agent witnessed the act from
+      // within their vision of the victim, the attacker is marked shamed
+      // — Normative agents will refuse to trade with them for SHAME_TURNS.
+      // This is Durkheim's social fact made mechanical: coercion has a
+      // social cost beyond the immediate retaliation.
+      const SHAME_TURNS = 15;
+      const SHAME_VISION = 3;
+      let witnessed = false;
+      for (let dy = -SHAME_VISION; dy <= SHAME_VISION && !witnessed; dy++) {
+        const ny = bestTarget.y + dy;
+        if (ny < 0 || ny >= this.height) continue;
+        for (let dx = -SHAME_VISION; dx <= SHAME_VISION && !witnessed; dx++) {
+          const nx = bestTarget.x + dx;
+          if (nx < 0 || nx >= this.width) continue;
+          const occ = this.occupants[ny * this.width + nx];
+          if (occ === -1 || occ === a.id) continue;
+          const w = this.agents[occ];
+          if (w?.alive && w.motivation === "normative") {
+            witnessed = true;
+          }
+        }
+      }
+      if (witnessed) {
+        a.shamedUntilTurn = this.turn + SHAME_TURNS;
+      }
+    }
+  }
+
+  /** Cultural transmission — agents occasionally adopt the motivation of a
+   *  wealthier neighbour. The dynamic captures Bourdieusian habitus
+   *  reproduction by imitation up the social ladder and Schelling-style
+   *  preference cascades from interaction.
+   *
+   *  Each tick, every agent has a small chance of looking around. If the
+   *  wealthiest agent within vision is *richer* and holds a different
+   *  motivation, our agent flips to that motivation. Net effect over the
+   *  run: motivations spread horizontally, not only descend through
+   *  birth — and a dominant strain can colonise a neighbourhood through
+   *  example alone. */
+  private culturalPhase(): void {
+    if (!this.culturalTransmission) return;
+
+    /** Per-tick probability an agent considers adopting a neighbour. */
+    const ADOPTION_RATE = 0.01;
+
+    for (const a of this.agents) {
+      if (!a.alive) continue;
+      if (this.rng() >= ADOPTION_RATE) continue;
+
+      const myWealth = a.sugar + a.spice;
+      let bestNeighbour: Agent | null = null;
+      let bestWealth = myWealth;
+
+      const v = Math.min(a.vision, 3);
+      for (let dy = -v; dy <= v; dy++) {
+        const ny = a.y + dy;
+        if (ny < 0 || ny >= this.height) continue;
+        for (let dx = -v; dx <= v; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = a.x + dx;
+          if (nx < 0 || nx >= this.width) continue;
+          const occ = this.occupants[ny * this.width + nx];
+          if (occ === -1) continue;
+          const n = this.agents[occ];
+          if (!n.alive || n.motivation === a.motivation) continue;
+          const w = n.sugar + n.spice;
+          if (w > bestWealth) {
+            bestWealth = w;
+            bestNeighbour = n;
+          }
+        }
+      }
+
+      if (bestNeighbour) {
+        a.motivation = bestNeighbour.motivation;
+      }
+    }
   }
 
   /** Per-tick birth dynamics. Each living agent's odds of reproducing this
@@ -336,6 +530,7 @@ export class Engine {
       sophistication: parent.sophistication,
       boldness: 0.5,
       lastHoldings: parent.initialSugar + parent.initialSpice,
+      shamedUntilTurn: 0,
     };
     this.agents.push(child);
     this.occupants[idx] = child.id;
@@ -362,10 +557,19 @@ export class Engine {
   }
 
   private regrow(stock: Float32Array, max: Float32Array): void {
+    // Slow seasonal cycle modulates regrowth between ~60 % and ~140 % of the
+    // base rate over an 80-turn period. The substrate breathes — booms and
+    // famines become inevitable, not just the consequence of internal
+    // economic shocks. Turchin's secular cycles get a substrate to ride on.
+    const SEASON_PERIOD = 80;
+    const SEASON_AMPLITUDE = 0.4;
+    const seasonal =
+      1 + SEASON_AMPLITUDE * Math.sin((this.turn * 2 * Math.PI) / SEASON_PERIOD);
+    const rate = this.regrowthRate * seasonal;
     for (let i = 0; i < stock.length; i++) {
       const m = max[i];
       if (m > 0) {
-        const next = stock[i] + this.regrowthRate * m;
+        const next = stock[i] + rate * m;
         stock[i] = next > m ? m : next;
       }
     }
@@ -384,8 +588,17 @@ export class Engine {
     }
 
     const idx = a.y * this.width + a.x;
-    a.sugar += this.cells[idx];
-    a.spice += this.spice[idx];
+    // Specialisation by motivation. Different drives produce different
+    // economic profiles — pure monocultures become self-defeating because
+    // each strain's strength is another's weakness.
+    //   - Material: productive subject. Better sugar yield.
+    //   - Symbolic: luxury orientation. Better spice yield.
+    //   - Normative: balanced; cooperation bonus shows up in trade.
+    //   - Power:    predatory; bad at gathering, supplements by combat.
+    const sugarGain = this.cells[idx] * sugarYieldFactor(a.motivation);
+    const spiceGain = this.spice[idx] * spiceYieldFactor(a.motivation);
+    a.sugar += sugarGain;
+    a.spice += spiceGain;
     this.cells[idx] = 0;
     this.spice[idx] = 0;
   }
@@ -671,6 +884,17 @@ export class Engine {
    * paid (sugar per spice), or 0 if no trade happened.
    */
   private tryTrade(a: Agent, b: Agent): number {
+    // Norm enforcement: a Normative agent refuses to trade with anyone the
+    // community has shamed. The sanction has real economic teeth — a
+    // chronically coercive Power agent loses access to the spice/sugar
+    // market for as long as the shame holds.
+    if (
+      (a.motivation === "normative" && b.shamedUntilTurn > this.turn) ||
+      (b.motivation === "normative" && a.shamedUntilTurn > this.turn)
+    ) {
+      return 0;
+    }
+
     const mrsA = mrs(a);
     const mrsB = mrs(b);
     if (mrsA === mrsB) return 0;
@@ -698,6 +922,18 @@ export class Engine {
     buyer.spice += spiceQty;
     seller.sugar += sugarQty;
     seller.spice -= spiceQty;
+
+    // Normative cooperative dividend. When either side is Normative, both
+    // parties pocket a small bonus on the goods that just moved — the gains
+    // from cooperative exchange Durkheim insisted on. Normative monocultures
+    // are economically *more* efficient than pure Material ones, but only
+    // when they're trading.
+    if (a.motivation === "normative" || b.motivation === "normative") {
+      const BONUS = 0.05;
+      buyer.spice += spiceQty * BONUS;
+      seller.sugar += sugarQty * BONUS;
+    }
+
     this.bumpTie(a.id, b.id);
     return price;
   }
@@ -734,10 +970,53 @@ export class Engine {
   }
 
   private killAgent(a: Agent): void {
+    // Bequeath holdings to surviving trade-tie partners, weighted by tie
+    // strength. Without this, sugar and spice held by the dying agent simply
+    // vanish from the system — and Gini resets harder than it should every
+    // time a hoarder dies. With inheritance, wealth concentrates across
+    // generations (Marx is happy) and trade-ties carry real economic stakes,
+    // not just sociological ones (Granovetter is happy).
+    if (this.inheritance) {
+      this.bequeathToTies(a);
+    }
     a.alive = false;
     this.occupants[a.y * this.width + a.x] = -1;
     this.scrubTies(a.id);
     // Births are no longer triggered by deaths — see `reproductionPhase`.
+  }
+
+  /** Distribute a dying agent's holdings to its surviving tie partners,
+   *  weighted by tie strength. No-op if it has no ties or is broke. */
+  private bequeathToTies(a: Agent): void {
+    const totalWealth = a.sugar + a.spice;
+    if (totalWealth <= 0) return;
+
+    // Collect every tie this agent has, whether stored as low→high or
+    // high→low in the sparse map.
+    const partners: { id: number; weight: number }[] = [];
+    const lowMap = this.tiesMap.get(a.id);
+    if (lowMap) {
+      for (const [hi, w] of lowMap) partners.push({ id: hi, weight: w });
+    }
+    for (const [lo, row] of this.tiesMap) {
+      const w = row.get(a.id);
+      if (w !== undefined) partners.push({ id: lo, weight: w });
+    }
+    if (partners.length === 0) return;
+
+    // Filter to living partners. Dead partners' shares would vanish too —
+    // we'd rather route everything to the living so wealth is preserved.
+    const living = partners.filter((p) => this.agents[p.id]?.alive);
+    const liveWeight = living.reduce((s, p) => s + p.weight, 0);
+    if (liveWeight <= 0) return;
+
+    for (const p of living) {
+      const share = p.weight / liveWeight;
+      this.agents[p.id].sugar += a.sugar * share;
+      this.agents[p.id].spice += a.spice * share;
+    }
+    a.sugar = 0;
+    a.spice = 0;
   }
 
   private findEmptyCell(): number {
@@ -1033,6 +1312,7 @@ function spawnAgents(
       sophistication: pickSophistication(),
       boldness: 0.5,
       lastHoldings: sugar + spice,
+      shamedUntilTurn: 0,
     });
   }
 
