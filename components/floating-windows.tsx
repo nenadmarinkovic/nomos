@@ -405,7 +405,7 @@ const MOTIVATION_COLORS: Record<(typeof MOTIVATION_ORDER)[number], string> = {
   material: "#E63946",
   symbolic: "#2E5C9E",
   normative: "#FFD23F",
-  power: "#111111",
+  power: "#2A9D5C",
 };
 const MOTIVATION_LABELS: Record<(typeof MOTIVATION_ORDER)[number], string> = {
   material: "Material",

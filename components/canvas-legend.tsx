@@ -6,7 +6,7 @@ const MOTIVATION_COLOR: Record<string, string> = {
   material: "#E63946",
   symbolic: "#2E5C9E",
   normative: "#FFD23F",
-  power: "#111111",
+  power: "#2A9D5C",
 };
 
 const MOTIVATION_LABEL: Record<string, string> = {
@@ -86,8 +86,7 @@ export function CanvasLegend() {
 
 function LegendShape({ motivation }: { motivation: string }) {
   const color = MOTIVATION_COLOR[motivation] ?? "#E63946";
-  const isPower = motivation === "power";
-  const stroke = isPower ? "rgba(240,240,240,0.9)" : "rgba(20,20,20,0.7)";
+  const stroke = "rgba(20,20,20,0.7)";
   const sw = 0.9;
 
   if (motivation === "symbolic") {

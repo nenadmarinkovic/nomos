@@ -21,7 +21,7 @@ const MOTIVATION_COLOR: Record<string, string> = {
   material: "#E63946",
   symbolic: "#2E5C9E",
   normative: "#FFD23F",
-  power: "#111111",
+  power: "#2A9D5C",
 };
 
 const MOTIVATION_LABEL: Record<string, string> = {
@@ -122,11 +122,7 @@ export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
     nodeSel.append("path").attr("d", (d) => shapePath(d.motivation));
     nodeSel
       .attr("fill", (d) => MOTIVATION_COLOR[d.motivation] ?? "#E63946")
-      .attr("stroke", (d) =>
-        d.motivation === "power"
-          ? "rgba(245,245,245,0.9)"
-          : "rgba(20,20,20,0.75)",
-      )
+      .attr("stroke", "rgba(20,20,20,0.75)")
       .attr("stroke-width", 0.9);
 
     nodeSel
