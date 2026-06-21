@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { PageWelcome } from "@/components/page-welcome";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OBSERVER_INFO, type ObserverKey } from "@/lib/config";
 import { useSimulationStore, type ChronicleEntry } from "@/lib/store";
@@ -36,18 +37,62 @@ export function NarratorPage() {
     return c;
   }, [chronicle]);
 
+  if (!started) {
+    return (
+      <PageWelcome
+        eyebrow="Narrator · The voices"
+        headline={
+          <>
+            Watch <em className="text-brand">different vocabularies</em> read
+            the same emergence.
+          </>
+        }
+        lead={
+          <>
+            Nomos grows societies from the bottom up. The Narrator hands the
+            same run to a panel of theorists and lets each read it through
+            their own lens. The events are identical; the readings won&rsquo;t
+            be. That asymmetry is the whole intellectual move.
+          </>
+        }
+        steps={[
+          {
+            n: "01",
+            title: "Marx & Bourdieu",
+            body: "<em>Capital, classes, distinction.</em> Who owns what, who reproduces their advantage across generations, whose taste tracks whose holdings. The economic infrastructure and its cultural superstructure.",
+          },
+          {
+            n: "02",
+            title: "Durkheim & Luhmann",
+            body: "<em>Solidarity, anomie, subsystems.</em> When the social tissue is dense and shared, when it&rsquo;s fraying into normlessness, when subsystems — economy, law, politics — split into their own codes and stop speaking the same language.",
+          },
+          {
+            n: "03",
+            title: "Butler & Ostrom",
+            body: "<em>Performativity and the commons.</em> Judith Butler reads identity as repeated acts citing norms into existence — gender, status, selfhood as performance. Elinor Ostrom reads shared resources as governable by rules a community crafts for itself, between market and state. Both watch social order produced from below.",
+          },
+          {
+            n: "04",
+            title: "Weber, Schelling, Turchin",
+            body: "<em>Domination, segregation cascades, secular cycles.</em> The persistent structures behind the daily motion — legitimate power, sorting under preference thresholds, multi-generation elite overproduction and collapse.",
+          },
+          {
+            n: "05",
+            title: "Epstein & Jessica Flack",
+            body: "<em>Methodological mirrors.</em> Joshua Epstein reads emergence as a Sugarscape modeller — &lsquo;if you didn&rsquo;t grow it, you didn&rsquo;t explain it.&rsquo; Jessica Flack reads it as a complexity ethologist watching animal politics: hierarchy as a computation, slow variables as a society&rsquo;s memory.",
+          },
+        ]}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-1 overflow-hidden">
       <ScrollArea className="flex-1">
         <div className="mx-auto w-full max-w-3xl px-6 py-8">
           <Header />
 
-          {!started ? (
-            <EmptyState
-              title="No run yet"
-              hint="Press Run and the observers will start reading what they see."
-            />
-          ) : groups.length === 0 ? (
+          {groups.length === 0 ? (
             <EmptyState
               title={filter ? "No readings from this observer yet" : "The observers are watching"}
               hint={

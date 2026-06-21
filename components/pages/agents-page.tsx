@@ -2,9 +2,11 @@
 
 import { useCallback } from "react";
 
+import { PageWelcome } from "@/components/page-welcome";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SnapshotBadge } from "@/components/snapshot-badge";
 import { MOTIVATION_INFO, type AgentMotivation } from "@/lib/config";
+import { useSimulationStore } from "@/lib/store";
 import { useWorldSnapshot } from "@/lib/use-world-snapshot";
 import type { RenderAgent, WorldView } from "@/lib/world";
 
@@ -16,10 +18,56 @@ const MOTIVATION_COLOR: Record<string, string> = {
 };
 
 export function AgentsPage() {
+  const started = useSimulationStore((s) => s.started);
   const snapshot = useWorldSnapshot(
     useCallback((world: WorldView) => computeData(world.agents), []),
   );
   const data = snapshot.data;
+
+  if (!started) {
+    return (
+      <PageWelcome
+        eyebrow="Agents · The actors"
+        headline={
+          <>
+            Watch <em className="text-brand">surprising societies</em> grow from
+            simple agents.
+          </>
+        }
+        lead={
+          <>
+            Every agent in Nomos is built from the same skeleton — a body that
+            harvests, eats, and ages. What makes them differ is what they
+            <em> want</em> and how they <em>think</em>. Hundreds of them run
+            side by side; whatever comes out is what those bodies, minds, and
+            drives produced together.
+          </>
+        }
+        steps={[
+          {
+            n: "01",
+            title: "The body",
+            body: "Each agent has a position on a sugar / spice landscape, holdings of both goods, a metabolism that burns through them every tick, and a fixed lifespan. Move, harvest, exchange, pay metabolism, age, die — or leave an heir.",
+          },
+          {
+            n: "02",
+            title: "The mind",
+            body: "Sophistication decides how an agent picks where to move. <em>Minimal</em> agents optimise greedily over their whole field of view. <em>Bounded</em> ones satisfice over a short horizon (Herbert Simon, 1956). <em>Adaptive</em> ones learn how far to range. <em>Social</em> ones imitate the wealthiest neighbour they can see.",
+          },
+          {
+            n: "03",
+            title: "The drive",
+            body: "Motivation is what they're after. <em>Material</em> chase resources (Marx). <em>Symbolic</em> chase status (Bourdieu). <em>Normative</em> chase belonging (Durkheim). <em>Power</em> chase domination (Weber). Set the mix on the setup screen and the engine takes that as the seed.",
+          },
+          {
+            n: "04",
+            title: "What you'll see here",
+            body: "Once a run is alive, this page becomes a population atlas — the motivation mix, the ranked hoarders and strugglers, ages and territories. None of it is scripted; it's whoever the conditions produced.",
+          },
+        ]}
+      />
+    );
+  }
 
   return (
     <ScrollArea className="flex-1">
@@ -182,10 +230,10 @@ function EmptyState() {
   return (
     <div className="mt-10 rounded-lg border border-dashed border-foreground/10 px-6 py-10 text-center">
       <p className="font-serif text-lg italic text-foreground/80">
-        No population yet.
+        No sample yet.
       </p>
       <p className="mt-2 font-sans text-[13px] text-muted-foreground">
-        Press Run, then come back to browse who&rsquo;s alive.
+        Press Refresh once a few ticks have passed, or let the run warm up.
       </p>
     </div>
   );

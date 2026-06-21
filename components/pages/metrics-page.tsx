@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 
+import { PageWelcome } from "@/components/page-welcome";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SnapshotBadge } from "@/components/snapshot-badge";
 import { SCALE_INFO } from "@/lib/config";
@@ -26,6 +27,50 @@ export function MetricsPage() {
   // frozen between explicit refreshes.
   const snapshot = useStoreSnapshot(liveSnapshot, sample.turn);
 
+  if (!started) {
+    return (
+      <PageWelcome
+        eyebrow="Metrics · The numbers"
+        headline={
+          <>
+            Read a society&rsquo;s{" "}
+            <em className="text-brand">body language</em> in plain numbers.
+          </>
+        }
+        lead={
+          <>
+            Nomos doesn&rsquo;t program inequality, classes, or markets — they
+            emerge or they don&rsquo;t. The measures on this page are how that
+            emergence reveals itself in aggregate. None of them are inputs.
+            All of them are outputs of what the conditions produced.
+          </>
+        }
+        steps={[
+          {
+            n: "01",
+            title: "Gini coefficient",
+            body: "Wealth concentration on a 0 → 1 scale. 0 means everyone holds the same; 1 means a single agent holds everything. Watch it rise and you&rsquo;re watching an oligarchy form bottom-up.",
+          },
+          {
+            n: "02",
+            title: "Trade price",
+            body: "Sugar per spice. There is no global market rule — the price you see is the geometric mean of every local Pareto-improving exchange this tick. A market <em>emerges</em> from individual gains, then a price <em>emerges</em> from the market.",
+          },
+          {
+            n: "03",
+            title: "Demography",
+            body: "Mean age, oldest, youth share. Whether the society is replacing itself, slowing into stagnation, or aging toward collapse.",
+          },
+          {
+            n: "04",
+            title: "Distribution",
+            body: "Top 10% holds, bottom 50% holds, median and mean wealth — where on the Lorenz curve the run is sitting, in plain numbers. The story the Gini summarises in one digit.",
+          },
+        ]}
+      />
+    );
+  }
+
   return (
     <ScrollArea className="flex-1">
       <div className="mx-auto w-full max-w-5xl px-6 py-8">
@@ -39,81 +84,72 @@ export function MetricsPage() {
           }
         />
 
-        {!started ? (
-          <EmptyState />
-        ) : (
-          <div className="mt-8 space-y-10">
-            <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <Summary
-                label="Turn"
-                value={snapshot.turn.toString().padStart(5, "0")}
-              />
-              <Summary
-                label="Alive"
-                value={`${snapshot.alive.toLocaleString()} / ${SCALE_INFO[
-                  config.world.scale
-                ].agents.toLocaleString()}`}
-              />
-              <Summary
-                label="Gini"
-                value={snapshot.gini.toFixed(3)}
-                hint="wealth concentration"
-              />
-              <Summary
-                label="Trade price"
-                value={
-                  snapshot.tradePrice > 0
-                    ? snapshot.tradePrice.toFixed(3)
-                    : "—"
-                }
-                hint="sugar per spice"
-              />
-            </section>
+        <div className="mt-8 space-y-10">
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Summary
+              label="Turn"
+              value={snapshot.turn.toString().padStart(5, "0")}
+            />
+            <Summary
+              label="Alive"
+              value={`${snapshot.alive.toLocaleString()} / ${SCALE_INFO[
+                config.world.scale
+              ].agents.toLocaleString()}`}
+            />
+            <Summary
+              label="Gini"
+              value={snapshot.gini.toFixed(3)}
+              hint="wealth concentration"
+            />
+            <Summary
+              label="Trade price"
+              value={
+                snapshot.tradePrice > 0 ? snapshot.tradePrice.toFixed(3) : "—"
+              }
+              hint="sugar per spice"
+            />
+          </section>
 
-            {advanced && (
-              <section className="space-y-3">
-                <SectionTitle
-                  title="Derived"
-                  hint="Numbers the windows compress away."
+          {advanced && (
+            <section className="space-y-3">
+              <SectionTitle
+                title="Derived"
+                hint="Numbers the windows compress away."
+              />
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <Summary
+                  label="Mean age"
+                  value={`${advanced.meanAge.toFixed(1)}t`}
                 />
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  <Summary
-                    label="Mean age"
-                    value={`${advanced.meanAge.toFixed(1)}t`}
-                  />
-                  <Summary
-                    label="Oldest"
-                    value={`${advanced.maxAge}t`}
-                  />
-                  <Summary
-                    label="Youth share"
-                    value={`${(advanced.youthShare * 100).toFixed(0)}%`}
-                  />
-                  <Summary
-                    label="Spice-rich"
-                    value={`${(advanced.spiceRichShare * 100).toFixed(0)}%`}
-                  />
-                  <Summary
-                    label="Top 10% holds"
-                    value={`${(advanced.top10Share * 100).toFixed(1)}%`}
-                  />
-                  <Summary
-                    label="Bottom 50% holds"
-                    value={`${(advanced.bottom50Share * 100).toFixed(1)}%`}
-                  />
-                  <Summary
-                    label="Median wealth"
-                    value={advanced.medianWealth.toFixed(2)}
-                  />
-                  <Summary
-                    label="Mean wealth"
-                    value={advanced.meanWealth.toFixed(2)}
-                  />
-                </div>
-              </section>
-            )}
-          </div>
-        )}
+                <Summary label="Oldest" value={`${advanced.maxAge}t`} />
+                <Summary
+                  label="Youth share"
+                  value={`${(advanced.youthShare * 100).toFixed(0)}%`}
+                />
+                <Summary
+                  label="Spice-rich"
+                  value={`${(advanced.spiceRichShare * 100).toFixed(0)}%`}
+                />
+                <Summary
+                  label="Top 10% holds"
+                  value={`${(advanced.top10Share * 100).toFixed(1)}%`}
+                />
+                <Summary
+                  label="Bottom 50% holds"
+                  value={`${(advanced.bottom50Share * 100).toFixed(1)}%`}
+                />
+                <Summary
+                  label="Median wealth"
+                  value={advanced.medianWealth.toFixed(2)}
+                />
+                <Summary
+                  label="Mean wealth"
+                  value={advanced.meanWealth.toFixed(2)}
+                />
+              </div>
+            </section>
+          )}
+        </div>
       </div>
     </ScrollArea>
   );
@@ -173,19 +209,6 @@ function SectionTitle({ title, hint }: { title: string; hint: string }) {
         {title}
       </h2>
       <p className="font-sans text-[12px] text-muted-foreground">{hint}</p>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="mt-10 rounded-lg border border-dashed border-foreground/10 px-6 py-10 text-center">
-      <p className="font-serif text-lg italic text-foreground/80">
-        No run yet.
-      </p>
-      <p className="mt-2 font-sans text-[13px] text-muted-foreground">
-        Press Run to start producing data.
-      </p>
     </div>
   );
 }

@@ -22,6 +22,22 @@ interface GraphLink {
   weight: number;
 }
 
+type GraphEvent = {
+  turn: number;
+  kind: "birth" | "death" | "tie";
+  text: string;
+};
+
+interface RebuildDelta {
+  addedNodes: number;
+  removedNodes: number;
+  addedLinks: number;
+  removedLinks: number;
+}
+
+const EVENT_HISTORY_LIMIT = 8;
+const EVENTS_PER_KIND_LIMIT = 3;
+
 const MOTIVATION_COLOR: Record<string, string> = {
   material: "#E63946",
   symbolic: "#2E5C9E",
@@ -58,6 +74,8 @@ export function NetworkCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const lastBuiltTurn = useRef<number>(-9999);
+  const prevNodeIdsRef = useRef<Set<number>>(new Set());
+  const prevLinkKeysRef = useRef<Set<string>>(new Set());
 
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [data, setData] = useState<{
@@ -66,6 +84,14 @@ export function NetworkCanvas() {
   }>({ nodes: [], links: [] });
   const [stats, setStats] = useState({ nodes: 0, edges: 0, alive: 0 });
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [lastRebuildTurn, setLastRebuildTurn] = useState(0);
+  const [lastDelta, setLastDelta] = useState<RebuildDelta>({
+    addedNodes: 0,
+    removedNodes: 0,
+    addedLinks: 0,
+    removedLinks: 0,
+  });
+  const [events, setEvents] = useState<GraphEvent[]>([]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -81,8 +107,19 @@ export function NetworkCanvas() {
   }, []);
 
   // Rebuild the graph from the live world on a slow cadence so the layout has
-  // time to settle and you don't get "new graph every second" jitter.
+  // time to settle and you don't get "new graph every second" jitter. Each
+  // rebuild also diffs against the previous one so the badge can name what
+  // changed and the event ticker can list births / deaths / new ties.
   useEffect(() => {
+    // A turn reset means a new run started; wipe diff bookkeeping so the
+    // first frame is treated as a baseline instead of a mass-death event.
+    if (turn === 0 && lastBuiltTurn.current > 0) {
+      prevNodeIdsRef.current = new Set();
+      prevLinkKeysRef.current = new Set();
+      lastBuiltTurn.current = -9999;
+      setEvents([]);
+    }
+
     const shouldRebuild =
       lastBuiltTurn.current < 0 ||
       turn - lastBuiltTurn.current >= REBUILD_EVERY_N_TURNS;
@@ -103,6 +140,52 @@ export function NetworkCanvas() {
       edges: links.length,
       alive: aliveAgents.length,
     });
+
+    // ---- Diff bookkeeping (UI-only; the graph itself is untouched) ----
+    const prevIds = prevNodeIdsRef.current;
+    const prevKeys = prevLinkKeysRef.current;
+    const currentIds = new Set<number>();
+    const currentKeys = new Set<string>();
+    for (const n of nodes) currentIds.add(n.id);
+    for (const l of links) currentKeys.add(linkKey(l));
+
+    const newNodeIds: number[] = [];
+    const removedNodeIds: number[] = [];
+    const newLinkKeys: string[] = [];
+    for (const id of currentIds) if (!prevIds.has(id)) newNodeIds.push(id);
+    for (const id of prevIds) if (!currentIds.has(id)) removedNodeIds.push(id);
+    for (const k of currentKeys) if (!prevKeys.has(k)) newLinkKeys.push(k);
+    let removedLinkCount = 0;
+    for (const k of prevKeys) if (!currentKeys.has(k)) removedLinkCount++;
+
+    const isFirstRebuild = prevIds.size === 0;
+    setLastRebuildTurn(turn);
+    setLastDelta({
+      addedNodes: newNodeIds.length,
+      removedNodes: removedNodeIds.length,
+      addedLinks: newLinkKeys.length,
+      removedLinks: removedLinkCount,
+    });
+
+    if (!isFirstRebuild) {
+      const burst: GraphEvent[] = [];
+      for (const id of newNodeIds.slice(0, EVENTS_PER_KIND_LIMIT)) {
+        burst.push({ turn, kind: "birth", text: `+ #${id}` });
+      }
+      for (const id of removedNodeIds.slice(0, EVENTS_PER_KIND_LIMIT)) {
+        burst.push({ turn, kind: "death", text: `− #${id}` });
+      }
+      for (const k of newLinkKeys.slice(0, EVENTS_PER_KIND_LIMIT)) {
+        const [a, b] = k.split(":");
+        burst.push({ turn, kind: "tie", text: `+ #${a}↔#${b}` });
+      }
+      if (burst.length > 0) {
+        setEvents((prev) => [...burst, ...prev].slice(0, EVENT_HISTORY_LIMIT));
+      }
+    }
+
+    prevNodeIdsRef.current = currentIds;
+    prevLinkKeysRef.current = currentKeys;
   }, [turn]);
 
   const maxWeight = useMemo(
@@ -202,20 +285,50 @@ export function NetworkCanvas() {
       <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-col gap-1 rounded-md border border-foreground/10 bg-card/90 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <span>
+            T:<span className="tabular-nums text-foreground">{turn}</span>
+          </span>
+          <span>
             <span className="text-foreground">{stats.nodes}</span> nodes
           </span>
           <span>
             <span className="text-foreground">{stats.edges}</span> ties
           </span>
         </div>
-        <span className="text-muted-foreground/70">all alive agents</span>
+        <span className="text-muted-foreground/70">
+          rebuilt{" "}
+          <span className="tabular-nums text-foreground/80">
+            {Math.max(0, turn - lastRebuildTurn)}t
+          </span>{" "}
+          ago · Δ {formatDelta(lastDelta)}
+        </span>
       </div>
 
       {selectedId === null && (
-        <div className="pointer-events-none absolute bottom-4 left-4 z-10 max-w-md rounded-md border border-foreground/10 bg-card/90 px-3 py-2 font-serif text-[12px] italic leading-snug text-foreground/80 backdrop-blur-sm">
-          Each shape is one agent; lines show each agent&apos;s three strongest
-          trade partners. Drag to orbit, scroll to zoom, click an agent to
-          focus the camera — click empty space to release.
+        <div className="pointer-events-none absolute bottom-4 left-4 z-10 w-[28rem] max-w-[calc(100vw-2rem)] rounded-md border border-foreground/10 bg-card/90 px-3 py-2 backdrop-blur-sm">
+          {events.length === 0 ? (
+            <p className="font-serif text-[12px] italic leading-snug text-foreground/80">
+              Each shape is one agent; lines show each agent&apos;s three
+              strongest trade partners. Drag to orbit, scroll to zoom, click an
+              agent to inspect.
+            </p>
+          ) : (
+            <>
+              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+                Recent changes
+              </div>
+              <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px] tabular-nums">
+                {events.map((e, i) => (
+                  <li
+                    key={`${e.turn}:${e.kind}:${e.text}:${i}`}
+                    className="flex items-baseline gap-1"
+                  >
+                    <span className="text-muted-foreground/60">T{e.turn}</span>
+                    <span className={eventColor(e.kind)}>{e.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       )}
 
@@ -454,4 +567,28 @@ function buildTieGraph(
 
   const links = raw.filter((_, idx) => keep.has(idx));
   return { nodes, links };
+}
+
+function linkKey(l: GraphLink): string {
+  return `${l.source}:${l.target}`;
+}
+
+function formatDelta(d: RebuildDelta): string {
+  const parts: string[] = [];
+  if (d.addedNodes) parts.push(`+${d.addedNodes} born`);
+  if (d.removedNodes) parts.push(`−${d.removedNodes} died`);
+  if (d.addedLinks) parts.push(`+${d.addedLinks} ties`);
+  if (d.removedLinks) parts.push(`−${d.removedLinks} ties`);
+  return parts.length === 0 ? "no change" : parts.join(", ");
+}
+
+function eventColor(kind: GraphEvent["kind"]): string {
+  switch (kind) {
+    case "birth":
+      return "text-[#2E5C9E]";
+    case "death":
+      return "text-[#E63946]";
+    case "tie":
+      return "text-foreground";
+  }
 }
