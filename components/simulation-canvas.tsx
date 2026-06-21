@@ -218,12 +218,13 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
 
         {!started && (
           <div className="pointer-events-auto absolute inset-0 overflow-y-auto bg-background">
-            <div className="mx-auto flex min-h-full max-w-2xl flex-col justify-center px-6 py-12">
+            <div className="mx-auto flex max-w-2xl flex-col px-6 pb-16 pt-16">
               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
                 A generative society simulation
               </p>
               <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
-                Build a society from <em>simple rules</em> and watch what it
+                Build a society from{" "}
+                <em className="text-brand">simple rules</em> and watch what it
                 becomes.
               </h1>
               <p className="mt-5 font-serif text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
@@ -253,14 +254,9 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
                 <Step
                   n="04"
                   title="Hear the theorists"
-                  body="AI observers read the same run through different lenses — Marx, Durkheim, Bourdieu, Weber, Ibn Khaldun, Turchin, Flack — and narrate what they see in their own vocabulary. Same emergence, multiple readings, side by side."
+                  body="AI observers read the same run through different lenses — Marx, Durkheim, Bourdieu, Weber, Turchin, Flack — and narrate what they see in their own vocabulary. Same emergence, multiple readings, side by side."
                 />
               </ol>
-
-              <p className="mt-10 font-serif text-[15px] italic leading-relaxed text-muted-foreground">
-                Epstein&rsquo;s principle: <em>if you didn&rsquo;t grow it, you
-                didn&rsquo;t explain it</em>. Press Run to begin.
-              </p>
             </div>
           </div>
         )}
