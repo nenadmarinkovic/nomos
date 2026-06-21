@@ -14,12 +14,6 @@ interface GraphNode {
   id: number;
   motivation: string;
   wealth: number;
-  // Seed positions so the renderer never reads `.x` from undefined during
-  // the brief window between graphData arriving and d3-force-3d's first
-  // tick. The library replaces these once layout starts.
-  x: number;
-  y: number;
-  z: number;
 }
 
 interface GraphLink {
@@ -48,7 +42,7 @@ const MOTIVATION_COLOR: Record<string, string> = {
   material: "#E63946",
   symbolic: "#2E5C9E",
   normative: "#FFD23F",
-  power: "#111111",
+  power: "#2A9D5C",
 };
 
 const MOTIVATION_LABEL: Record<string, string> = {
@@ -259,36 +253,13 @@ export function NetworkCanvas() {
               const color = MOTIVATION_COLOR[motivation] ?? "#E63946";
               const r = 3 + Math.log(1 + (n.wealth as number));
               const geom = motivationGeometry(motivation, r);
-              const isPower = motivation === "power";
               const isSelected = n.id === selectedId;
-              // Power agents are near-black for visual identity, which makes
-              // them invisible on dark backgrounds. A constant self-illumination
-              // keeps the brand colour but ensures the mesh is always readable;
-              // selection still overrides with a stronger coloured glow.
               const mat = new THREE.MeshLambertMaterial({
                 color,
-                emissive: isSelected
-                  ? color
-                  : isPower
-                    ? 0x555555
-                    : 0x000000,
-                emissiveIntensity: isSelected ? 0.6 : isPower ? 1.0 : 0,
+                emissive: isSelected ? color : 0x000000,
+                emissiveIntensity: isSelected ? 0.6 : 0,
               });
-              const mesh = new THREE.Mesh(geom, mat);
-              if (isPower && !isSelected) {
-                // A thin lighter wireframe ring lifts power agents off the
-                // backdrop in both light and dark modes, without changing the
-                // base black colour.
-                const ringMat = new THREE.MeshBasicMaterial({
-                  color: 0xb0b0b0,
-                  wireframe: true,
-                  transparent: true,
-                  opacity: 0.45,
-                });
-                const ringGeom = motivationGeometry(motivation, r * 1.18);
-                mesh.add(new THREE.Mesh(ringGeom, ringMat));
-              }
-              return mesh;
+              return new THREE.Mesh(geom, mat);
             }}
           />
         ) : null}
@@ -542,9 +513,6 @@ function buildTieGraph(
     id: a.id,
     motivation: a.motivation,
     wealth: a.sugar + a.spice,
-    x: 0,
-    y: 0,
-    z: 0,
   }));
 
   const raw: GraphLink[] = [];
