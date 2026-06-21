@@ -71,7 +71,7 @@ export function AgentsPage() {
 
   return (
     <ScrollArea className="flex-1">
-      <div className="mx-auto w-full max-w-5xl px-6 py-8">
+      <div className="mx-auto w-full max-w-5xl px-6 pb-16 pt-8">
         <Header
           badge={
             <SnapshotBadge

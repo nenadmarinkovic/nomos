@@ -480,10 +480,9 @@ function StreamWindow() {
 
 function NarratorWindow() {
   const chronicle = useSimulationStore((s) => s.chronicle);
-  const recent = chronicle
-    .filter((e) => e.status === "done" && e.text)
-    .slice(-3)
-    .reverse();
+  const done = chronicle.filter((e) => e.status === "done" && e.text);
+  const latest = done[done.length - 1];
+  const previous = done.slice(-3, -1).reverse();
   const pending = chronicle.some((e) => e.status === "pending");
 
   return (
@@ -492,29 +491,49 @@ function NarratorWindow() {
       title="Narrator"
       meta={pending ? "···" : undefined}
     >
-      {recent.length === 0 ? (
-        <p className="font-serif text-[12px] italic leading-snug text-muted-foreground">
+      {!latest ? (
+        <p className="font-sans text-[13px] leading-relaxed text-muted-foreground">
           {pending
             ? "Observers are watching…"
             : "Run the simulation. Observers will narrate as the society unfolds."}
         </p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {recent.map((e) => (
-            <div key={e.key} className="flex flex-col gap-1">
-              <p className="font-serif text-[12px] italic leading-snug text-foreground/90">
-                &ldquo;{e.text}&rdquo;
-              </p>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-                  — {OBSERVER_INFO[e.observer].name}
-                </span>
-                <span className="font-mono text-[9px] tabular-nums text-muted-foreground/60">
-                  T{e.turn}
-                </span>
-              </div>
+        <div className="flex flex-col gap-4">
+          {/* The newest reading — prominent and easy to read. */}
+          <div className="flex flex-col gap-2">
+            <p className="font-sans text-[14px] leading-relaxed text-foreground">
+              {latest.text}
+            </p>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="font-sans text-[12px] font-medium text-foreground/85">
+                {OBSERVER_INFO[latest.observer].name}
+              </span>
+              <span className="font-sans text-[11px] tabular-nums text-muted-foreground">
+                Turn {latest.turn}
+              </span>
             </div>
-          ))}
+          </div>
+
+          {/* Older readings, dimmer and lighter. */}
+          {previous.length > 0 && (
+            <div className="flex flex-col gap-3 border-t border-foreground/10 pt-3">
+              {previous.map((e, i) => (
+                <div key={`${e.key}:${i}`} className="flex flex-col gap-1">
+                  <p className="font-sans text-[13px] leading-relaxed text-foreground/70">
+                    {e.text}
+                  </p>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-sans text-[11px] text-muted-foreground">
+                      {OBSERVER_INFO[e.observer].name}
+                    </span>
+                    <span className="font-sans text-[10px] tabular-nums text-muted-foreground/60">
+                      T{e.turn}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </FloatingWindow>
