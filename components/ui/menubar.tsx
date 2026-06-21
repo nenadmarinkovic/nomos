@@ -58,7 +58,7 @@ function MenubarContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-[8rem] overflow-hidden rounded-md border border-foreground/15 bg-card p-1 font-sans text-foreground shadow-md outline-none",
+          "z-50 min-w-[8rem] overflow-hidden rounded-md border border-foreground/15 bg-card p-1 font-sans text-foreground outline-none",
           className,
         )}
         {...props}

@@ -187,7 +187,7 @@ export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
 
         {hover && (
           <div
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-sm border border-foreground/15 bg-card px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground shadow-md"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-sm border border-foreground/15 bg-card px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground"
             style={{
               left: hover.cx,
               top: hover.cy - 8,

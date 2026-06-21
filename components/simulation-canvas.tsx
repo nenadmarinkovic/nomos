@@ -605,8 +605,7 @@ function InspectorOverlay({
       ref={setNodeRef}
       style={{ transform: `translate3d(${x}px, ${y}px, 0)` }}
       className={cn(
-        "pointer-events-auto absolute left-0 top-0 w-64 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground shadow-xl backdrop-blur-md",
-        isDragging && "shadow-2xl",
+        "pointer-events-auto absolute left-0 top-0 w-64 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground backdrop-blur-md",
       )}
     >
       <div

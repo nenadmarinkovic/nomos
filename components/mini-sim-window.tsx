@@ -141,8 +141,7 @@ function MiniSimBody({
       ref={setNodeRef}
       style={{ transform: `translate3d(${x}px, ${y}px, 0)`, width: W }}
       className={cn(
-        "pointer-events-auto absolute left-0 top-0 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground shadow-xl backdrop-blur-md",
-        isDragging && "shadow-2xl",
+        "pointer-events-auto absolute left-0 top-0 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground backdrop-blur-md",
       )}
     >
       <div

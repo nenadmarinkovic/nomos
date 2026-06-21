@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { XIcon } from "@phosphor-icons/react";
 
 import { activeWorldRef } from "@/lib/active-world";
 import { useSimulationStore } from "@/lib/store";
@@ -395,7 +396,7 @@ function AgentInspector({
 
   if (!agent || !agent.alive) {
     return (
-      <div className="absolute bottom-4 right-4 z-10 w-72 rounded-md border border-foreground/15 bg-card/95 p-3 font-sans text-[12px] text-foreground shadow-xl backdrop-blur-md">
+      <div className="absolute bottom-4 right-4 z-10 w-72 rounded-md border border-foreground/15 bg-card/95 p-3 font-sans text-[12px] text-foreground backdrop-blur-md">
         <div className="flex items-center justify-between">
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             Agent #{agentId}
@@ -404,9 +405,9 @@ function AgentInspector({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="cursor-pointer rounded-sm p-1 text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
+            className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
           >
-            ×
+            <XIcon size={12} weight="bold" />
           </button>
         </div>
         <p className="mt-2 font-serif italic text-muted-foreground">
@@ -419,7 +420,7 @@ function AgentInspector({
   const wealth = agent.sugar + agent.spice;
 
   return (
-    <div className="absolute bottom-4 right-4 z-10 w-80 rounded-md border border-foreground/15 bg-card/95 font-sans text-[12px] text-foreground shadow-xl backdrop-blur-md">
+    <div className="absolute bottom-4 right-4 z-10 w-80 rounded-md border border-foreground/15 bg-card/95 font-sans text-[12px] text-foreground backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-foreground/10 px-3 py-2">
         <div className="flex items-center gap-2">
           <span
@@ -440,9 +441,9 @@ function AgentInspector({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="cursor-pointer rounded-sm p-1 text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
+          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
         >
-          ×
+          <XIcon size={12} weight="bold" />
         </button>
       </div>
 
