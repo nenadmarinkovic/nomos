@@ -14,6 +14,12 @@ interface GraphNode {
   id: number;
   motivation: string;
   wealth: number;
+  // Seed positions so the renderer never reads `.x` from undefined during
+  // the brief window between graphData arriving and d3-force-3d's first
+  // tick. The library replaces these once layout starts.
+  x: number;
+  y: number;
+  z: number;
 }
 
 interface GraphLink {
@@ -196,15 +202,21 @@ export function NetworkCanvas() {
   const handleNodeClick = (n: any) => {
     setSelectedId(n.id as number);
     const g = graphRef.current;
-    if (g && typeof g.cameraPosition === "function") {
-      const dist = 80;
-      const ratio = 1 + dist / Math.hypot(n.x ?? 1, n.y ?? 1, n.z ?? 1);
-      g.cameraPosition(
-        { x: (n.x ?? 0) * ratio, y: (n.y ?? 0) * ratio, z: (n.z ?? 0) * ratio },
-        n,
-        800,
-      );
-    }
+    if (!g || typeof g.cameraPosition !== "function") return;
+    // Only frame the node once d3-force-3d has actually placed it. Calling
+    // cameraPosition with an undefined look-at coordinate is what produced
+    // the runtime "Cannot read properties of undefined (reading 'x')".
+    const nx = typeof n.x === "number" ? n.x : 0;
+    const ny = typeof n.y === "number" ? n.y : 0;
+    const nz = typeof n.z === "number" ? n.z : 0;
+    if (nx === 0 && ny === 0 && nz === 0) return;
+    const dist = 80;
+    const ratio = 1 + dist / Math.hypot(nx, ny, nz);
+    g.cameraPosition(
+      { x: nx * ratio, y: ny * ratio, z: nz * ratio },
+      { x: nx, y: ny, z: nz },
+      800,
+    );
   };
 
   return (
@@ -229,8 +241,8 @@ export function NetworkCanvas() {
                 (n.motivation as string);
               return `#${n.id} · ${label} · w ${(n.wealth as number).toFixed(1)}`;
             }}
-            linkColor={() => "rgba(150,150,150,0.45)"}
-            linkOpacity={0.55}
+            linkColor={() => "rgba(180,180,180,0.85)"}
+            linkOpacity={0.9}
             linkWidth={(l: any) => 0.4 + 1.6 * ((l.weight as number) / maxWeight)}
             linkDirectionalParticles={0}
             onNodeClick={handleNodeClick}
@@ -239,7 +251,7 @@ export function NetworkCanvas() {
             warmupTicks={20}
             d3AlphaDecay={0.04}
             d3VelocityDecay={0.4}
-            enableNodeDrag={true}
+            enableNodeDrag={false}
             controlType="orbit"
             showNavInfo={false}
             nodeThreeObject={(n: any) => {
@@ -530,6 +542,9 @@ function buildTieGraph(
     id: a.id,
     motivation: a.motivation,
     wealth: a.sugar + a.spice,
+    x: 0,
+    y: 0,
+    z: 0,
   }));
 
   const raw: GraphLink[] = [];

@@ -57,6 +57,11 @@ export class SimWorkerCore {
       case "resume":
         if (!this.running && this.engine) {
           this.running = true;
+          // Tick once immediately so the simulation visibly advances the
+          // moment Resume is clicked, instead of waiting up to BASE_TICK_MS
+          // for the first scheduled tick. Then settle into the normal loop.
+          this.engine.tick();
+          this.postFrame();
           this.loop();
         }
         break;
