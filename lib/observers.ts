@@ -19,6 +19,31 @@ export interface WorldSummary {
   reproduction: boolean;
 }
 
+/**
+ * Live snapshot of macro signals the AI should weigh in addition to the
+ * specific triggering event. Lets observers contextualise — "this is the
+ * third inequality surge", "the population skews material", "the trade
+ * network has fragmented" — instead of reading each moment in isolation.
+ */
+export interface SimContext {
+  /** Population shares (0..1) per motivation, in canonical order. */
+  motivationMix: {
+    material: number;
+    symbolic: number;
+    normative: number;
+    power: number;
+  };
+  /** Most-recent significant events before this one, oldest first. */
+  recentEvents: { turn: number; kind: string; title: string }[];
+  /** Snapshot of the trade-partner tie graph. */
+  ties: {
+    count: number;
+    topWeight: number;
+    /** Share (0..1) of alive agents with no surviving tie. */
+    isolatesShare: number;
+  };
+}
+
 export function isObserverKey(value: unknown): value is ObserverKey {
   return typeof value === "string" && value in OBSERVER_INFO;
 }
@@ -46,12 +71,49 @@ export function buildSystemPrompt(observer: ObserverKey): string {
 export function buildUserPrompt(
   event: SignificantEvent,
   world: WorldSummary,
+  context?: SimContext,
 ): string {
-  return [
+  const lines: string[] = [];
+
+  lines.push(
     `Setting: a ${world.scale}-scale society on a ${world.landscape} landscape, started from ${world.equality} conditions, with ${world.reproduction ? "inheritance between generations" : "no inheritance — each life resets"}.`,
-    "",
-    `Event (turn ${event.turn}): ${event.summary}`,
-    "",
-    "Narrate what you see.",
-  ].join("\n");
+  );
+
+  if (context) {
+    const mix = context.motivationMix;
+    const pct = (v: number) => `${Math.round(v * 100)}%`;
+    const mixParts: string[] = [];
+    if (mix.material > 0) mixParts.push(`${pct(mix.material)} material`);
+    if (mix.symbolic > 0) mixParts.push(`${pct(mix.symbolic)} symbolic`);
+    if (mix.normative > 0) mixParts.push(`${pct(mix.normative)} normative`);
+    if (mix.power > 0) mixParts.push(`${pct(mix.power)} power`);
+    if (mixParts.length > 0) {
+      lines.push(
+        `Population leans: ${mixParts.join(", ")} (what the agents are after).`,
+      );
+    }
+
+    const t = context.ties;
+    if (t.count > 0) {
+      lines.push(
+        `Trade ties: ${t.count} active trade-partner relations, strongest at weight ${t.topWeight.toFixed(1)}, with ${Math.round(t.isolatesShare * 100)}% of the population trading with no one.`,
+      );
+    } else {
+      lines.push(`Trade ties: nobody is trading yet.`);
+    }
+
+    if (context.recentEvents.length > 0) {
+      const past = context.recentEvents
+        .map((e) => `T${e.turn} ${e.title.toLowerCase()}`)
+        .join("; ");
+      lines.push(`Earlier this run: ${past}.`);
+    }
+  }
+
+  lines.push("");
+  lines.push(`Event (turn ${event.turn}): ${event.summary}`);
+  lines.push("");
+  lines.push("Narrate what you see.");
+
+  return lines.join("\n");
 }

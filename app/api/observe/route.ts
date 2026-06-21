@@ -5,6 +5,7 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
   isObserverKey,
+  type SimContext,
   type WorldSummary,
 } from "@/lib/observers";
 import {
@@ -20,6 +21,7 @@ interface ObserveRequest {
   observer?: unknown;
   event?: SignificantEvent;
   world?: WorldSummary;
+  context?: SimContext;
 }
 
 export async function POST(req: Request) {
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { observer, event, world } = body;
+  const { observer, event, world, context } = body;
 
   if (!isObserverKey(observer)) {
     return NextResponse.json(
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
   try {
     const text = await mistralChat([
       { role: "system", content: buildSystemPrompt(observer) },
-      { role: "user", content: buildUserPrompt(event, world) },
+      { role: "user", content: buildUserPrompt(event, world, context) },
     ]);
     return NextResponse.json({ observer, eventId: event.id, text });
   } catch (err) {
