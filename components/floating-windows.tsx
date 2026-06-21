@@ -31,7 +31,14 @@ import {
 import { cn } from "@/lib/utils";
 import { OBSERVER_INFO } from "@/lib/config";
 import { WEALTH_BIN_LABELS } from "@/lib/engine";
-import { useSimulationStore, type ViewKey } from "@/lib/store";
+import {
+  resolveWindowPosition,
+  useSimulationStore,
+  WIN_HEIGHTS,
+  WIN_WIDTH,
+  type ViewKey,
+  type WindowAnchor,
+} from "@/lib/store";
 
 const giniConfig: ChartConfig = {
   gini: { label: "Gini", color: "#E63946" },
@@ -58,11 +65,42 @@ export function FloatingWindows() {
 
   function handleDragEnd(e: DragEndEvent) {
     const key = e.active.id as ViewKey;
-    const current = useSimulationStore.getState().windowPositions[key];
-    moveWindow(key, {
-      x: Math.max(0, current.x + e.delta.x),
-      y: Math.max(0, current.y + e.delta.y),
-    });
+    const state = useSimulationStore.getState();
+    const current = state.windowPositions[key];
+    const canvas = state.canvasSize;
+    const W = canvas.width || 800;
+    const H = canvas.height || 600;
+    const winH = WIN_HEIGHTS[key];
+
+    // Where the window actually ended up, in absolute container coords.
+    const start = resolveWindowPosition(current, key, canvas);
+    const nextX = start.x + e.delta.x;
+    const nextY = start.y + e.delta.y;
+
+    // Anchor follows the corner closest to the window's center, so a drag
+    // toward the top-right ends with a top-right anchor — and that anchor
+    // is what keeps it pinned through later container reflows.
+    const centerX = nextX + WIN_WIDTH / 2;
+    const centerY = nextY + winH / 2;
+    const anchor: WindowAnchor =
+      centerX < W / 2
+        ? centerY < H / 2
+          ? "tl"
+          : "bl"
+        : centerY < H / 2
+          ? "tr"
+          : "br";
+
+    const offsetX =
+      anchor === "tl" || anchor === "bl"
+        ? Math.max(0, nextX)
+        : Math.max(0, W - WIN_WIDTH - nextX);
+    const offsetY =
+      anchor === "tl" || anchor === "tr"
+        ? Math.max(0, nextY)
+        : Math.max(0, H - winH - nextY);
+
+    moveWindow(key, { anchor, offsetX, offsetY });
   }
 
   return (
@@ -92,6 +130,7 @@ function FloatingWindow({
 }) {
   const visible = useSimulationStore((s) => s.views[windowKey]);
   const position = useSimulationStore((s) => s.windowPositions[windowKey]);
+  const canvasSize = useSimulationStore((s) => s.canvasSize);
   const toggleView = useSimulationStore((s) => s.toggleView);
 
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -99,8 +138,11 @@ function FloatingWindow({
 
   if (!visible) return null;
 
-  const x = position.x + (transform?.x ?? 0);
-  const y = position.y + (transform?.y ?? 0);
+  // Resolve on every render: container size changes (sidebar collapse,
+  // viewport resize) re-derive x/y from the same anchor + offset.
+  const resolved = resolveWindowPosition(position, windowKey, canvasSize);
+  const x = resolved.x + (transform?.x ?? 0);
+  const y = resolved.y + (transform?.y ?? 0);
 
   return (
     <div
@@ -482,7 +524,6 @@ function NarratorWindow() {
   const chronicle = useSimulationStore((s) => s.chronicle);
   const done = chronicle.filter((e) => e.status === "done" && e.text);
   const latest = done[done.length - 1];
-  const previous = done.slice(-3, -1).reverse();
   const pending = chronicle.some((e) => e.status === "pending");
 
   return (
@@ -491,15 +532,17 @@ function NarratorWindow() {
       title="Narrator"
       meta={pending ? "···" : undefined}
     >
-      {!latest ? (
-        <p className="font-sans text-[13px] leading-relaxed text-muted-foreground">
-          {pending
-            ? "Observers are watching…"
-            : "Run the simulation. Observers will narrate as the society unfolds."}
-        </p>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {/* The newest reading — prominent and easy to read. */}
+      {/* Match the chart-window body height (h-24 chart + caption ≈ 121px)
+       * so the narrator doesn't shrink or grow with text length — the next
+       * window below it would otherwise drift away from a uniform 10px gap. */}
+      <div className="min-h-[121px]">
+        {!latest ? (
+          <p className="font-sans text-[13px] leading-relaxed text-muted-foreground">
+            {pending
+              ? "Observers are watching…"
+              : "Run the simulation. Observers will narrate as the society unfolds."}
+          </p>
+        ) : (
           <div className="flex flex-col gap-2">
             <p className="font-sans text-[14px] leading-relaxed text-foreground">
               {latest.text}
@@ -513,29 +556,8 @@ function NarratorWindow() {
               </span>
             </div>
           </div>
-
-          {/* Older readings, dimmer and lighter. */}
-          {previous.length > 0 && (
-            <div className="flex flex-col gap-3 border-t border-foreground/10 pt-3">
-              {previous.map((e, i) => (
-                <div key={`${e.key}:${i}`} className="flex flex-col gap-1">
-                  <p className="font-sans text-[13px] leading-relaxed text-foreground/70">
-                    {e.text}
-                  </p>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-sans text-[11px] text-muted-foreground">
-                      {OBSERVER_INFO[e.observer].name}
-                    </span>
-                    <span className="font-sans text-[10px] tabular-nums text-muted-foreground/60">
-                      T{e.turn}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </FloatingWindow>
   );
 }
