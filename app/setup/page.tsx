@@ -135,7 +135,7 @@ const STEPS: readonly StepDef[] = [
     framing:
       "Resources don't only get used — they regrow. The speed of that regrowth sets the carrying capacity of the whole society.",
     theoryHook:
-      "Slow regrowth turns the simulation into a Malthusian world: once exhausted, a region takes a long time to recover, and societies that overshoot collapse. Fast regrowth lifts the ceiling — there's always more, scarcity rarely bites, and the dynamics shift toward distribution and status rather than survival. The contrast between these two regimes is one of the oldest debates in human history, from Malthus to Ostrom.",
+      "Slow regrowth turns the simulation into a Malthusian world: once exhausted, a region takes a long time to recover, and societies that overshoot collapse. Fast regrowth lifts the ceiling — there's always more, scarcity rarely bites, and the dynamics shift toward distribution and status rather than survival. The contrast between these two regimes is one of the oldest debates in human history.",
   },
   {
     key: "vision",
@@ -175,7 +175,7 @@ const STEPS: readonly StepDef[] = [
     framing:
       "What agents try to maximize shapes everything that follows — economy, status games, ritual life, authority. Pick more than one if you want different drives to coexist.",
     theoryHook:
-      "This is the deepest choice in the model, and the four options track four classical positions. Material agents chase resources — Marx's productive subject. Symbolic ones chase status and distinction — Bourdieu's capital game. Normative ones chase belonging and conformity — Durkheim's collective conscience. Power-seeking ones chase authority and control over others — Weber's iron cage and the question of legitimate domination. Pick more than one and the population splits between drives — closer to real societies, where some chase money, others chase honour, others just follow the room, and some quietly try to rule it. When something emerges in a mixed population, the interesting question becomes: which drive produced it?",
+      "This is the deepest choice in the model, and the four options track four classical positions. Material agents chase resources — Marx's productive subject. Symbolic ones chase status and distinction — Bourdieu's capital game. Normative ones chase belonging and conformity — Durkheim's collective conscience. Power-seeking ones chase authority and control over others — the question of legitimate domination. Pick more than one and the population splits between drives — closer to real societies, where some chase money, others chase honour, others just follow the room, and some quietly try to rule it. When something emerges in a mixed population, the interesting question becomes: which drive produced it?",
   },
   {
     key: "topology",
@@ -191,7 +191,7 @@ const STEPS: readonly StepDef[] = [
     framing:
       "AI theorists watch the same simulation and describe what they see in their own vocabulary.",
     theoryHook:
-      "This is the move that makes Nomos different. The simulation runs once, but the chosen theorists each narrate it through their own lens. Marx might see class struggle where Durkheim sees ritual breakdown and Luhmann sees subsystems failing to translate each other. You're not asking which one is right — you're watching multiple readings of the same emergence, side by side. Pick more than one. Disagreement is where the intellectual move actually lives.",
+      "This is the move that makes Nomos different. The simulation runs once, but the chosen theorists each narrate it through their own lens. Marx might see class struggle where Durkheim sees ritual breakdown and Schelling sees a quiet segregation cascade nobody intended. You're not asking which one is right — you're watching multiple readings of the same emergence, side by side. Pick more than one. Disagreement is where the intellectual move actually lives.",
   },
   {
     key: "summary",

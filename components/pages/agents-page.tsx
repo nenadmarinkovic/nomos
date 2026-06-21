@@ -57,7 +57,7 @@ export function AgentsPage() {
           {
             n: "03",
             title: "The drive",
-            body: "Motivation is what they're after. <em>Material</em> chase resources (Marx). <em>Symbolic</em> chase status (Bourdieu). <em>Normative</em> chase belonging (Durkheim). <em>Power</em> chase domination (Weber). Set the mix on the setup screen and the engine takes that as the seed.",
+            body: "Motivation is what they're after. <em>Material</em> chase resources (Marx). <em>Symbolic</em> chase status (Bourdieu). <em>Normative</em> chase belonging (Durkheim). <em>Power</em> chase domination over others. Set the mix on the setup screen and the engine takes that as the seed.",
           },
           {
             n: "04",

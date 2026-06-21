@@ -1,3 +1,4 @@
+import { anonIdHeaders } from "@/lib/anon-id";
 import type { SimulationConfig } from "@/lib/config";
 import type { HistoryPoint, ChronicleEntry } from "@/lib/store";
 
@@ -41,14 +42,25 @@ async function asJson<T>(res: Response): Promise<T> {
 }
 
 export async function listRuns(): Promise<RunSummary[]> {
-  return asJson<RunSummary[]>(await fetch("/api/runs", { cache: "no-store" }));
+  return asJson<RunSummary[]>(
+    await fetch("/api/runs", {
+      cache: "no-store",
+      // `create: false` — listing is a read-only first visit, no need to
+      // mint an anonymous id just to look at the (empty) library.
+      headers: anonIdHeaders(false),
+    }),
+  );
 }
 
 export async function saveRun(input: SaveRunInput): Promise<RunSummary> {
   return asJson<RunSummary>(
     await fetch("/api/runs", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Saves need an owner. Mint the anon id if it doesn't exist yet.
+        ...anonIdHeaders(true),
+      },
       body: JSON.stringify(input),
     }),
   );
@@ -56,11 +68,17 @@ export async function saveRun(input: SaveRunInput): Promise<RunSummary> {
 
 export async function getRun(id: string): Promise<RunDetail> {
   return asJson<RunDetail>(
-    await fetch(`/api/runs/${id}`, { cache: "no-store" }),
+    await fetch(`/api/runs/${id}`, {
+      cache: "no-store",
+      headers: anonIdHeaders(false),
+    }),
   );
 }
 
 export async function deleteRun(id: string): Promise<void> {
-  const res = await fetch(`/api/runs/${id}`, { method: "DELETE" });
+  const res = await fetch(`/api/runs/${id}`, {
+    method: "DELETE",
+    headers: anonIdHeaders(false),
+  });
   if (!res.ok) throw new Error(`Delete failed (${res.status})`);
 }

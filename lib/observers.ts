@@ -6,8 +6,8 @@ import type { SignificantEvent } from "@/lib/events";
  *
  * Each observer is a social theorist. Given the same factual event summary,
  * every observer reads it through their own vocabulary — Marx sees class,
- * Durkheim sees ritual, Luhmann sees subsystems. The system prompt fixes the
- * persona; the user prompt delivers the neutral facts to interpret.
+ * Durkheim sees ritual, Schelling sees a tipping point. The system prompt
+ * fixes the persona; the user prompt delivers the neutral facts to interpret.
  *
  * Pure module — safe to import from a route handler. No client/store imports.
  */

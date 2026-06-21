@@ -28,13 +28,12 @@ export type ObserverKey =
   | "epstein"
   | "bourdieu"
   | "marx"
-  | "weber"
+  | "polanyi"
   | "durkheim"
-  | "luhmann"
+  | "granovetter"
   | "turchin"
   | "schelling"
-  | "ostrom"
-  | "butler"
+  | "farmer"
   | "flack";
 
 export interface WorldPhysics {
@@ -409,14 +408,14 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
     watches:
       "Surplus extraction, alienation, and the contradictions that turn quantitative pressure into qualitative rupture.",
   },
-  weber: {
-    label: "Weber",
-    name: "Max Weber",
-    era: "1864–1920",
-    lens: "rationalization, legitimacy, bureaucracy",
-    sees: "Modernity as the disenchantment of the world — life increasingly governed by calculable rules and means-ends rationality. The iron cage builds itself.",
+  polanyi: {
+    label: "Polanyi",
+    name: "Karl Polanyi",
+    era: "1886–1964",
+    lens: "embedded economy, great transformation",
+    sees: "Pre-modern economic life is embedded in social relations — reciprocity, redistribution, householding. The self-regulating market is a recent, unstable invention that always provokes a counter-movement to protect society from itself.",
     watches:
-      "How charisma routinizes into bureaucracy, how authority claims legitimacy (traditional, charismatic, legal-rational), and where rationalization corrodes meaning.",
+      "When trade disembeds from kinship and locality into impersonal market exchange, when reciprocity gives way to price, when a 'fictitious commodity' stress starts to show.",
   },
   durkheim: {
     label: "Durkheim",
@@ -427,14 +426,14 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
     watches:
       "The shift from mechanical to organic solidarity, anomie when shared norms loosen, and rituals that bind a group into a single conscience.",
   },
-  luhmann: {
-    label: "Luhmann",
-    name: "Niklas Luhmann",
-    era: "1927–1998",
-    lens: "subsystems, binary codes",
-    sees: "Society as a network of autopoietic subsystems — law, economy, politics, science — each operating on its own binary code and unable to fully translate the others.",
+  granovetter: {
+    label: "Granovetter",
+    name: "Mark Granovetter",
+    era: "contemporary",
+    lens: "embeddedness, weak ties, social structure of markets",
+    sees: "Economic action embedded in concrete personal networks. Markets aren't anonymous; they run on who knows whom, and bridging weak ties carry the information that strong cluster ties can't.",
     watches:
-      "How subsystems differentiate, draw boundaries, and communicate through structural couplings. Where one code colonizes another.",
+      "Which agents become brokers between clusters, when the tie graph fragments into cliques, where weak ties are doing the structural work the strong ones get credit for.",
   },
   turchin: {
     label: "Turchin",
@@ -454,23 +453,14 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
     watches:
       "Tipping points, thresholds, and the moments when small preference shifts cascade into segregation, runs, or coordination collapse.",
   },
-  ostrom: {
-    label: "Ostrom",
-    name: "Elinor Ostrom",
-    era: "1933–2012",
-    lens: "commons, governance, polycentricity",
-    sees: "Communities can govern shared resources sustainably — neither pure market nor pure state — when the rules fit the situation. Hobbes and Smith don't exhaust the options.",
-    watches:
-      "How groups craft rules, monitor each other, and resolve disputes. The design principles that let a commons survive enclosure and free-riding.",
-  },
-  butler: {
-    label: "Butler",
-    name: "Judith Butler",
+  farmer: {
+    label: "Farmer",
+    name: "J. Doyne Farmer",
     era: "contemporary",
-    lens: "performativity, recognition, norms",
-    sees: "Identity not as expressed but as performed. Gender, race, and selfhood are produced through repeated acts that cite norms into existence.",
+    lens: "complexity economics, agent-based markets",
+    sees: "The economy as an evolving complex system, far from equilibrium. Prices form from adaptive agents reacting to each other; stability is a balance the system keeps re-finding, not a baseline it sits on.",
     watches:
-      "Which bodies become intelligible and which don't, how norms reproduce by being cited, and where performance fails or refuses the categories meant to contain it.",
+      "How the emergent price arises and where it gets volatile, when positive feedback concentrates wealth, when the system tips toward runaway instability instead of self-correcting.",
   },
   flack: {
     label: "Flack",

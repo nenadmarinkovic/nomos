@@ -1,0 +1,27 @@
+# Local Postgres for development. Bring it up with:
+#   docker compose up -d postgres
+# Then point .env DATABASE_URL at it (the default in .env.example matches).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nomos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nomos
+      POSTGRES_PASSWORD: nomos
+      POSTGRES_DB: nomos
+    ports:
+      # Host port 5434 to avoid clashing with other local Postgres containers
+      # (sprachenwald on 5432, home-db on 5433). Container still listens on 5432.
+      - "5434:5432"
+    volumes:
+      - nomos-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nomos -d nomos"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  nomos-postgres-data:
