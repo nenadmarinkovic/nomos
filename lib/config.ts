@@ -55,6 +55,16 @@ export interface WorldConfig {
   landscape: Landscape;
   initialSettlement: InitialSettlement;
   reproduction: boolean;
+  /** Cultural transmission — agents occasionally adopt a wealthy neighbour's
+   *  motivation. Lets ways of being spread horizontally, not only descend
+   *  vertically through birth. */
+  culturalTransmission: boolean;
+  /** Inheritance on death — the dying agent's holdings split among their
+   *  surviving trade-tie partners, weighted by tie strength. */
+  inheritance: boolean;
+  /** Conflict — power-motivated agents may take a share of a weaker
+   *  neighbour's holdings. Power motivation gets actual teeth. */
+  conflict: boolean;
   physics: WorldPhysics;
 }
 
@@ -489,6 +499,9 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     landscape: "two_peaks",
     initialSettlement: "scattered",
     reproduction: true,
+    culturalTransmission: true,
+    inheritance: true,
+    conflict: true,
     physics: DEFAULT_PHYSICS,
   },
   agents: {
