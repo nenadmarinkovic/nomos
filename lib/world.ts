@@ -1,15 +1,9 @@
 import type { AgentMotivation } from "@/lib/config";
 
-/**
- * The world, decoupled from the engine.
- *
- * v0.3 moves the tick loop into a Web Worker, so the main thread no longer
- * holds a live `Engine`. The renderer, inspector, and network graph instead
- * read a `WorldView` — a read-only snapshot the worker produces each tick and
- * the main thread rehydrates from transferable buffers. The `Engine` itself
- * satisfies `WorldView` structurally, so the same code paths work on either
- * side of the worker boundary.
- */
+// The tick loop runs in a Web Worker. The main thread never holds the
+// engine directly — it reads `WorldView` snapshots posted across the
+// worker boundary. The engine itself implements `WorldView`, so the same
+// reader code works on both sides.
 
 export const MOTIVATIONS: readonly AgentMotivation[] = [
   "material",
@@ -18,7 +12,16 @@ export const MOTIVATIONS: readonly AgentMotivation[] = [
   "power",
 ];
 
-/** The per-agent fields the UI reads — a subset of the engine's full `Agent`. */
+/** Mirror of `AgentTraits` from the engine, duplicated to keep the worker
+ *  boundary loose. */
+export interface RenderAgentTraits {
+  greed: number;
+  prosociality: number;
+  dominance: number;
+  statusSeeking: number;
+}
+
+/** Subset of `Agent` the UI reads. */
 export interface RenderAgent {
   id: number;
   alive: boolean;
@@ -34,6 +37,7 @@ export interface RenderAgent {
   sugarMetab: number;
   spiceMetab: number;
   motivation: AgentMotivation;
+  traits: RenderAgentTraits;
 }
 
 export interface WorldView {
@@ -45,17 +49,15 @@ export interface WorldView {
   spice: Float32Array;
   maxSpice: Float32Array;
   occupants: Int32Array;
-  /** Indexed by agent id (id === array index). */
+  /** Indexed by agent id. */
   agents: readonly RenderAgent[];
-  /** Flat triples [idA, idB, weight, …] of decaying trade-partner ties. */
+  /** Flat [idA, idB, weight, …] of decaying trade-partner ties. */
   ties: Float32Array;
 }
 
-/**
- * A flattened, structurally-cloned world ready to post across the worker
- * boundary. Agents are packed into one Float32 buffer (column-major per agent)
- * so the whole frame moves as a handful of transferable ArrayBuffers.
- */
+/** A world packed into transferable buffers for postMessage. Agents go
+ *  into one Float32 buffer (stride = STRIDE) so the whole frame moves as
+ *  a handful of transferable ArrayBuffers. */
 export interface WorldFrame {
   width: number;
   height: number;
@@ -67,11 +69,10 @@ export interface WorldFrame {
   maxSpice: ArrayBuffer;
   occupants: ArrayBuffer;
   agents: ArrayBuffer;
-  /** Flat triples buffer of trade-partner ties, [idA, idB, weight, …]. */
   ties: ArrayBuffer;
 }
 
-const STRIDE = 14;
+const STRIDE = 18;
 const ID = 0;
 const ALIVE = 1;
 const X = 2;
@@ -86,14 +87,15 @@ const VISION = 10;
 const SUGAR_METAB = 11;
 const SPICE_METAB = 12;
 const MOTIV = 13;
+const T_GREED = 14;
+const T_PROSOCIALITY = 15;
+const T_DOMINANCE = 16;
+const T_STATUS = 17;
 
-/**
- * Pack a world into transferable buffers. Resource and occupant grids are
- * copied (`.slice()`) so the engine keeps its own arrays after the buffers are
- * transferred away. Integers (ids, coordinates) sit comfortably within
- * Float32's exact-integer range, so a single Float32 buffer carries every
- * agent field.
- */
+/** Pack a world into transferable buffers ready for postMessage. Grids are
+ *  copied via `.slice()` because the engine needs to keep using them after
+ *  the buffers are transferred. Integer fields fit in Float32, so one
+ *  agent buffer carries everything. */
 export function serializeWorld(view: WorldView): {
   frame: WorldFrame;
   transfer: ArrayBuffer[];
@@ -117,6 +119,10 @@ export function serializeWorld(view: WorldView): {
     data[o + SUGAR_METAB] = a.sugarMetab;
     data[o + SPICE_METAB] = a.spiceMetab;
     data[o + MOTIV] = Math.max(0, MOTIVATIONS.indexOf(a.motivation));
+    data[o + T_GREED] = a.traits.greed;
+    data[o + T_PROSOCIALITY] = a.traits.prosociality;
+    data[o + T_DOMINANCE] = a.traits.dominance;
+    data[o + T_STATUS] = a.traits.statusSeeking;
   }
 
   const cells = view.cells.slice();
@@ -154,7 +160,7 @@ export function serializeWorld(view: WorldView): {
   };
 }
 
-/** Rehydrate a posted frame into a `WorldView` (no copies — wraps the buffers). */
+/** Rehydrate a posted frame into a `WorldView`. Wraps the buffers, no copy. */
 export function deserializeWorld(frame: WorldFrame): WorldView {
   const data = new Float32Array(frame.agents);
   const agents: RenderAgent[] = new Array(frame.count);
@@ -175,6 +181,12 @@ export function deserializeWorld(frame: WorldFrame): WorldView {
       sugarMetab: data[o + SUGAR_METAB],
       spiceMetab: data[o + SPICE_METAB],
       motivation: MOTIVATIONS[data[o + MOTIV]] ?? "material",
+      traits: {
+        greed: data[o + T_GREED],
+        prosociality: data[o + T_PROSOCIALITY],
+        dominance: data[o + T_DOMINANCE],
+        statusSeeking: data[o + T_STATUS],
+      },
     };
   }
 
