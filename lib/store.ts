@@ -29,6 +29,12 @@ const EMPTY_SNAPSHOT: EngineSnapshot = {
   blightActive: false,
   blightStartedTurn: -9999,
   plagueDeathsThisTurn: 0,
+  landDegradation: 0,
+  tokenSupply: 0,
+  tokenTradeVolume: 0,
+  topIssuerId: -1,
+  topIssuerLiability: 0,
+  circulatingIssuers: 0,
 };
 
 export interface HistoryPoint {
