@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
   AgentModel,
@@ -581,16 +580,13 @@ export default function SetupPage() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Link
-            href="/"
-            aria-label="Close guided setup"
-            className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
-          >
-            <XIcon size={18} weight="regular" />
-          </Link>
-        </div>
+        <Link
+          href="/"
+          aria-label="Close guided setup"
+          className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+        >
+          <XIcon size={18} weight="regular" />
+        </Link>
       </header>
 
       <div className="shrink-0 bg-background">

@@ -4,6 +4,8 @@ A society simulation where agents follow simple rules and AI theorists observe w
 
 > **Status:** the simulation core, the engine's social mechanics, the trait-based agent model, the token economy, and the observers are working. Open fronts: scale/performance (PixiJS) and accounts. See the [roadmap](#roadmap).
 
+> **Full docs in [`docs/`](docs/README.md)** — what the project is and what it argues, the per-tick simulation walkthrough, the observers and chronicle layer, and a development guide.
+
 ## What Nomos is
 
 A grid of agents harvests two goods (sugar and spice), trades them with neighbours, sometimes seizes from each other, drifts in identity by imitating wealthier peers, reproduces, and dies. A panel of AI theorists watches the same field and narrates what they see in their own vocabulary — Marx on class, Axelrod on tit-for-tat, Durkheim on solidarity, and so on.
