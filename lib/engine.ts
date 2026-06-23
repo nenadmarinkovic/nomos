@@ -259,6 +259,15 @@ const TIE_DECAY = 0.97;
 const TIE_THRESHOLD = 0.25;
 const TIE_CAP = 8;
 
+// Substrate cellular-automaton step (only when substrateDiffusion is on).
+// STOCK_DIFFUSION: share of the gap to each neighbour that standing
+// resources flow across per tick — must stay < 0.25 for stability with
+// four neighbours. FERTILITY_SPREAD: how fast a cell's fertility (its
+// max ÷ pristine ceiling) relaxes toward its neighbours' — the rate at
+// which exhaustion spreads and fertile land reseeds the worn ground.
+const STOCK_DIFFUSION = 0.12;
+const FERTILITY_SPREAD = 0.05;
+
 export interface EngineSnapshot {
   turn: number;
   alive: number;
@@ -320,6 +329,8 @@ export class Engine {
   private originalMaxCells: Float32Array;
   private originalMaxSpice: Float32Array;
   private pristineLandTotal: number;
+  /** Reusable write buffer for the synchronous substrate CA step. */
+  private diffScratch: Float32Array;
   agents: Agent[];
   turn = 0;
 
@@ -353,6 +364,7 @@ export class Engine {
   private culturalTransmission: boolean;
   private inheritance: boolean;
   private conflict: boolean;
+  private substrateDiffusion: boolean;
   private topology: InteractionTopology;
   /** Soft ceiling — birth rate scales down as population approaches it. */
   private populationCap: number;
@@ -368,6 +380,10 @@ export class Engine {
     this.culturalTransmission = config.world.culturalTransmission ?? true;
     this.inheritance = config.world.inheritance ?? true;
     this.conflict = config.world.conflict ?? true;
+    // Unlike the social toggles above, this one defaults *off* for legacy
+    // configs: it alters substrate physics, so a run saved before the
+    // feature existed must replay exactly as it was recorded.
+    this.substrateDiffusion = config.world.substrateDiffusion ?? false;
     this.topology = config.agents.topology;
 
     const size = GRID_SIZE[config.world.scale];
@@ -393,6 +409,7 @@ export class Engine {
     this.spice.set(this.maxSpice);
     this.originalMaxCells = this.maxCells.slice();
     this.originalMaxSpice = this.maxSpice.slice();
+    this.diffScratch = new Float32Array(total);
     this.pristineLandTotal = 0;
     for (let i = 0; i < total; i++) {
       this.pristineLandTotal += this.originalMaxCells[i] + this.originalMaxSpice[i];
@@ -420,6 +437,7 @@ export class Engine {
     this.rollShocks();
     this.regrow(this.cells, this.maxCells, true);
     this.regrow(this.spice, this.maxSpice, false);
+    if (this.substrateDiffusion) this.diffuseSubstrate();
 
     const order: number[] = [];
     for (const a of this.agents) {
@@ -734,6 +752,91 @@ export class Engine {
         stock[i] = next > m ? m : next;
       }
     }
+  }
+
+  /** One synchronous cellular-automaton step over the substrate. Standing
+   *  resources diffuse to the four orthogonal neighbours (rich cells bleed
+   *  into exhausted ones), and each cell's fertility relaxes toward its
+   *  neighbours' — so worn ground spreads like desertification and fertile
+   *  land slowly reseeds the depleted cells beside it. Every cell is
+   *  computed from the *old* grid and written to a scratch buffer before
+   *  being committed, so the update is a true CA, not a sequential sweep.
+   *  No RNG is consumed, so the diffusion never shifts the agent stream. */
+  private diffuseSubstrate(): void {
+    this.diffuseStock(this.cells);
+    this.diffuseStock(this.spice);
+    this.spreadFertility(this.maxCells, this.originalMaxCells);
+    this.spreadFertility(this.maxSpice, this.originalMaxSpice);
+  }
+
+  /** Conservative diffusion of a standing-resource grid. Reflecting (no-flux)
+   *  boundaries — edge cells simply have fewer neighbours — so total stock is
+   *  preserved exactly. */
+  private diffuseStock(stock: Float32Array): void {
+    const w = this.width;
+    const h = this.height;
+    const out = this.diffScratch;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const s = stock[i];
+        let flux = 0;
+        if (x > 0) flux += stock[i - 1] - s;
+        if (x < w - 1) flux += stock[i + 1] - s;
+        if (y > 0) flux += stock[i - w] - s;
+        if (y < h - 1) flux += stock[i + w] - s;
+        out[i] = s + STOCK_DIFFUSION * flux;
+      }
+    }
+    stock.set(out);
+  }
+
+  /** Relax each cell's fertility — its current ceiling as a fraction of its
+   *  pristine ceiling — toward the mean of its fertile neighbours'. Working
+   *  in fraction space keeps the landscape's underlying shape intact (a peak
+   *  stays a peak): only *depletion* spreads and heals, never the base relief.
+   *  Naturally barren cells (no pristine capacity) take no part. */
+  private spreadFertility(max: Float32Array, original: Float32Array): void {
+    const w = this.width;
+    const h = this.height;
+    const out = this.diffScratch;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const orig = original[i];
+        if (orig <= 0) {
+          out[i] = max[i];
+          continue;
+        }
+        let sum = 0;
+        let n = 0;
+        if (x > 0 && original[i - 1] > 0) {
+          sum += max[i - 1] / original[i - 1];
+          n++;
+        }
+        if (x < w - 1 && original[i + 1] > 0) {
+          sum += max[i + 1] / original[i + 1];
+          n++;
+        }
+        if (y > 0 && original[i - w] > 0) {
+          sum += max[i - w] / original[i - w];
+          n++;
+        }
+        if (y < h - 1 && original[i + w] > 0) {
+          sum += max[i + w] / original[i + w];
+          n++;
+        }
+        if (n === 0) {
+          out[i] = max[i];
+          continue;
+        }
+        const frac = max[i] / orig;
+        const target = sum / n;
+        const next = frac + FERTILITY_SPREAD * (target - frac);
+        out[i] = Math.max(0, Math.min(orig, next * orig));
+      }
+    }
+    max.set(out);
   }
 
   /** Blight risk grows with land degradation; plague risk grows with
@@ -1349,10 +1452,14 @@ export class Engine {
   }
 
   /** Split the dying agent's wealth among its living tie partners,
-   *  weighted by tie strength. */
+   *  weighted by tie strength. Only the *positive* part of each good is
+   *  bequeathed: a starved agent dies because one good ran below zero, and
+   *  that debt is not a thing heirs can inherit — passing it on would push
+   *  living agents negative, which then poisons `mrs`/price with NaNs. */
   private bequeathToTies(a: Agent): void {
-    const totalWealth = a.sugar + a.spice;
-    if (totalWealth <= 0) return;
+    const sugar = a.sugar > 0 ? a.sugar : 0;
+    const spice = a.spice > 0 ? a.spice : 0;
+    if (sugar + spice <= 0) return;
 
     // Ties are stored once per (lo, hi) pair, so look in both directions.
     const partners: { id: number; weight: number }[] = [];
@@ -1372,8 +1479,8 @@ export class Engine {
 
     for (const p of living) {
       const share = p.weight / liveWeight;
-      this.agents[p.id].sugar += a.sugar * share;
-      this.agents[p.id].spice += a.spice * share;
+      this.agents[p.id].sugar += sugar * share;
+      this.agents[p.id].spice += spice * share;
     }
     a.sugar = 0;
     a.spice = 0;
