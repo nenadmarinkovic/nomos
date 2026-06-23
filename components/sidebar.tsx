@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowRightIcon,
+  BookOpenIcon,
   CaretLeftIcon,
   CaretRightIcon,
   EyeIcon,
@@ -25,7 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type SectionKey = "world" | "agents" | "metrics" | "narrator";
+export type SectionKey = "world" | "agents" | "metrics" | "narrator" | "docs";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -44,12 +45,14 @@ const SECTIONS: SectionDef[] = [
   { key: "agents", href: "/agents", label: "Agents", icon: UsersThreeIcon },
   { key: "metrics", href: "/metrics", label: "Metrics", icon: PulseIcon },
   { key: "narrator", href: "/narrator", label: "Narrator", icon: EyeIcon },
+  { key: "docs", href: "/docs", label: "Docs", icon: BookOpenIcon },
 ];
 
 export function sectionFromPath(pathname: string): SectionKey {
   if (pathname.startsWith("/agents")) return "agents";
   if (pathname.startsWith("/metrics")) return "metrics";
   if (pathname.startsWith("/narrator")) return "narrator";
+  if (pathname.startsWith("/docs")) return "docs";
   return "world";
 }
 
@@ -60,7 +63,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "group/sidebar relative hidden h-full shrink-0 flex-col border-r border-foreground/10 bg-card/40 font-sans transition-[width] duration-200 md:flex",
+        "group/sidebar relative hidden h-full shrink-0 flex-col border-r border-foreground/10 bg-background font-sans transition-[width] duration-200 md:flex",
         collapsed ? "w-[60px]" : "w-56",
       )}
     >

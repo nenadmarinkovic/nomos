@@ -30,6 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { SectionKey } from "@/components/sidebar";
 import { useSimulationStore } from "@/lib/store";
+import { version as APP_VERSION } from "@/package.json";
 
 const SPEEDS: { label: string; value: number }[] = [
   { label: "1×", value: 1 },
@@ -54,6 +55,7 @@ const SECTION_LABELS: Record<SectionKey, { group: string; label: string }> = {
   agents: { group: "Run", label: "Agents" },
   metrics: { group: "Run", label: "Metrics" },
   narrator: { group: "Run", label: "Narrator" },
+  docs: { group: "Reference", label: "Docs" },
 };
 
 export function SiteHeader({
@@ -97,44 +99,29 @@ export function SiteHeader({
       <div
         className={cn(
           "hidden shrink-0 items-center border-foreground/10 px-4 transition-[width] duration-200 md:flex md:border-r",
-          sidebarCollapsed
-            ? "md:w-[60px] md:justify-center"
-            : "md:w-56 md:justify-between",
+          sidebarCollapsed ? "md:w-[60px] md:justify-center" : "md:w-56",
         )}
       >
-        {!sidebarCollapsed && (
-          <Link href="/" aria-label="Nomos" className="flex items-center">
-            <Image
-              src="/logo.svg"
-              alt="Nomos"
-              width={38}
-              height={35}
-              priority
-              className="h-12 w-auto dark:invert"
-            />
-          </Link>
-        )}
-        {onToggleSidebar && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  onClick={onToggleSidebar}
-                  aria-label={
-                    sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
-                  }
-                  className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
-                >
-                  <SidebarSimpleIcon size={18} weight="regular" />
-                </button>
-              }
-            />
-            <TooltipContent side="bottom" sideOffset={6}>
-              {sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            </TooltipContent>
-          </Tooltip>
-        )}
+        <Link href="/" aria-label="Nomos" className="flex items-center gap-2.5">
+          <Image
+            src="/logo.svg"
+            alt="Nomos"
+            width={38}
+            height={35}
+            priority
+            className="h-12 w-auto dark:invert"
+          />
+          {!sidebarCollapsed && (
+            <span className="flex flex-col leading-tight">
+              <span className="font-sans text-[13px] font-semibold tracking-tight text-foreground">
+                Nomos
+              </span>
+              <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                Version: {APP_VERSION}
+              </span>
+            </span>
+          )}
+        </Link>
       </div>
 
       <div className="flex flex-1 items-center justify-between gap-4 px-3 md:px-4">
@@ -164,7 +151,7 @@ export function SiteHeader({
                     aria-label={
                       sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                     }
-                    className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground md:hidden"
+                    className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
                   >
                     <SidebarSimpleIcon size={18} weight="regular" />
                   </button>
