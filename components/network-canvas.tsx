@@ -54,40 +54,68 @@ const MOTIVATION_LABEL: Record<string, string> = {
 };
 
 const REBUILD_EVERY_N_TURNS = 20;
-/** Only the K heaviest trade ties of each agent survive into the rendered
- * graph. Cuts the hairball down to each agent's strongest social ego-network. */
+/** Keep only each agent's K strongest trade ties — cuts the hairball. */
 const TOP_K_PER_AGENT = 3;
+/** Past this point the graph is an unreadable hairball; keep only the
+ *  most-embedded nodes. */
+const MAX_RENDERED_NODES = 1200;
 
-/** Module-scoped flag for "has the first auto-fit run this session." A fresh
- *  `useRef` would reset to `false` on every remount, which made every
- *  Field → Network → Field round-trip re-fit the camera against a different
- *  layout state and visibly resize the graph. We persist it across mounts
- *  and only clear it when a new run starts (turn 0). */
+/** Module-scoped so it survives component remounts. A useRef would reset
+ *  on every Field ↔ Network switch and re-fit the camera each time. */
 let hasFitCamera = false;
 
-// The 3D force graph is a Three.js-backed client component — no SSR.
+// Three.js-backed; no SSR.
 const ForceGraph3D = dynamic(
   async () => (await import("react-force-graph-3d")).default,
   { ssr: false },
 );
 
-/**
- * Force-directed graph view of the simulation, laid out in 3D space via
- * d3-force-3d (under react-force-graph-3d / Three.js). Nodes are alive
- * agents; edges are each agent's three strongest persistent trade-partner
- * ties (their social ego-network).
- */
+const NODE_RADIUS = 6;
+
+/** Shared GPU resources — one geometry per motivation, one material per
+ *  (motivation, selection) pair. Building these per-node leaked VRAM at
+ *  town scale and was the dominant render cost. */
+const MOTIVATION_GEOMETRY: Record<string, THREE.BufferGeometry> = {
+  symbolic: new THREE.SphereGeometry(NODE_RADIUS, 16, 16),
+  normative: new THREE.ConeGeometry(NODE_RADIUS, NODE_RADIUS * 1.8, 4),
+  power: new THREE.OctahedronGeometry(NODE_RADIUS, 0),
+  material: new THREE.BoxGeometry(
+    NODE_RADIUS * 1.6,
+    NODE_RADIUS * 1.6,
+    NODE_RADIUS * 1.6,
+  ),
+};
+
+const nodeMaterialCache = new Map<string, THREE.MeshLambertMaterial>();
+function getNodeMaterial(
+  motivation: string,
+  isSelected: boolean,
+): THREE.MeshLambertMaterial {
+  const key = `${motivation}:${isSelected ? "s" : "n"}`;
+  const cached = nodeMaterialCache.get(key);
+  if (cached) return cached;
+  const color = MOTIVATION_COLOR[motivation] ?? "#E63946";
+  const mat = new THREE.MeshLambertMaterial({
+    color,
+    emissive: isSelected ? color : 0x000000,
+    emissiveIntensity: isSelected ? 0.6 : 0,
+  });
+  nodeMaterialCache.set(key, mat);
+  return mat;
+}
+
+/** 3D force-directed view. Nodes = alive agents; edges = each agent's
+ *  three strongest trade partners. */
 export function NetworkCanvas() {
   const turn = useSimulationStore((s) => s.turn);
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const lastBuiltTurn = useRef<number>(-9999);
-  // The 3D graph has no built-in auto-fit. We do it once per session via the
-  // module-level `hasFitCamera` flag (not a `useRef`, so it survives remounts
-  // — switching Field ↔ Network doesn't trigger a refit at a different layout
-  // state). The flag is cleared on new-run detection below.
   const prevNodeIdsRef = useRef<Set<number>>(new Set());
   const prevLinkKeysRef = useRef<Set<string>>(new Set());
+  // Reuse the same node objects across rebuilds so react-force-graph's
+  // layout state survives and the sim warm-starts instead of cold-restarting.
+  const nodeCacheRef = useRef<Map<number, GraphNode>>(new Map());
 
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [data, setData] = useState<{
@@ -128,9 +156,9 @@ export function NetworkCanvas() {
     if (turn === 0 && lastBuiltTurn.current > 0) {
       prevNodeIdsRef.current = new Set();
       prevLinkKeysRef.current = new Set();
+      nodeCacheRef.current = new Map();
       lastBuiltTurn.current = -9999;
-      // A new run repopulates the graph from scratch — let it reframe once the
-      // fresh layout settles instead of holding the previous run's camera.
+      // New run — reset the auto-fit so the fresh layout reframes.
       hasFitCamera = false;
       setEvents([]);
     }
@@ -145,10 +173,12 @@ export function NetworkCanvas() {
     if (!world) return;
 
     const aliveAgents = world.agents.filter((a) => a.alive);
-    const { nodes, links } = buildTieGraph(aliveAgents, world.ties);
-    // The graph data comes from a worker-driven mutable ref; we have to
-    // sync it into React state for the third-party graph component to read.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    const { nodes, links } = buildTieGraph(
+      aliveAgents,
+      world.ties,
+      nodeCacheRef.current,
+    );
+    // Sync the worker-sourced graph into React state for the 3rd-party graph.
     setData({ nodes, links });
     setStats({
       nodes: nodes.length,
@@ -156,7 +186,7 @@ export function NetworkCanvas() {
       alive: aliveAgents.length,
     });
 
-    // ---- Diff bookkeeping (UI-only; the graph itself is untouched) ----
+    // Diff bookkeeping — feeds the "recent changes" ticker.
     const prevIds = prevNodeIdsRef.current;
     const prevKeys = prevLinkKeysRef.current;
     const currentIds = new Set<number>();
@@ -212,9 +242,8 @@ export function NetworkCanvas() {
     setSelectedId(n.id as number);
     const g = graphRef.current;
     if (!g || typeof g.cameraPosition !== "function") return;
-    // Only frame the node once d3-force-3d has actually placed it. Calling
-    // cameraPosition with an undefined look-at coordinate is what produced
-    // the runtime "Cannot read properties of undefined (reading 'x')".
+    // Skip if d3-force-3d hasn't placed the node yet — otherwise
+    // cameraPosition crashes on undefined coords.
     const nx = typeof n.x === "number" ? n.x : 0;
     const ny = typeof n.y === "number" ? n.y : 0;
     const nz = typeof n.z === "number" ? n.z : 0;
@@ -258,14 +287,12 @@ export function NetworkCanvas() {
             linkDirectionalParticles={0}
             onNodeClick={handleNodeClick}
             onBackgroundClick={() => setSelectedId(null)}
-            cooldownTicks={120}
-            warmupTicks={20}
-            d3AlphaDecay={0.04}
-            d3VelocityDecay={0.4}
+            cooldownTicks={40}
+            warmupTicks={5}
+            d3AlphaDecay={0.06}
+            d3VelocityDecay={0.5}
             onEngineStop={() => {
-              // Frame the graph once per session, the first time a non-empty
-              // layout settles. The module-level flag survives remounts so
-              // Field ↔ Network round-trips don't refit each time.
+              // Auto-fit once per session on the first non-empty layout.
               if (hasFitCamera || data.nodes.length === 0) return;
               const g = graphRef.current;
               if (g && typeof g.zoomToFit === "function") {
@@ -277,22 +304,12 @@ export function NetworkCanvas() {
             controlType="orbit"
             showNavInfo={false}
             nodeThreeObject={(n: any) => {
+              // Uniform size and full saturation — wealth is intentionally not
+              // visualised here to avoid dimming the late-game population.
               const motivation = n.motivation as string;
-              const color = MOTIVATION_COLOR[motivation] ?? "#E63946";
-              // Uniform size, full saturation. Wealth is not encoded visually
-              // here — it would otherwise dim most of the population once
-              // concentration sets in, which made the Network view look pale
-              // mid-run while the Field still showed bright newly-spawned
-              // agents. Brightness should be a property of the agent's
-              // identity, not its current wealth.
-              const NODE_RADIUS = 6;
-              const geom = motivationGeometry(motivation, NODE_RADIUS);
-              const isSelected = n.id === selectedId;
-              const mat = new THREE.MeshLambertMaterial({
-                color,
-                emissive: isSelected ? color : 0x000000,
-                emissiveIntensity: isSelected ? 0.6 : 0,
-              });
+              const geom =
+                MOTIVATION_GEOMETRY[motivation] ?? MOTIVATION_GEOMETRY.material;
+              const mat = getNodeMaterial(motivation, n.id === selectedId);
               return new THREE.Mesh(geom, mat);
             }}
           />
@@ -305,7 +322,13 @@ export function NetworkCanvas() {
             T:<span className="tabular-nums text-foreground">{turn}</span>
           </span>
           <span>
-            <span className="text-foreground">{stats.nodes}</span> nodes
+            <span className="text-foreground">{stats.nodes}</span>
+            {stats.alive > stats.nodes ? (
+              <span className="text-muted-foreground/70">
+                /{stats.alive}
+              </span>
+            ) : null}{" "}
+            nodes
           </span>
           <span>
             <span className="text-foreground">{stats.edges}</span> ties
@@ -358,19 +381,6 @@ export function NetworkCanvas() {
       )}
     </div>
   );
-}
-
-function motivationGeometry(motivation: string, r: number): THREE.BufferGeometry {
-  switch (motivation) {
-    case "symbolic":
-      return new THREE.SphereGeometry(r, 16, 16);
-    case "normative":
-      return new THREE.ConeGeometry(r, r * 1.8, 4);
-    case "power":
-      return new THREE.OctahedronGeometry(r, 0);
-    default:
-      return new THREE.BoxGeometry(r * 1.6, r * 1.6, r * 1.6);
-  }
 }
 
 interface PartnerInfo {
@@ -539,50 +549,85 @@ function Stat({ label, value }: { label: string; value: string }) {
 function buildTieGraph(
   alive: readonly RenderAgent[],
   ties: Float32Array,
+  cache: Map<number, GraphNode>,
 ): { nodes: GraphNode[]; links: GraphLink[] } {
   const aliveById = new Map<number, RenderAgent>();
   for (const a of alive) aliveById.set(a.id, a);
 
-  const nodes: GraphNode[] = alive.map((a) => {
-    // Guard against transient NaN / Infinity / negative holdings before they
-    // reach Three.js, where they would crash the bounding-sphere computation
-    // (`Computed radius is NaN`). The renderer can't tell the difference
-    // between "this agent is broke" and "this agent's wealth is NaN".
-    const w = a.sugar + a.spice;
-    const safeWealth = Number.isFinite(w) && w > 0 ? w : 0;
-    return {
-      id: a.id,
-      motivation: a.motivation,
-      wealth: safeWealth,
-    };
-  });
-
-  const raw: GraphLink[] = [];
+  // Total tie weight per agent — used both to cap the rendered set and
+  // to score edges for the top-K filter below.
+  const embeddedness = new Map<number, number>();
   for (let i = 0; i < ties.length; i += 3) {
     const a = ties[i] | 0;
     const b = ties[i + 1] | 0;
     if (!aliveById.has(a) || !aliveById.has(b)) continue;
-    raw.push({ source: a, target: b, weight: ties[i + 2] });
+    const w = ties[i + 2];
+    embeddedness.set(a, (embeddedness.get(a) ?? 0) + w);
+    embeddedness.set(b, (embeddedness.get(b) ?? 0) + w);
   }
 
-  // Top-K per agent: keep an edge only if it's among either endpoint's
-  // strongest ties.
+  // At city scale render only the most-embedded agents; the rest is hairball.
+  let rendered: RenderAgent[];
+  if (alive.length > MAX_RENDERED_NODES) {
+    const sorted = [...alive].sort(
+      (p, q) =>
+        (embeddedness.get(q.id) ?? 0) - (embeddedness.get(p.id) ?? 0),
+    );
+    rendered = sorted.slice(0, MAX_RENDERED_NODES);
+  } else {
+    rendered = [...alive];
+  }
+  const renderedIds = new Set<number>();
+  for (const a of rendered) renderedIds.add(a.id);
+
+  // Reuse cached node objects so the layout state attached by the force
+  // graph (x/y/z/vx/vy/vz) survives between rebuilds.
+  for (const id of cache.keys()) {
+    if (!renderedIds.has(id)) cache.delete(id);
+  }
+  const nodes: GraphNode[] = new Array(rendered.length);
+  for (let i = 0; i < rendered.length; i++) {
+    const a = rendered[i];
+    // Guard against NaN/Infinity/negative wealth — Three.js crashes
+    // the bounding-sphere computation otherwise.
+    const w = a.sugar + a.spice;
+    const safeWealth = Number.isFinite(w) && w > 0 ? w : 0;
+    let node = cache.get(a.id);
+    if (node) {
+      node.motivation = a.motivation;
+      node.wealth = safeWealth;
+    } else {
+      node = { id: a.id, motivation: a.motivation, wealth: safeWealth };
+      cache.set(a.id, node);
+    }
+    nodes[i] = node;
+  }
+
+  // Build per-agent edge lists for the top-K filter.
+  const raw: GraphLink[] = [];
   const byAgent = new Map<number, { idx: number; weight: number }[]>();
-  raw.forEach((l, idx) => {
-    let listA = byAgent.get(l.source);
+  for (let i = 0; i < ties.length; i += 3) {
+    const a = ties[i] | 0;
+    const b = ties[i + 1] | 0;
+    if (!renderedIds.has(a) || !renderedIds.has(b)) continue;
+    const weight = ties[i + 2];
+    const idx = raw.length;
+    raw.push({ source: a, target: b, weight });
+    let listA = byAgent.get(a);
     if (!listA) {
       listA = [];
-      byAgent.set(l.source, listA);
+      byAgent.set(a, listA);
     }
-    listA.push({ idx, weight: l.weight });
-    let listB = byAgent.get(l.target);
+    listA.push({ idx, weight });
+    let listB = byAgent.get(b);
     if (!listB) {
       listB = [];
-      byAgent.set(l.target, listB);
+      byAgent.set(b, listB);
     }
-    listB.push({ idx, weight: l.weight });
-  });
+    listB.push({ idx, weight });
+  }
 
+  // Keep an edge if it's among either endpoint's strongest ties.
   const keep = new Set<number>();
   for (const list of byAgent.values()) {
     list.sort((p, q) => q.weight - p.weight);
