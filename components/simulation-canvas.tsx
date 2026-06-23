@@ -3,14 +3,18 @@
 import {
   DndContext,
   PointerSensor,
-  useDraggable,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { useEffect, useRef, useState } from "react";
-import { XIcon } from "@phosphor-icons/react";
 
+import { AgentInspectorOverlay } from "@/components/agent-inspector";
+import {
+  drawResourceField,
+  SPICE_RGB,
+  SUGAR_RGB,
+} from "@/lib/render-resources";
 import { cn } from "@/lib/utils";
 import {
   activeFrameAtRef,
@@ -207,7 +211,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
             sensors={inspectorSensors}
             onDragEnd={handleInspectorDragEnd}
           >
-            <InspectorOverlay
+            <AgentInspectorOverlay
               selectedId={selectedId}
               position={inspectorPos}
               onClose={() => setSelectedId(null)}
@@ -329,38 +333,6 @@ const MOTIVATION_COLOR: Record<string, string> = {
   power: "#2A9D5C",
 };
 
-/** Paint one resource field as small dots, nudged so the two goods don't
- * sit exactly on top of each other where they overlap. */
-function drawResource(
-  ctx: CanvasRenderingContext2D,
-  field: Float32Array,
-  maxField: Float32Array,
-  rgb: [number, number, number],
-  nudge: number,
-  cellW: number,
-  cellH: number,
-  dotSize: number,
-  width: number,
-  height: number,
-) {
-  const off = nudge * dotSize * 0.45;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
-      const v = field[idx];
-      const max = maxField[idx];
-      if (max <= 0 || v < max * 0.5) continue;
-      const intensity = Math.min(1, v / 4);
-      const alpha = 0.18 + intensity * 0.35;
-      ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
-      const dx = x * cellW + cellW / 2 - dotSize / 2 + off;
-      const dy = y * cellH + cellH / 2 - dotSize / 2 + off;
-      ctx.fillRect(dx, dy, dotSize, dotSize);
-    }
-  }
-}
-
-
 function renderWorld(
   world: WorldView,
   canvas: HTMLCanvasElement,
@@ -380,11 +352,11 @@ function renderWorld(
 
   ctx.clearRect(0, 0, W, H);
 
+  // Sugar (green, nudged left) and spice (amber, nudged right) so that
+  // cells holding both show two adjacent dots rather than overlapping.
   const dotSize = Math.max(shapeSize * 0.18, 2 * dpr);
-  // Sugar (green) and spice (amber) are two separate goods. Where one is dense
-  // the other is usually sparse — that gradient is what makes trade pay.
-  drawResource(ctx, world.cells, world.maxCells, [120, 200, 130], -1, cellW, cellH, dotSize, world.width, world.height);
-  drawResource(ctx, world.spice, world.maxSpice, [214, 158, 90], 1, cellW, cellH, dotSize, world.width, world.height);
+  drawResourceField(ctx, world.cells, world.maxCells, SUGAR_RGB, -1, cellW, cellH, dotSize, world.width, world.height);
+  drawResourceField(ctx, world.spice, world.maxSpice, SPICE_RGB, 1, cellW, cellH, dotSize, world.width, world.height);
 
   const agentSize = Math.max(shapeSize * 0.72, 5 * dpr);
   const outlineWidth = Math.max(0.6, 0.7 * dpr);
@@ -528,140 +500,3 @@ function neighborsInVision(world: WorldView, a: RenderAgent): number[] {
   return out;
 }
 
-interface AgentSnapshot {
-  id: number;
-  alive: boolean;
-  x: number;
-  y: number;
-  sugar: number;
-  spice: number;
-  age: number;
-  maxAge: number;
-  vision: number;
-  sugarMetab: number;
-  spiceMetab: number;
-  motivation: string;
-}
-
-function InspectorOverlay({
-  selectedId,
-  position,
-  onClose,
-}: {
-  selectedId: number;
-  position: { x: number; y: number };
-  onClose: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: "inspector" });
-  const turn = useSimulationStore((s) => s.turn);
-  const [snap, setSnap] = useState<AgentSnapshot | null>(null);
-
-  useEffect(() => {
-    const world = activeWorldRef.current;
-    if (!world) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSnap(null);
-      return;
-    }
-    const a = world.agents[selectedId];
-    if (!a) {
-       
-      setSnap(null);
-      return;
-    }
-     
-    setSnap({
-      id: a.id,
-      alive: a.alive,
-      x: a.x,
-      y: a.y,
-      sugar: a.sugar,
-      spice: a.spice,
-      age: a.age,
-      maxAge: a.maxAge,
-      vision: a.vision,
-      sugarMetab: a.sugarMetab,
-      spiceMetab: a.spiceMetab,
-      motivation: a.motivation,
-    });
-  }, [turn, selectedId]);
-
-  if (!snap) return null;
-
-  const x = position.x + (transform?.x ?? 0);
-  const y = position.y + (transform?.y ?? 0);
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: `translate3d(${x}px, ${y}px, 0)` }}
-      className={cn(
-        "pointer-events-auto absolute left-0 top-0 w-64 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground backdrop-blur-md",
-      )}
-    >
-      <div
-        {...listeners}
-        {...attributes}
-        className={cn(
-          "flex items-center justify-between gap-2 border-b border-foreground/10 px-3 py-2",
-          isDragging ? "cursor-grabbing" : "cursor-grab",
-        )}
-      >
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Agent #{snap.id}
-        </span>
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={onClose}
-          aria-label="Close inspector"
-          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
-        >
-          <XIcon size={12} weight="bold" />
-        </button>
-      </div>
-      <div className="px-3 py-3">
-
-      {!snap.alive ? (
-        <p className="font-serif text-[13px] italic text-foreground/70">
-          Deceased.
-        </p>
-      ) : (
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
-          <InspectorRow label="Motivation" value={snap.motivation} />
-          <InspectorRow
-            label="Wealth"
-            value={(snap.sugar + snap.spice).toFixed(1)}
-          />
-          <InspectorRow label="Sugar" value={snap.sugar.toFixed(1)} />
-          <InspectorRow label="Spice" value={snap.spice.toFixed(1)} />
-          <InspectorRow label="Position" value={`${snap.x}, ${snap.y}`} />
-          <InspectorRow
-            label="Age"
-            value={`${snap.age} / ${snap.maxAge}`}
-          />
-          <InspectorRow label="Vision" value={snap.vision.toString()} />
-          <InspectorRow
-            label="Metabolism"
-            value={`${snap.sugarMetab.toFixed(1)} / ${snap.spiceMetab.toFixed(1)}`}
-          />
-        </dl>
-      )}
-      </div>
-    </div>
-  );
-}
-
-function InspectorRow({ label, value }: { label: string; value: string }) {
-  return (
-    <>
-      <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="text-right font-mono tabular-nums text-foreground">
-        {value}
-      </dd>
-    </>
-  );
-}
