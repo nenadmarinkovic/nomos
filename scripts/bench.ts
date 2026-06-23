@@ -125,5 +125,6 @@ function run({ scale, turns, seed, sampleEvery }: RunOptions): void {
   );
 }
 
-run({ scale: "village", turns: 2000, seed: 1, sampleEvery: 100 });
-run({ scale: "town", turns: 1500, seed: 1, sampleEvery: 75 });
+run({ scale: "village", turns: 1500, seed: 1, sampleEvery: 100 });
+run({ scale: "town", turns: 1000, seed: 1, sampleEvery: 75 });
+run({ scale: "city", turns: 600, seed: 1, sampleEvery: 50 });

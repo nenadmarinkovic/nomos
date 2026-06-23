@@ -7,7 +7,15 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { useEffect, useRef, useState } from "react";
+import {
+  Application,
+  CanvasSource,
+  Container,
+  Graphics,
+  Sprite,
+  Texture,
+} from "pixi.js";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AgentInspectorOverlay } from "@/components/agent-inspector";
 import {
@@ -21,26 +29,71 @@ import {
   activeIntervalRef,
   activeWorldRef,
 } from "@/lib/active-world";
-import { type RenderAgent, type WorldView } from "@/lib/world";
 import { useSimulationStore } from "@/lib/store";
 
 interface SimulationCanvasProps {
   running: boolean;
 }
 
+const MOTIVATION_COLOR_HEX: Record<string, number> = {
+  material: 0xe63946,
+  symbolic: 0x2e5c9e,
+  normative: 0xffd23f,
+  power: 0x2a9d5c,
+};
+
+const MOTIVATION_KEYS = ["material", "symbolic", "normative", "power"] as const;
+type MotivationKey = (typeof MOTIVATION_KEYS)[number];
+
+/** Pixi WebGL field renderer. Each alive agent is a motivation-coloured
+ *  sprite (batched by Pixi); the resource grid is an off-screen Canvas2D
+ *  blitted to a single GPU sprite each tick; selection is a Graphics
+ *  layer with a pulsing two-pass ring. */
 export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const appRef = useRef<Application | null>(null);
+  const stageRef = useRef<Container | null>(null);
+  const agentLayerRef = useRef<Container | null>(null);
+  const spritesRef = useRef<Map<number, Sprite>>(new Map());
+  const texturesRef = useRef<Record<MotivationKey, Texture> | null>(null);
+  /** Selection overlay — vision lines + a two-pass ring with a subtle
+   *  pulsing alpha for a "live" feel that C2D's static ring doesn't have. */
+  const selectionLayerRef = useRef<Graphics | null>(null);
+  // The resource layer: an off-screen Canvas2D we redraw each tick, plus
+  // a single Pixi Sprite that wraps it as a texture. One draw call for
+  // ≤12k cells, with sharp pixels at any zoom.
+  const resourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const resourceTextureRef = useRef<Texture | null>(null);
+  const resourceSpriteRef = useRef<Sprite | null>(null);
+  const lastResourceTurnRef = useRef<number>(-1);
   const rafRef = useRef<number | null>(null);
+  // Canvas size: React state drives both the host's inline pixel dims
+  // (mirroring the Canvas2D path that's known to lay out correctly) and
+  // the Pixi renderer. The ref mirrors the same value so async callbacks
+  // (init().then) can read the latest without a stale closure.
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const currentSizeRef = useRef({ width: 0, height: 0 });
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [inspectorPos, setInspectorPos] = useState({ x: 12, y: 12 });
   const selectedIdRef = useRef<number | null>(null);
-  const hoveredIdRef = useRef<number | null>(null);
-
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+  const [inspectorPos, setInspectorPos] = useState({ x: 12, y: 12 });
   const inspectorSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
+
+  const started = useSimulationStore((s) => s.started);
+  const runId = useSimulationStore((s) => s.runId);
+  const turn = useSimulationStore((s) => s.turn);
+  const setCanvasSize = useSimulationStore((s) => s.setCanvasSize);
+
+  // Clear selection on new run.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedId(null);
+  }, [runId, started]);
 
   function handleInspectorDragEnd(e: DragEndEvent) {
     setInspectorPos((p) => ({
@@ -48,128 +101,364 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       y: Math.max(0, p.y + e.delta.y),
     }));
   }
-  useEffect(() => {
-    selectedIdRef.current = selectedId;
-  }, [selectedId]);
 
-  const started = useSimulationStore((s) => s.started);
-  const runId = useSimulationStore((s) => s.runId);
-  const turn = useSimulationStore((s) => s.turn);
-  const setCanvasSize = useSimulationStore((s) => s.setCanvasSize);
-
-  // Draw the latest world to the canvas at a given inter-frame progress (0..1).
-  function paint(progress = 1, selId = selectedIdRef.current) {
-    const canvas = canvasRef.current;
+  function handleHostClick(e: React.MouseEvent<HTMLDivElement>) {
+    const host = hostRef.current;
     const world = activeWorldRef.current;
-    if (!canvas || !world) return;
-    const dpr = window.devicePixelRatio || 1;
-    renderWorld(world, canvas, dpr, { selectedId: selId, progress });
+    if (!host || !world) return;
+    const r = host.getBoundingClientRect();
+    const px = e.clientX - r.left;
+    const py = e.clientY - r.top;
+    const cellW = r.width / world.width;
+    const cellH = r.height / world.height;
+    const gx = Math.floor(px / cellW);
+    const gy = Math.floor(py / cellH);
+    if (gx < 0 || gy < 0 || gx >= world.width || gy >= world.height) {
+      setSelectedId(null);
+      return;
+    }
+    const id = world.occupants[gy * world.width + gx];
+    setSelectedId(id === -1 ? null : id);
   }
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSelectedId(null);
-  }, [runId, started]);
+  const paint = useCallback((progress = 1) => {
+    const app = appRef.current;
+    const layer = agentLayerRef.current;
+    const textures = texturesRef.current;
+    const world = activeWorldRef.current;
+    if (!app || !layer || !textures || !world) return;
 
-  // Repaint after each fresh frame when not running (paused / idle).
-  useEffect(() => {
-    void turn;
-    if (running) return;
-    paint(1);
-     
-  }, [turn, running]);
+    // In Pixi v8, `renderer.width/height` are already CSS-space dimensions
+    // (the values passed to `resize()`); the framebuffer attribute is
+    // separately scaled by `resolution`. Dividing again here was the
+    // bug that made all content render at half size in the top-left
+    // quarter on retina displays.
+    const W = app.renderer.width;
+    const H = app.renderer.height;
+    const cellW = W / world.width;
+    const cellH = H / world.height;
+    const shapeSize = Math.min(cellW, cellH);
+    const agentSize = Math.max(shapeSize * 0.72, 5);
+    const ease = easeInOutCubic(progress);
 
+    // Resource layer — only repaint when the world's turn has changed.
+    // The off-screen canvas is sized at framebuffer resolution (CSS × dpr)
+    // and drawn at that scale so retina displays render sharp; the Pixi
+    // sprite stays at CSS-pixel dimensions, so Pixi 1:1-maps texture
+    // pixels to framebuffer pixels.
+    const resourceCanvas = resourceCanvasRef.current;
+    const resourceSprite = resourceSpriteRef.current;
+    let resourceTexture = resourceTextureRef.current;
+    if (resourceCanvas && resourceSprite && resourceTexture) {
+      const dpr = app.renderer.resolution || 1;
+      const bufW = Math.max(2, Math.round(W * dpr));
+      const bufH = Math.max(2, Math.round(H * dpr));
+      if (resourceCanvas.width !== bufW || resourceCanvas.height !== bufH) {
+        resourceCanvas.width = bufW;
+        resourceCanvas.height = bufH;
+        // Recreate the texture entirely so UVs match the new canvas
+        // dimensions. The old source/texture is destroyed; the new one
+        // is built via explicit constructors (not `Texture.from`) so
+        // Pixi's texture cache can't hand us back a stale entry.
+        const oldTexture = resourceTexture;
+        const newTexture = new Texture({
+          source: new CanvasSource({ resource: resourceCanvas }),
+        });
+        resourceSprite.texture = newTexture;
+        resourceTextureRef.current = newTexture;
+        resourceTexture = newTexture;
+        oldTexture.destroy(true);
+        lastResourceTurnRef.current = -1;
+      }
+      if (lastResourceTurnRef.current !== world.turn) {
+        const rctx = resourceCanvas.getContext("2d");
+        if (rctx) {
+          rctx.clearRect(0, 0, resourceCanvas.width, resourceCanvas.height);
+          const cellWPx = bufW / world.width;
+          const cellHPx = bufH / world.height;
+          const dotSize = Math.max(Math.min(cellWPx, cellHPx) * 0.18, 2 * dpr);
+          drawResourceField(
+            rctx,
+            world.cells,
+            world.maxCells,
+            SUGAR_RGB,
+            -1,
+            cellWPx,
+            cellHPx,
+            dotSize,
+            world.width,
+            world.height,
+          );
+          drawResourceField(
+            rctx,
+            world.spice,
+            world.maxSpice,
+            SPICE_RGB,
+            1,
+            cellWPx,
+            cellHPx,
+            dotSize,
+            world.width,
+            world.height,
+          );
+          resourceTexture.source.update();
+          lastResourceTurnRef.current = world.turn;
+        }
+      }
+      resourceSprite.x = 0;
+      resourceSprite.y = 0;
+      resourceSprite.width = W;
+      resourceSprite.height = H;
+    }
+
+    const liveIds = new Set<number>();
+    const sprites = spritesRef.current;
+
+    for (const a of world.agents) {
+      if (!a.alive) continue;
+      liveIds.add(a.id);
+      let s = sprites.get(a.id);
+      const motivationKey = (
+        a.motivation in textures ? a.motivation : "material"
+      ) as MotivationKey;
+      if (!s) {
+        s = new Sprite(textures[motivationKey]);
+        s.anchor.set(0.5);
+        sprites.set(a.id, s);
+        layer.addChild(s);
+      } else if (s.texture !== textures[motivationKey]) {
+        s.texture = textures[motivationKey];
+      }
+      const ix = a.prevX + (a.x - a.prevX) * ease;
+      const iy = a.prevY + (a.y - a.prevY) * ease;
+      s.x = ix * cellW + cellW / 2;
+      s.y = iy * cellH + cellH / 2;
+      const scale = agentSize / 64;
+      s.scale.set(scale);
+      // Wealth-based brightness. Broke agents dim toward α=0.45, rich
+      // agents stay at full brightness. The sqrt mapping handles the
+      // long-tail wealth distribution: most agents sit in the middle
+      // band, a few outliers anchor the "fully bright" reading.
+      const wealth = a.sugar + a.spice;
+      const safeWealth = Number.isFinite(wealth) && wealth > 0 ? wealth : 0;
+      s.alpha = 0.45 + 0.55 * Math.min(1, Math.sqrt(safeWealth / 30));
+    }
+
+    for (const [id, s] of sprites) {
+      if (liveIds.has(id)) continue;
+      layer.removeChild(s);
+      s.destroy();
+      sprites.delete(id);
+    }
+
+    // Selection overlay — pulsing two-pass ring + vision lines.
+    const selection = selectionLayerRef.current;
+    if (selection) {
+      selection.clear();
+      const selId = selectedIdRef.current;
+      if (selId !== null) {
+        const a = world.agents[selId];
+        if (a && a.alive) {
+          const ax = a.prevX + (a.x - a.prevX) * ease;
+          const ay = a.prevY + (a.y - a.prevY) * ease;
+          const cx = ax * cellW + cellW / 2;
+          const cy = ay * cellH + cellH / 2;
+
+          // Vision lines — to every visible neighbour. Drawn first so the
+          // selection ring overlaps them at the centre.
+          const lineWidth = Math.max(0.8, shapeSize * 0.06);
+          for (let dy = -a.vision; dy <= a.vision; dy++) {
+            const ny = a.y + dy;
+            if (ny < 0 || ny >= world.height) continue;
+            for (let dx = -a.vision; dx <= a.vision; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              const nx = a.x + dx;
+              if (nx < 0 || nx >= world.width) continue;
+              const occ = world.occupants[ny * world.width + nx];
+              if (occ === -1 || occ === a.id) continue;
+              const n = world.agents[occ];
+              if (!n || !n.alive) continue;
+              const nix = n.prevX + (n.x - n.prevX) * ease;
+              const niy = n.prevY + (n.y - n.prevY) * ease;
+              const nxp = nix * cellW + cellW / 2;
+              const nyp = niy * cellH + cellH / 2;
+              selection
+                .moveTo(cx, cy)
+                .lineTo(nxp, nyp)
+                .stroke({ color: 0x141414, width: lineWidth, alpha: 0.45 });
+            }
+          }
+
+          // Two-pass ring with breathing alpha. The outer halo stays
+          // steady; the inner ring pulses slowly so the selection feels
+          // alive without distracting from the agents.
+          const r = Math.max(shapeSize * 0.9, 8);
+          const t = performance.now() / 1000;
+          const pulse = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2.4));
+          selection
+            .circle(cx, cy, r + 3)
+            .stroke({ color: 0xffffff, width: 3, alpha: 0.6 });
+          selection
+            .circle(cx, cy, r)
+            .stroke({ color: 0x141414, width: 1.6, alpha: pulse });
+        }
+      }
+    }
+  }, []);
+
+  // ResizeObserver pushes the container's dimensions into both React
+  // state (drives the host's inline width/height) and the ref (read by
+  // async init callbacks).
   useEffect(() => {
     if (!containerRef.current) return;
+    const apply = (w: number, h: number) => {
+      currentSizeRef.current = { width: w, height: h };
+      setSize({ width: w, height: h });
+      setCanvasSize({ width: w, height: h });
+    };
     const ro = new ResizeObserver((entries) => {
       const r = entries[0]?.contentRect;
-      if (r) {
-        const next = { width: Math.round(r.width), height: Math.round(r.height) };
-        setSize(next);
-        setCanvasSize(next);
-      }
+      if (r) apply(Math.round(r.width), Math.round(r.height));
     });
     ro.observe(containerRef.current);
+    const r = containerRef.current.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) {
+      apply(Math.round(r.width), Math.round(r.height));
+    }
     return () => ro.disconnect();
   }, [setCanvasSize]);
 
+  // Bootstrap the Pixi Application. We measure the container synchronously
+  // BEFORE calling init() so Pixi starts at the right size — no race
+  // between init() resolving and a later resize call.
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || size.width === 0 || size.height === 0) return;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = size.width * dpr;
-    canvas.height = size.height * dpr;
+    const host = hostRef.current;
+    const container = containerRef.current;
+    if (!host || !container) return;
+    let cancelled = false;
+
+    // Synchronous measurement — forces layout, gives real dims.
+    const r0 = container.getBoundingClientRect();
+    const initW = Math.max(1, Math.round(r0.width));
+    const initH = Math.max(1, Math.round(r0.height));
+    if (r0.width > 0 && r0.height > 0) {
+      currentSizeRef.current = { width: initW, height: initH };
+    }
+
+    const app = new Application();
+    void app
+      .init({
+        width: initW,
+        height: initH,
+        antialias: true,
+        backgroundAlpha: 0,
+        resolution: window.devicePixelRatio || 1,
+      })
+      .then(() => {
+        if (cancelled) {
+          // Strict-mode mount/unmount race: init finished after cleanup ran.
+          app.destroy(true, { children: true });
+          return;
+        }
+        // Apply CSS dimensions explicitly. Pixi sets the framebuffer
+        // attributes; we set the display CSS so the canvas fills the host.
+        app.canvas.style.cssText = `position: absolute; left: 0; top: 0; display: block; width: ${initW}px; height: ${initH}px;`;
+        host.appendChild(app.canvas);
+        const stage = new Container();
+        // Resource layer first (below agents). The sprite's texture is
+        // an off-screen canvas we paint per tick; one Pixi draw call.
+        // Initial canvas is sized to the framebuffer right away so the
+        // first texture has correct UVs — `Texture.from(canvas)` reads
+        // the canvas dimensions at creation time and caches them.
+        const dprNow = app.renderer.resolution || 1;
+        const initBufW = Math.max(2, Math.round(initW * dprNow));
+        const initBufH = Math.max(2, Math.round(initH * dprNow));
+        const resourceCanvas = document.createElement("canvas");
+        resourceCanvas.width = initBufW;
+        resourceCanvas.height = initBufH;
+        const resourceTexture = new Texture({
+          source: new CanvasSource({ resource: resourceCanvas }),
+        });
+        const resourceSprite = new Sprite(resourceTexture);
+        stage.addChild(resourceSprite);
+        const agents = new Container();
+        stage.addChild(agents);
+        // Selection overlay sits above agents so the ring isn't occluded.
+        const selectionLayer = new Graphics();
+        stage.addChild(selectionLayer);
+        app.stage.addChild(stage);
+        stageRef.current = stage;
+        agentLayerRef.current = agents;
+        selectionLayerRef.current = selectionLayer;
+        texturesRef.current = buildMotivationTextures(app);
+        resourceCanvasRef.current = resourceCanvas;
+        resourceTextureRef.current = resourceTexture;
+        resourceSpriteRef.current = resourceSprite;
+        appRef.current = app;
+        // If the container has been resized between measurement and now
+        // (e.g., RO fired with a different size during the async init),
+        // catch up to the latest dims.
+        const s = currentSizeRef.current;
+        if (s.width !== initW || s.height !== initH) {
+          app.canvas.style.width = `${s.width}px`;
+          app.canvas.style.height = `${s.height}px`;
+          app.renderer.resize(s.width, s.height);
+        }
+        paint(1);
+      });
+
+    const sprites = spritesRef.current;
+    return () => {
+      cancelled = true;
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      sprites.clear();
+      // Only destroy if appRef.current is populated — that flag is only
+      // set after init resolves, so this avoids the half-init crash
+      // (`this._cancelResize is not a function`). When init is still
+      // pending the then() above will destroy the app itself.
+      if (appRef.current) {
+        appRef.current.destroy(true, { children: true });
+        appRef.current = null;
+      }
+      stageRef.current = null;
+      agentLayerRef.current = null;
+      selectionLayerRef.current = null;
+      texturesRef.current = null;
+      resourceSpriteRef.current = null;
+      resourceTextureRef.current = null;
+      resourceCanvasRef.current = null;
+      lastResourceTurnRef.current = -1;
+    };
+    // `paint` is stable (useCallback with []), so including it doesn't
+    // re-trigger Pixi init on every render.
+  }, [paint]);
+
+  // Drive Pixi's renderer from React state. Runs whenever size changes
+  // *or* once init has completed (re-fires because `paint` is the same
+  // useCallback ref — actually no, only on size change, so init's .then
+  // also resizes itself, see below).
+  useEffect(() => {
+    const app = appRef.current;
+    if (!app || size.width === 0 || size.height === 0) return;
+    app.canvas.style.width = `${size.width}px`;
+    app.canvas.style.height = `${size.height}px`;
+    app.renderer.resize(size.width, size.height);
     paint(1);
-  }, [size]);
+  }, [size, paint]);
 
-  function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current;
-    const world = activeWorldRef.current;
-    if (!canvas || !world) return;
-    const rect = canvas.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
-    const cellW = rect.width / world.width;
-    const cellH = rect.height / world.height;
-    const gx = Math.floor(px / cellW);
-    const gy = Math.floor(py / cellH);
-    if (gx < 0 || gy < 0 || gx >= world.width || gy >= world.height) {
-      setSelectedId(null);
-      return;
-    }
-    const id = world.occupants[gy * world.width + gx];
-    if (id === -1) {
-      setSelectedId(null);
-      return;
-    }
-    setSelectedId(id);
-    paint(1, id);
-  }
-
-  function handleCanvasMove(e: React.MouseEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current;
-    const world = activeWorldRef.current;
-    if (!canvas || !world) return;
-    const rect = canvas.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
-    const cellW = rect.width / world.width;
-    const cellH = rect.height / world.height;
-    const gx = Math.floor(px / cellW);
-    const gy = Math.floor(py / cellH);
-    if (gx < 0 || gy < 0 || gx >= world.width || gy >= world.height) {
-      canvas.style.cursor = "default";
-      hoveredIdRef.current = null;
-      return;
-    }
-    const id = world.occupants[gy * world.width + gx];
-    if (id === -1) {
-      canvas.style.cursor = "default";
-      hoveredIdRef.current = null;
-      return;
-    }
-    canvas.style.cursor = "pointer";
-    hoveredIdRef.current = id;
-  }
-
-  function handleCanvasLeave() {
-    const canvas = canvasRef.current;
-    if (canvas) canvas.style.cursor = "default";
-    hoveredIdRef.current = null;
-  }
-
-  // Clear the canvas when no run is active. The worker lifecycle now lives
-  // in <SimulationEngine /> at the AppShell root so it survives navigation.
+  // Repaint on every fresh tick when not running (paused), and on
+  // selection change so the ring updates immediately even while paused.
   useEffect(() => {
-    if (!started) clearCanvas(canvasRef.current);
-  }, [started]);
+    void turn;
+    void selectedId;
+    if (running) return;
+    paint(1);
+  }, [turn, running, selectedId, paint]);
 
-  // While running, drive the canvas at animation-frame rate, interpolating
-  // each agent between its previous and current cell using the time since the
-  // last frame arrived from the worker (published by SimulationEngine).
+  // Per-RAF interpolated repaint while running.
   useEffect(() => {
     if (!running) return;
-
     function loop() {
       const interval = activeIntervalRef.current;
       const progress = Math.min(
@@ -179,33 +468,34 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       paint(progress);
       rafRef.current = requestAnimationFrame(loop);
     }
-
     rafRef.current = requestAnimationFrame(loop);
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-     
-  }, [running]);
+  }, [running, paint]);
+
+  // Clear when no run is active.
+  useEffect(() => {
+    if (started) return;
+    const layer = agentLayerRef.current;
+    if (!layer) return;
+    layer.removeChildren();
+    spritesRef.current.clear();
+  }, [started]);
 
   return (
     <div className="relative flex h-full flex-1 flex-col">
-      <div
-        ref={containerRef}
-        className="relative flex-1 overflow-hidden"
-      >
-        <canvas
-          ref={canvasRef}
-          onClick={handleCanvasClick}
-          onMouseMove={handleCanvasMove}
-          onMouseLeave={handleCanvasLeave}
+      <div ref={containerRef} className="relative flex-1 overflow-hidden">
+        <div
+          ref={hostRef}
+          onClick={handleHostClick}
           style={{ width: size.width, height: size.height }}
           className={cn(
             "absolute inset-0 transition-opacity duration-300",
-            started ? "opacity-100" : "opacity-0",
+            started ? "cursor-pointer opacity-100" : "opacity-0",
           )}
         />
-
         {started && selectedId !== null && (
           <DndContext
             sensors={inspectorSensors}
@@ -218,8 +508,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
             />
           </DndContext>
         )}
-
-
         {!started && (
           <div className="pointer-events-auto absolute inset-0 overflow-y-auto bg-background">
             <div className="mx-auto flex max-w-2xl flex-col px-6 pb-16 pt-16">
@@ -258,7 +546,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
                 <Step
                   n="04"
                   title="Hear the theorists"
-                  body="AI observers read the same run through different lenses — Marx, Polanyi, Bourdieu, Durkheim, Granovetter, Schelling, Turchin, Farmer, Epstein, Flack — and narrate what they see in their own vocabulary. Same emergence, multiple readings, side by side."
+                  body="AI observers read the same run through different lenses — Marx, Polanyi, Bourdieu, Durkheim, Granovetter, Schelling, Turchin, Farmer, Epstein, Flack, Axelrod — and narrate what they see in their own vocabulary. Same emergence, multiple readings, side by side."
                 />
               </ol>
             </div>
@@ -281,10 +569,63 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
             {running ? "running" : started ? "paused" : "idle"}
           </span>
         </div>
-
       </div>
     </div>
   );
+}
+
+/** Pre-render each motivation's shape into a 64×64 RenderTexture once.
+ *  Sprites then scale these to fit the current cell. Phase B will swap the
+ *  filled-circle placeholders for the proper square/circle/triangle/diamond
+ *  per motivation. */
+function buildMotivationTextures(
+  app: Application,
+): Record<MotivationKey, Texture> {
+  const out = {} as Record<MotivationKey, Texture>;
+  for (const k of MOTIVATION_KEYS) {
+    const color = MOTIVATION_COLOR_HEX[k];
+    const g = new Graphics();
+    drawShape(g, k, color);
+    const texture = app.renderer.generateTexture(g);
+    out[k] = texture;
+    g.destroy();
+  }
+  return out;
+}
+
+/** Draw the canonical motivation shape into a Graphics, centred in a 64×64
+ *  box. The size argument is the *target* footprint; sprites scale this
+ *  texture to fit the current cell at render time. */
+function drawShape(g: Graphics, motivation: MotivationKey, color: number) {
+  const cx = 32;
+  const cy = 32;
+  const half = 28;
+  if (motivation === "material") {
+    g.rect(cx - half, cy - half, half * 2, half * 2)
+      .fill(color)
+      .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
+    return;
+  }
+  if (motivation === "symbolic") {
+    g.circle(cx, cy, half)
+      .fill(color)
+      .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
+    return;
+  }
+  if (motivation === "normative") {
+    g.poly([cx, cy - half, cx + half, cy + half, cx - half, cy + half])
+      .fill(color)
+      .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
+    return;
+  }
+  // power — diamond
+  g.poly([cx, cy - half, cx + half, cy, cx, cy + half, cx - half, cy])
+    .fill(color)
+    .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
+}
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 function Step({
@@ -312,191 +653,5 @@ function Step({
       </div>
     </li>
   );
-}
-
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-function clearCanvas(canvas: HTMLCanvasElement | null) {
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-
-const MOTIVATION_COLOR: Record<string, string> = {
-  material: "#E63946",
-  symbolic: "#2E5C9E",
-  normative: "#FFD23F",
-  power: "#2A9D5C",
-};
-
-function renderWorld(
-  world: WorldView,
-  canvas: HTMLCanvasElement,
-  dpr: number,
-  opts: { selectedId: number | null; progress?: number },
-) {
-  const progress = opts.progress ?? 1;
-  const ease = easeInOutCubic(progress);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  const W = canvas.width;
-  const H = canvas.height;
-  const cellW = W / world.width;
-  const cellH = H / world.height;
-  const shapeSize = Math.min(cellW, cellH);
-
-  ctx.clearRect(0, 0, W, H);
-
-  // Sugar (green, nudged left) and spice (amber, nudged right) so that
-  // cells holding both show two adjacent dots rather than overlapping.
-  const dotSize = Math.max(shapeSize * 0.18, 2 * dpr);
-  drawResourceField(ctx, world.cells, world.maxCells, SUGAR_RGB, -1, cellW, cellH, dotSize, world.width, world.height);
-  drawResourceField(ctx, world.spice, world.maxSpice, SPICE_RGB, 1, cellW, cellH, dotSize, world.width, world.height);
-
-  const agentSize = Math.max(shapeSize * 0.72, 5 * dpr);
-  const outlineWidth = Math.max(0.6, 0.7 * dpr);
-
-  for (const a of world.agents) {
-    if (!a.alive) continue;
-    const ix = a.prevX + (a.x - a.prevX) * ease;
-    const iy = a.prevY + (a.y - a.prevY) * ease;
-    const cx = ix * cellW + cellW / 2;
-    const cy = iy * cellH + cellH / 2;
-    const color = MOTIVATION_COLOR[a.motivation] ?? "#E63946";
-    // Agents render at full brightness regardless of wealth. The wealth-dim
-    // step function used previously made the field look pale once
-    // concentration set in — and switching to the Network view (which is
-    // always bright) read as "agents are wrong / different." Now both views
-    // show identical, full-brightness agents; wealth is read off the
-    // metrics windows instead.
-    ctx.fillStyle = color;
-    ctx.strokeStyle = "rgba(20, 20, 20, 0.6)";
-    ctx.lineWidth = outlineWidth;
-    drawShape(ctx, a.motivation, cx, cy, agentSize, /* withStroke */ true);
-  }
-
-  if (opts.selectedId !== null) {
-    const a = world.agents[opts.selectedId];
-    if (a && a.alive) {
-      const ax = a.prevX + (a.x - a.prevX) * ease;
-      const ay = a.prevY + (a.y - a.prevY) * ease;
-      const cx = ax * cellW + cellW / 2;
-      const cy = ay * cellH + cellH / 2;
-
-      const isDark =
-        typeof document !== "undefined" &&
-        document.documentElement.classList.contains("dark");
-      const lineColor = isDark
-        ? "rgba(255,255,255,0.55)"
-        : "rgba(20,20,20,0.55)";
-      const ringColor = isDark
-        ? "rgba(255,255,255,0.95)"
-        : "rgba(20,20,20,0.85)";
-      const ringHaloColor = isDark
-        ? "rgba(0,0,0,0.45)"
-        : "rgba(255,255,255,0.9)";
-
-      ctx.strokeStyle = lineColor;
-      ctx.lineWidth = Math.max(0.8, 0.9 * dpr);
-      for (const id of neighborsInVision(world, a)) {
-        const n = world.agents[id];
-        if (!n || !n.alive) continue;
-        const nix = n.prevX + (n.x - n.prevX) * ease;
-        const niy = n.prevY + (n.y - n.prevY) * ease;
-        const nx = nix * cellW + cellW / 2;
-        const ny = niy * cellH + cellH / 2;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(nx, ny);
-        ctx.stroke();
-      }
-
-      const r = Math.max(shapeSize * 0.9, 7 * dpr);
-      // Two-pass ring: a slightly wider halo behind the main stroke. Keeps the
-      // selection visible whether the underlying agent shape is pale (light
-      // theme + yellow triangle) or dark (dark theme + black diamond).
-      ctx.strokeStyle = ringHaloColor;
-      ctx.lineWidth = Math.max(2.6, 3.2 * dpr);
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.strokeStyle = ringColor;
-      ctx.lineWidth = Math.max(1.4, 1.5 * dpr);
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-  }
-}
-
-function drawShape(
-  ctx: CanvasRenderingContext2D,
-  motivation: string,
-  cx: number,
-  cy: number,
-  size: number,
-  withStroke = false,
-) {
-  const half = size / 2;
-  if (motivation === "material") {
-    ctx.fillRect(cx - half, cy - half, size, size);
-    if (withStroke) ctx.strokeRect(cx - half, cy - half, size, size);
-    return;
-  }
-  if (motivation === "symbolic") {
-    ctx.beginPath();
-    ctx.arc(cx, cy, half, 0, Math.PI * 2);
-    ctx.fill();
-    if (withStroke) ctx.stroke();
-    return;
-  }
-  if (motivation === "normative") {
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - half);
-    ctx.lineTo(cx + half, cy + half);
-    ctx.lineTo(cx - half, cy + half);
-    ctx.closePath();
-    ctx.fill();
-    if (withStroke) ctx.stroke();
-    return;
-  }
-  if (motivation === "power") {
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - half);
-    ctx.lineTo(cx + half, cy);
-    ctx.lineTo(cx, cy + half);
-    ctx.lineTo(cx - half, cy);
-    ctx.closePath();
-    ctx.fill();
-    if (withStroke) ctx.stroke();
-    return;
-  }
-  ctx.fillRect(cx - half, cy - half, size, size);
-  if (withStroke) ctx.strokeRect(cx - half, cy - half, size, size);
-}
-
-function neighborsInVision(world: WorldView, a: RenderAgent): number[] {
-  const out: number[] = [];
-  const W = world.width;
-  const H = world.height;
-  const v = a.vision;
-  for (let dy = -v; dy <= v; dy++) {
-    const ny = a.y + dy;
-    if (ny < 0 || ny >= H) continue;
-    for (let dx = -v; dx <= v; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const nx = a.x + dx;
-      if (nx < 0 || nx >= W) continue;
-      const occ = world.occupants[ny * W + nx];
-      if (occ !== -1 && occ !== a.id) out.push(occ);
-    }
-  }
-  return out;
 }
 

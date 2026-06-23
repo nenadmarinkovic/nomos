@@ -37,6 +37,10 @@ export function AgentInspectorOverlay({
   const turn = useSimulationStore((s) => s.turn);
   const [snap, setSnap] = useState<AgentSnapshot | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
+  // Re-reads the worker-updated world ref on every `turn` to keep the
+  // inspector live — a legitimate use of setState-in-effect for external
+  // state sync.
   useEffect(() => {
     const world = activeWorldRef.current;
     if (!world) {
@@ -63,6 +67,7 @@ export function AgentInspectorOverlay({
       motivation: a.motivation,
     });
   }, [turn, selectedId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!snap) return null;
 
