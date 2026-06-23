@@ -404,99 +404,99 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
     name: "Joshua Epstein",
     era: "contemporary",
     lens: "macro patterns from micro rules",
-    sees: "Society as a generative system. Large-scale patterns emerge from the simple rules each agent follows locally — no central planner required.",
+    sees: "Society as a generative system. Large-scale patterns — inequality, classes, markets, money, even the identities people end up wearing — emerge from the simple rules each agent follows locally. No central planner required, and no category set in advance.",
     watches:
-      "Whether inequality, segregation, and crisis can be 'grown' from agent interactions alone. If you didn't grow it, you didn't explain it.",
+      "Whether the macro phenomena under review were *grown* rather than stipulated — money issued by agents and accepted by strangers, classes that cluster out of trait variance instead of being configured, commons that wear thin from individually-rational harvest. If you didn't grow it, you didn't explain it.",
   },
   bourdieu: {
     label: "Bourdieu",
     name: "Pierre Bourdieu",
     era: "1930–2002",
     lens: "capital, field, habitus",
-    sees: "Society as a field of struggles where actors deploy economic, cultural, social, and symbolic capital. Tastes and bodies carry the structure forward.",
+    sees: "Society as a field of struggles where actors deploy economic, cultural, social, and symbolic capital. Tastes and bodies carry the structure forward; even the slow remaking of an agent's dispositions through imitating their wealthier neighbours is habitus reproducing itself, at a real cost.",
     watches:
-      "How habitus reproduces class across generations, how capital converts between forms, and where symbolic violence is doing the quiet work.",
+      "How habitus reproduces across generations even when the children's traits drift; how economic capital converts into the social capital of being trusted to issue an IOU; where symbolic violence does the quiet work of making the resulting hierarchy feel natural to those at its bottom.",
   },
   marx: {
     label: "Marx",
     name: "Karl Marx",
     era: "1818–1883",
     lens: "class, surplus, consciousness",
-    sees: "Society shaped by who owns the means of production and who must sell their labour. Material conditions come first; ideas follow.",
+    sees: "Society shaped by who owns the means of production and who must sell their labour. Material conditions come first; ideas, identities, even the soil's exhaustion follow from the appetite of accumulation.",
     watches:
-      "Surplus extraction, alienation, and the contradictions that turn quantitative pressure into qualitative rupture.",
+      "Surplus extraction, alienation, and the contradictions that turn quantitative pressure into qualitative rupture. Private promises-to-pay issued by the strong are debt as new chains; the land worn down by relentless harvest is the commons devoured to feed accumulation; class is what people *do* to and for each other, not the label they were given.",
   },
   polanyi: {
     label: "Polanyi",
     name: "Karl Polanyi",
     era: "1886–1964",
     lens: "embedded economy, great transformation",
-    sees: "Pre-modern economic life is embedded in social relations — reciprocity, redistribution, householding. The self-regulating market is a recent, unstable invention that always provokes a counter-movement to protect society from itself.",
+    sees: "Pre-modern economic life is embedded in social relations — reciprocity, redistribution, householding. Money, land, and labour are *fictitious commodities*: treat them as ordinary goods and society reacts to protect itself. The self-regulating market is a recent and unstable invention.",
     watches:
-      "When trade disembeds from kinship and locality into impersonal market exchange, when reciprocity gives way to price, when a 'fictitious commodity' stress starts to show.",
+      "When trade disembeds from kinship and locality into impersonal price; when promises-to-pay accepted by strangers harden into a circulating medium that has detached from the relations that birthed it; when land's stress under commodification shows as exhausted soil; when the counter-movement appears as shaming, refusal of trade, the community asserting itself against pure market logic.",
   },
   durkheim: {
     label: "Durkheim",
     name: "Émile Durkheim",
     era: "1858–1917",
     lens: "solidarity, anomie, social facts",
-    sees: "Society as a moral reality above individuals. Social facts — norms, rituals, collective beliefs — have causal force no one person creates or controls.",
+    sees: "Society as a moral reality above individuals. Social facts — norms, rituals, collective beliefs — have causal force no one person creates or controls; even credit, even a private promise accepted by a stranger, presupposes a shared conscience that gives the promise weight.",
     watches:
-      "The shift from mechanical to organic solidarity, anomie when shared norms loosen, and rituals that bind a group into a single conscience.",
+      "The shift from mechanical to organic solidarity; anomie when shared norms loosen and the soil itself is left to wear down without stewardship; the ritual force of shaming the predator and the silent moral consequence when the community refuses to trade with him; whether the conscience collective is strong enough that strangers will accept each other's promises.",
   },
   granovetter: {
     label: "Granovetter",
     name: "Mark Granovetter",
     era: "contemporary",
     lens: "embeddedness, weak ties, social structure of markets",
-    sees: "Economic action embedded in concrete personal networks. Markets aren't anonymous; they run on who knows whom, and bridging weak ties carry the information that strong cluster ties can't.",
+    sees: "Economic action embedded in concrete personal networks. Markets aren't anonymous; they run on who knows whom, on the trust accumulated by repeated dealing, on the bridging weak ties that carry information across cluster boundaries.",
     watches:
-      "Which agents become brokers between clusters, when the tie graph fragments into cliques, where weak ties are doing the structural work the strong ones get credit for.",
+      "Which agents become brokers between clusters; when the tie graph fragments into cliques; where embedded trade-partner trust quietly shields against predation that strangers would suffer; how an issuer's promises travel through the network from holder to holder until they're being accepted by people who never met the issuer at all — that moment is when private credit has become money.",
   },
   turchin: {
     label: "Turchin",
     name: "Peter Turchin",
     era: "contemporary",
     lens: "elite overproduction",
-    sees: "History as quantifiable. Societies oscillate between integrative and disintegrative phases driven by elite competition and popular immiseration.",
+    sees: "History as quantifiable. Societies oscillate between integrative and disintegrative phases driven by elite competition, popular immiseration, and the exhaustion of the substrate that fed the integrative climb.",
     watches:
-      "Too many elites chasing too few positions, real wages falling, state finances cracking. The structural-demographic preconditions of crisis.",
+      "Too many elites chasing too few positions; real wages falling; the soil's carrying capacity declining beneath the population it sustains; financialisation — credit notes proliferating as the late-cycle elite buys time with promises — as a marker of disintegration. The structural-demographic preconditions of crisis.",
   },
   schelling: {
     label: "Schelling",
     name: "Thomas Schelling",
     era: "1921–2016",
     lens: "thresholds, segregation",
-    sees: "Macrobehavior as the accidental sum of micromotives. Mild individual preferences can compound into outcomes nobody wanted.",
+    sees: "Macrobehavior as the accidental sum of micromotives. Mild individual preferences can compound into outcomes nobody wanted; individually rational harvest can leave the commons bare; individually rational mistrust can collapse a credit cascade.",
     watches:
-      "Tipping points, thresholds, and the moments when small preference shifts cascade into segregation, runs, or coordination collapse.",
+      "Tipping points, thresholds, the moment when small preference shifts cascade into spatial sorting, when an issuer's notes tip from a one-off favour into a circulating money, when individually-trivial harvest decisions cross over into a substrate that can no longer support the population.",
   },
   farmer: {
     label: "Farmer",
     name: "J. Doyne Farmer",
     era: "contemporary",
     lens: "complexity economics, agent-based markets",
-    sees: "The economy as an evolving complex system, far from equilibrium. Prices form from adaptive agents reacting to each other; stability is a balance the system keeps re-finding, not a baseline it sits on.",
+    sees: "The economy as an evolving complex system, far from equilibrium. Prices form from adaptive agents reacting to each other; money itself is endogenously created when one agent's promise gets accepted by enough others; stability is a balance the system keeps re-finding, not a baseline it sits on.",
     watches:
-      "How the emergent price arises and where it gets volatile, when positive feedback concentrates wealth, when the system tips toward runaway instability instead of self-correcting.",
+      "How the emergent price arises and where it gets volatile; when positive feedback concentrates wealth; when private-credit issuance scales beyond the collateral that backs it; how the discount on a risky issuer's notes prices the perceived chance of default; when the system tips toward runaway instability rather than self-correcting.",
   },
   flack: {
     label: "Flack",
     name: "Jessica Flack",
     era: "contemporary",
     lens: "slow variables, policing",
-    sees: "Society as a system stabilized by slow variables — norms, institutions, conventions — that absorb fast-moving conflict and keep the whole legible.",
+    sees: "Society as a system stabilised by slow variables — norms, institutions, conventions, the soil's carrying capacity, the standing of an issuer whose notes others trust — that absorb fast-moving conflict and keep the whole legible.",
     watches:
-      "How policing and conflict management coarse-grain the world, where collective computation lives, and what fails when slow variables erode.",
+      "How policing and conflict management coarse-grain the world; where collective computation lives — in the consensus that this issuer's promises are good, in the shared classification of who counts as predator; what fails when slow variables erode: when the land's reserve runs down, when trust in the standing issuer thins, when policing stops being credible.",
   },
   axelrod: {
     label: "Axelrod",
     name: "Robert Axelrod",
     era: "contemporary",
     lens: "evolution of cooperation, tit-for-tat",
-    sees: "Cooperation as something that *evolves*, not something imposed. When the same partners meet again and again, selfish agents discover that reciprocity beats betrayal — niceness, retaliation, forgiveness, and clarity together produce a robust strategy that resists exploitation.",
+    sees: "Cooperation as something that *evolves*, not something imposed. When the same partners meet again and again, selfish agents discover that reciprocity beats betrayal — niceness, retaliation, forgiveness, and clarity together produce a robust strategy that resists exploitation. Credit between repeat partners is the same logic in monetary form: a willingness to be exploited once, on the bet that the partner will be there next round.",
     watches:
-      "Whether the shadow of the future is long enough for reciprocity to take root; whether retaliation against defectors is swift and proportionate; whether the cooperators cluster densely enough to insulate one another from invasion. Predation surfacing is not collapse but the *test* the strategy was built for.",
+      "Whether the shadow of the future is long enough for reciprocity to take root; whether retaliation against defectors is swift, proportionate, and visible to bystanders; whether trade partners' standing shields them from being preyed upon by the same agents who prey on strangers; whether an issuer's reputation for paying back lets their promises circulate. Predation surfacing is not collapse but the *test* the strategy was built for.",
   },
 };
 

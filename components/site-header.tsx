@@ -100,15 +100,21 @@ export function SiteHeader({
           sidebarCollapsed ? "md:w-[60px]" : "md:w-56",
         )}
       >
-        <Link href="/" aria-label="Nomos" className="flex items-center">
+        <Link href="/" aria-label="Nomos" className="flex items-center gap-2">
           <Image
             src="/logo.svg"
             alt="Nomos"
             width={38}
             height={35}
             priority
-            className="h-12 w-auto dark:invert"
+            className="h-10 w-auto dark:invert"
           />
+          {!sidebarCollapsed && (
+            <span className="flex flex-col font-sans text-[10px] leading-[1.2] font-medium text-foreground/75">
+              <span>Nomos, a generative</span>
+              <span>society simulation.</span>
+            </span>
+          )}
         </Link>
       </div>
 
@@ -224,17 +230,13 @@ export function SiteHeader({
         </div>
 
         <Dialog open={stopConfirmOpen} onOpenChange={setStopConfirmOpen}>
-          <DialogContent
-            showCloseButton={false}
-            className="sm:max-w-md"
-          >
+          <DialogContent showCloseButton={false} className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Stop this simulation?</DialogTitle>
               <DialogDescription>
                 The current run will end and the turn counter will reset to
-                zero. Your settings are kept — you can begin a new run any
-                time. If you only want to step away for a moment, use
-                Pause instead.
+                zero. Your settings are kept — you can begin a new run any time.
+                If you only want to step away for a moment, use Pause instead.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="border-t-0">
@@ -245,11 +247,7 @@ export function SiteHeader({
               >
                 Cancel
               </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={confirmStop}
-              >
+              <Button variant="default" size="sm" onClick={confirmStop}>
                 <StopIcon weight="fill" />
                 Stop simulation
               </Button>
