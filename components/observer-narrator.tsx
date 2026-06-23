@@ -60,7 +60,6 @@ export function ObserverNarrator() {
     oligarchyArmed: true,
     consecutivePassages: 0,
     lastFireByKind: {},
-    cooperationThickensArmed: true,
   });
   const seenRef = useRef<Set<string>>(new Set());
   const historyRef = useRef<MetricPoint[]>([]);
@@ -92,7 +91,6 @@ export function ObserverNarrator() {
       oligarchyArmed: true,
       consecutivePassages: 0,
       lastFireByKind: {},
-      cooperationThickensArmed: true,
     };
     seenRef.current = new Set();
     historyRef.current = [];

@@ -16,7 +16,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Link
           href="/"
           aria-label="Nomos"
-          className="inline-flex items-center"
+          className="inline-flex items-center gap-2"
         >
           <Image
             src="/logo.svg"
@@ -26,6 +26,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             priority
             className="h-9 w-auto dark:invert"
           />
+          <span className="flex flex-col font-sans text-[10px] font-medium leading-[1.2] text-foreground">
+            <span>Nomos, a generative</span>
+            <span>society simulation.</span>
+          </span>
         </Link>
       </header>
 

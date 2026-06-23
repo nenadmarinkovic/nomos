@@ -126,10 +126,6 @@ export interface DetectorState {
    *  much less often than the global cooldown allows, otherwise they
    *  dominate the chronicle and crowd everything else out. */
   lastFireByKind: Partial<Record<EventKind, number>>;
-  /** Hysteresis latch — fires once when cooperation thickens (tokens
-   *  start to circulate widely OR most predation is being sanctioned),
-   *  then re-arms only after the underlying signals dim. */
-  cooperationThickensArmed: boolean;
 }
 
 /** Turns back we compare against when measuring change. */
@@ -328,22 +324,18 @@ export function detectEvent(
 
   // Cooperation thickening — fire when tokens have started to circulate
   // (≥1 issuer held by 3+ agents) OR when most of this turn's predation
-  // drew a sanction. Either signals that reciprocity is winning over
-  // raw seizure, which the macro Gini/coercion stats by themselves never
-  // surface. Latched so it only fires when the signal is fresh.
+  // drew a sanction. Throttled by the per-kind 60-turn cooldown only —
+  // the previous hysteresis latch fired once and never re-armed under
+  // a sustained cooperative regime, which made the event ironically
+  // invisible exactly when cooperation was holding.
   const circulating = snapshot.circulatingIssuers ?? 0;
   const sanctioned =
     (snapshot.coercionCount ?? 0) >= 3 &&
-    (snapshot.shamingCount ?? 0) >= (snapshot.coercionCount ?? 0) * 0.6;
-  if (circulating === 0 && !sanctioned) {
-    state.cooperationThickensArmed = true;
-  }
+    (snapshot.shamingCount ?? 0) >= (snapshot.coercionCount ?? 0) * 0.5;
   if (
-    state.cooperationThickensArmed &&
     (circulating >= 1 || sanctioned) &&
     respectsKindCooldown("cooperation_thickens")
   ) {
-    state.cooperationThickensArmed = false;
     return makeEvent("cooperation_thickens", "major", snapshot, shared);
   }
 
@@ -592,7 +584,7 @@ function summarize(kind: EventKind, m: EventMetrics): string {
           `${m.circulatingIssuers} ${noun} promises-to-pay are now held by three or more others, the first sign of a circulating medium of exchange`,
         );
       }
-      if (m.coercionCount >= 3 && m.shamingCount >= m.coercionCount * 0.6) {
+      if (m.coercionCount >= 3 && m.shamingCount >= m.coercionCount * 0.5) {
         parts.push(
           `${m.shamingCount} of the ${m.coercionCount} seizures this turn drew an immediate sanction from witnesses, who refused further trade with the aggressors`,
         );

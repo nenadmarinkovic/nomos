@@ -194,20 +194,26 @@ function imitationPropensity(t: AgentTraits): number {
   return BASE * t.statusSeeking;
 }
 
-/** Soft denominator that gives fresh issuers (no track record) a baseline
- *  trustworthiness. Higher = more credit extended to new agents. */
-const TOKEN_PRIOR_LIABILITY = 1;
+/** Soft denominator giving fresh issuers a baseline trustworthiness.
+ *  Tuned up after the bench showed `wealth / (liability + 1)` collapsed
+ *  too fast after the first issuance — tokens reached one holder and
+ *  then never circulated to a third. */
+const TOKEN_PRIOR_LIABILITY = 4;
 
-/** Probability the seller accepts a token. Combines their own social
- *  disposition, existing trust in the issuer, and the issuer's current
- *  trustworthiness (set in `Engine.trustworthiness`). */
+/** Probability the seller accepts a token. The 0.08 floor is the
+ *  bootstrap term — without it, third-party sellers with no personal
+ *  tie to the issuer almost always refused, and tokens never crossed
+ *  the threshold from bilateral credit into circulating money. */
 function tokenAcceptanceProb(
   sellerTraits: AgentTraits,
   trustInIssuer: number,
   issuerTrustworthiness: number,
 ): number {
-  const proso = 0.4 + 0.6 * sellerTraits.prosociality;
-  return Math.min(1, 0.2 * trustInIssuer + 0.6 * issuerTrustworthiness * proso);
+  const proso = 0.3 + 0.7 * sellerTraits.prosociality;
+  return Math.min(
+    1,
+    0.08 + 0.25 * trustInIssuer + 0.7 * issuerTrustworthiness * proso,
+  );
 }
 
 /** Score a cell for movement. Greed values raw resources; prosocial
@@ -1196,21 +1202,36 @@ export class Engine {
 
     if (seller.spice <= spiceQty) return 0;
 
-    // Token fallback if buyer can't pay in goods. The chosen plan's
-    // acceptance roll commits here, but the token movement only happens
-    // after the welfare check below confirms the trade.
+    // Pick a payment mode. Tokens get *first* try whenever the buyer
+    // already holds third-party IOUs (use-them-or-lose-them: an issuer
+    // can default at any tick), and as a fallback when the buyer can't
+    // cover in sugar. The chosen plan's acceptance roll commits here
+    // but the actual token movement waits for the welfare check.
     let tokenChoice:
       | { issuerId: number; trustworthiness: number; transfer: boolean }
       | null = null;
     let buyerSugarOut = sugarQty;
     let sellerSugarIn = sugarQty;
-    if (buyer.sugar <= sugarQty) {
-      tokenChoice = this.chooseTokenPayment(buyer, seller, sugarQty);
-      if (!tokenChoice) return 0;
-      buyerSugarOut = 0;
-      // Tokens are worth less than face value to the seller —
-      // trustworthiness is the discount.
-      sellerSugarIn = sugarQty * tokenChoice.trustworthiness;
+    const buyerHoldsTokens = (this.tokenHoldings.get(buyer.id)?.size ?? 0) > 0;
+    const tryTokensFirst = buyerHoldsTokens || buyer.sugar <= sugarQty;
+    if (tryTokensFirst) {
+      const proposal = this.chooseTokenPayment(buyer, seller, sugarQty);
+      if (proposal) {
+        // Provisional take: the welfare check below decides. If the
+        // discounted value fails Pareto, we fall through to a normal
+        // sugar trade (when buyer can afford it).
+        const sellerValue = sugarQty * proposal.trustworthiness;
+        const sellerBefore = welfare(seller.sugar, seller.spice, seller.sugarMetab, seller.spiceMetab);
+        const sellerAfter = welfare(seller.sugar + sellerValue, seller.spice - spiceQty, seller.sugarMetab, seller.spiceMetab);
+        const buyerBefore = welfare(buyer.sugar, buyer.spice, buyer.sugarMetab, buyer.spiceMetab);
+        const buyerAfter = welfare(buyer.sugar, buyer.spice + spiceQty, buyer.sugarMetab, buyer.spiceMetab);
+        if (sellerAfter > sellerBefore && buyerAfter > buyerBefore) {
+          tokenChoice = proposal;
+          buyerSugarOut = 0;
+          sellerSugarIn = sellerValue;
+        }
+      }
+      if (!tokenChoice && buyer.sugar <= sugarQty) return 0;
     }
 
     const buyerBefore = welfare(buyer.sugar, buyer.spice, buyer.sugarMetab, buyer.spiceMetab);
