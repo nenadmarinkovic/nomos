@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 
 import { PageWelcome } from "@/components/page-welcome";
+import { RunConditions } from "@/components/run-conditions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SnapshotBadge } from "@/components/snapshot-badge";
 import { SCALE_INFO } from "@/lib/config";
@@ -84,8 +85,12 @@ export function MetricsPage() {
           }
         />
 
+        <div className="mt-6">
+          <RunConditions />
+        </div>
+
         <div className="mt-8 space-y-10">
-          <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
             <Summary
               label="Turn"
               value={snapshot.turn.toString().padStart(5, "0")}
@@ -107,6 +112,19 @@ export function MetricsPage() {
                 snapshot.tradePrice > 0 ? snapshot.tradePrice.toFixed(3) : "—"
               }
               hint="sugar per spice"
+            />
+            <Summary
+              label="Money supply"
+              value={
+                snapshot.tokenSupply > 0
+                  ? Math.round(snapshot.tokenSupply).toLocaleString()
+                  : "—"
+              }
+              hint={
+                snapshot.circulatingIssuers > 0
+                  ? `${snapshot.circulatingIssuers} circulating issuer${snapshot.circulatingIssuers === 1 ? "" : "s"}`
+                  : "no tokens yet"
+              }
             />
           </section>
 
@@ -149,9 +167,74 @@ export function MetricsPage() {
               </div>
             </section>
           )}
+
+          <TokenEconomySection snapshot={snapshot} />
         </div>
       </div>
     </ScrollArea>
+  );
+}
+
+function TokenEconomySection({
+  snapshot,
+}: {
+  snapshot: {
+    tokenSupply: number;
+    tokenTradeVolume: number;
+    topIssuerId: number;
+    topIssuerLiability: number;
+    circulatingIssuers: number;
+  };
+}) {
+  const noTokens = snapshot.tokenSupply <= 0 && snapshot.topIssuerId === -1;
+  return (
+    <section className="space-y-3">
+      <SectionTitle
+        title="Token economy"
+        hint="Private IOUs an agent prints when short on sugar. When the same issuer's tokens end up held by many strangers, you're watching money emerge."
+      />
+      {noTokens ? (
+        <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-6">
+          <p className="font-serif text-[14px] italic leading-relaxed text-foreground/70">
+            No tokens are in circulation. Either no buyer has yet been short
+            enough on sugar to ask for credit, or no seller has trusted the
+            offered IOU enough to accept it. Watch this section once trade
+            thickens — the first circulating issuer is the first private bank.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Summary
+            label="Tokens outstanding"
+            value={Math.round(snapshot.tokenSupply).toLocaleString()}
+            hint="across all holders"
+          />
+          <Summary
+            label="Token trades · turn"
+            value={snapshot.tokenTradeVolume.toString()}
+            hint="IOU-paid exchanges"
+          />
+          <Summary
+            label="Circulating issuers"
+            value={snapshot.circulatingIssuers.toString()}
+            hint="held by ≥3 strangers"
+          />
+          <Summary
+            label="Top issuer"
+            value={
+              snapshot.topIssuerId >= 0
+                ? `#${snapshot.topIssuerId}`
+                : "—"
+            }
+            hint={
+              snapshot.topIssuerLiability > 0
+                ? `${Math.round(snapshot.topIssuerLiability)} outstanding`
+                : undefined
+            }
+          />
+        </div>
+      )}
+    </section>
   );
 }
 

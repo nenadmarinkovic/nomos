@@ -24,6 +24,7 @@ export type EventKind =
   | "segregation"
   | "motivation_shift"
   | "coercion_wave"
+  | "cooperation_thickens"
   | "network_fracture"
   | "extreme_inequality"
   | "oligarchy"
@@ -73,6 +74,13 @@ export interface EventMetrics {
   /** Its population share at the window's start and now (0..1). */
   motivationFrom?: number;
   motivationTo?: number;
+  /** Tokens currently in circulation across all holders (phase 6). */
+  tokenSupply: number;
+  /** Issuers whose IOUs are held by ≥3 distinct agents — the threshold
+   *  past which we can talk about *emergent money* rather than bilateral credit. */
+  circulatingIssuers: number;
+  /** Trades paid in tokens this turn. */
+  tokenTradeVolume: number;
 }
 
 export interface SignificantEvent {
@@ -113,14 +121,28 @@ export interface DetectorState {
    *  kind in between). Cap on this so a stable world goes silent instead
    *  of producing N rephrasings of the same fact. */
   consecutivePassages: number;
+  /** Per-event-kind last-fire turn, used by the per-kind cooldown table.
+   *  Some event kinds (coercion_wave, cooperation_thickens) need to fire
+   *  much less often than the global cooldown allows, otherwise they
+   *  dominate the chronicle and crowd everything else out. */
+  lastFireByKind: Partial<Record<EventKind, number>>;
+  /** Hysteresis latch — fires once when cooperation thickens (tokens
+   *  start to circulate widely OR most predation is being sanctioned),
+   *  then re-arms only after the underlying signals dim. */
+  cooperationThickensArmed: boolean;
 }
 
 /** Turns back we compare against when measuring change. */
 const WINDOW = 8;
-/** Minimum turns between non-founding events. At 1× speed (5 turns/sec)
- *  that's a little over two seconds between events — fast enough to keep
- *  the chronicle moving, slow enough that each reading still has weight. */
+/** Minimum turns between non-founding events. */
 const COOLDOWN = 12;
+/** Per-kind cooldowns that override the global one upward. Without this,
+ *  loud recurring events (coercion_wave) monopolise the chronicle and
+ *  the user hears the same theorist on the same theme every 12 turns. */
+const KIND_COOLDOWN: Partial<Record<EventKind, number>> = {
+  coercion_wave: 60,
+  cooperation_thickens: 60,
+};
 
 const TITLES: Record<EventKind, string> = {
   founding: "The founding",
@@ -135,6 +157,7 @@ const TITLES: Record<EventKind, string> = {
   segregation: "The society sorts itself",
   motivation_shift: "A way of life spreads",
   coercion_wave: "The strong take",
+  cooperation_thickens: "Cooperation takes hold",
   network_fracture: "The web of trade frays",
   extreme_inequality: "Inequality calcifies",
   oligarchy: "An oligarchy consolidates",
@@ -230,6 +253,15 @@ export function detectEvent(
     return null;
   }
 
+  // Per-kind throttle that overrides the global cooldown upward. Wraps
+  // the existing `makeEvent` returns below.
+  const respectsKindCooldown = (kind: EventKind): boolean => {
+    const limit = KIND_COOLDOWN[kind];
+    if (limit === undefined) return true;
+    const last = state.lastFireByKind[kind];
+    return last === undefined || turn - last >= limit;
+  };
+
   const deltaAlive = alive - ref.alive;
   const deltaGini = gini - ref.gini;
   const alivePct = ref.alive > 0 ? deltaAlive / ref.alive : 0;
@@ -294,14 +326,38 @@ export function detectEvent(
     return makeEvent("population_boom", "minor", snapshot, shared);
   }
 
-  // A burst of predation this turn — surfaces the combat subsystem directly
-  // instead of waiting for it to register as a Gini move. Major when the
-  // community actually sanctioned the aggressors.
+  // Cooperation thickening — fire when tokens have started to circulate
+  // (≥1 issuer held by 3+ agents) OR when most of this turn's predation
+  // drew a sanction. Either signals that reciprocity is winning over
+  // raw seizure, which the macro Gini/coercion stats by themselves never
+  // surface. Latched so it only fires when the signal is fresh.
+  const circulating = snapshot.circulatingIssuers ?? 0;
+  const sanctioned =
+    (snapshot.coercionCount ?? 0) >= 3 &&
+    (snapshot.shamingCount ?? 0) >= (snapshot.coercionCount ?? 0) * 0.6;
+  if (circulating === 0 && !sanctioned) {
+    state.cooperationThickensArmed = true;
+  }
+  if (
+    state.cooperationThickensArmed &&
+    (circulating >= 1 || sanctioned) &&
+    respectsKindCooldown("cooperation_thickens")
+  ) {
+    state.cooperationThickensArmed = false;
+    return makeEvent("cooperation_thickens", "major", snapshot, shared);
+  }
+
+  // A burst of predation this turn — major when the community sanctioned
+  // the aggressors. Throttled per-kind so it doesn't crowd out the rest
+  // of the chronicle in a violent stretch.
   const coercionFloor = Math.max(
     COERCION_FLOOR,
     Math.round(alive * COERCION_RATE),
   );
-  if ((snapshot.coercionCount ?? 0) >= coercionFloor) {
+  if (
+    (snapshot.coercionCount ?? 0) >= coercionFloor &&
+    respectsKindCooldown("coercion_wave")
+  ) {
     return makeEvent(
       "coercion_wave",
       (snapshot.shamingCount ?? 0) > 0 ? "major" : "minor",
@@ -467,6 +523,9 @@ function makeEvent(
     coercionCount: snapshot.coercionCount ?? 0,
     shamingCount: snapshot.shamingCount ?? 0,
     isolateShare: snapshot.isolateShare ?? 0,
+    tokenSupply: snapshot.tokenSupply ?? 0,
+    circulatingIssuers: snapshot.circulatingIssuers ?? 0,
+    tokenTradeVolume: snapshot.tokenTradeVolume ?? 0,
     ...partial,
   };
   return {
@@ -524,6 +583,26 @@ function summarize(kind: EventKind, m: EventMetrics): string {
           ? `, and ${m.shamingCount} of the aggressors were marked out and refused trade by those who saw it`
           : ", with no one moving to stop it";
       return `At turn ${m.turn} a wave of predation runs through the society: ${m.coercionCount} agents had wealth seized by stronger neighbours this turn${sanction}. ${alive} agents are alive, Gini ${gini}.`;
+    }
+    case "cooperation_thickens": {
+      const parts: string[] = [];
+      if (m.circulatingIssuers >= 1) {
+        const noun = m.circulatingIssuers === 1 ? "agent's" : "agents'";
+        parts.push(
+          `${m.circulatingIssuers} ${noun} promises-to-pay are now held by three or more others, the first sign of a circulating medium of exchange`,
+        );
+      }
+      if (m.coercionCount >= 3 && m.shamingCount >= m.coercionCount * 0.6) {
+        parts.push(
+          `${m.shamingCount} of the ${m.coercionCount} seizures this turn drew an immediate sanction from witnesses, who refused further trade with the aggressors`,
+        );
+      }
+      const detail = parts.length > 0 ? parts.join("; ") + "." : "";
+      const tokens =
+        m.tokenSupply > 0
+          ? ` Around ${Math.round(m.tokenSupply)} tokens are in circulation, with ${m.tokenTradeVolume} token-paid trades this turn.`
+          : "";
+      return `By turn ${m.turn} cooperation is taking hold rather than fraying. ${detail}${tokens} ${alive} agents are alive, Gini ${gini}.`;
     }
     case "network_fracture": {
       const iso = Math.round(m.isolateShare * 100);
