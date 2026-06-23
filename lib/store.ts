@@ -151,6 +151,10 @@ interface SimulationState {
   history: HistoryPoint[];
   speed: number;
   canvasView: "field" | "network";
+  /** Which renderer the Field view uses. Canvas2D is the original,
+   *  battle-tested path; Pixi is the WebGL renderer that scales further but
+   *  is missing the resource layer and selection overlay in its first pass. */
+  fieldRenderer: "canvas2d" | "pixi";
   canvasSize: { width: number; height: number };
   views: Record<ViewKey, boolean>;
   windowPositions: Record<ViewKey, WindowPosition>;
@@ -162,6 +166,7 @@ interface SimulationState {
   stopRun: () => void;
   setSpeed: (speed: number) => void;
   setCanvasView: (view: "field" | "network") => void;
+  setFieldRenderer: (renderer: "canvas2d" | "pixi") => void;
   updateSnapshot: (snapshot: EngineSnapshot) => void;
   setCanvasSize: (s: { width: number; height: number }) => void;
   toggleView: (key: ViewKey) => void;
@@ -185,6 +190,7 @@ export const useSimulationStore = create<SimulationState>()(
       history: [],
       speed: 1,
       canvasView: "field",
+      fieldRenderer: "canvas2d",
       canvasSize: { width: 0, height: 0 },
       views: {
         gini: true,
@@ -234,6 +240,7 @@ export const useSimulationStore = create<SimulationState>()(
         }),
       setSpeed: (speed) => set({ speed }),
       setCanvasView: (canvasView) => set({ canvasView }),
+      setFieldRenderer: (fieldRenderer) => set({ fieldRenderer }),
       setCanvasSize: (canvasSize) => set({ canvasSize }),
       toggleView: (key) =>
         set((s) => ({ views: { ...s.views, [key]: !s.views[key] } })),

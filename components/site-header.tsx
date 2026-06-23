@@ -97,25 +97,44 @@ export function SiteHeader({
       <div
         className={cn(
           "hidden shrink-0 items-center border-foreground/10 px-4 transition-[width] duration-200 md:flex md:border-r",
-          sidebarCollapsed ? "md:w-[60px]" : "md:w-56",
+          sidebarCollapsed
+            ? "md:w-[60px] md:justify-center"
+            : "md:w-56 md:justify-between",
         )}
       >
-        <Link href="/" aria-label="Nomos" className="flex items-center gap-2">
-          <Image
-            src="/logo.svg"
-            alt="Nomos"
-            width={38}
-            height={35}
-            priority
-            className="h-10 w-auto dark:invert"
-          />
-          {!sidebarCollapsed && (
-            <span className="flex flex-col font-sans text-[10px] leading-[1.2] font-medium text-foreground/75">
-              <span>Nomos, a generative</span>
-              <span>society simulation.</span>
-            </span>
-          )}
-        </Link>
+        {!sidebarCollapsed && (
+          <Link href="/" aria-label="Nomos" className="flex items-center">
+            <Image
+              src="/logo.svg"
+              alt="Nomos"
+              width={38}
+              height={35}
+              priority
+              className="h-12 w-auto dark:invert"
+            />
+          </Link>
+        )}
+        {onToggleSidebar && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={onToggleSidebar}
+                  aria-label={
+                    sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                  }
+                  className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+                >
+                  <SidebarSimpleIcon size={18} weight="regular" />
+                </button>
+              }
+            />
+            <TooltipContent side="bottom" sideOffset={6}>
+              {sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       <div className="flex flex-1 items-center justify-between gap-4 px-3 md:px-4">
@@ -145,7 +164,7 @@ export function SiteHeader({
                     aria-label={
                       sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                     }
-                    className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+                    className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground md:hidden"
                   >
                     <SidebarSimpleIcon size={18} weight="regular" />
                   </button>
