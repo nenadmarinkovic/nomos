@@ -65,6 +65,7 @@ type StepKey =
   | "reproduction"
   | "metabolism"
   | "regrowth"
+  | "substrate"
   | "vision"
   | "lifespan"
   | "heterogeneity"
@@ -136,6 +137,14 @@ const STEPS: readonly StepDef[] = [
       "Resources don't only get used — they regrow. The speed of that regrowth sets the carrying capacity of the whole society.",
     theoryHook:
       "Slow regrowth turns the simulation into a Malthusian world: once exhausted, a region takes a long time to recover, and societies that overshoot collapse. Fast regrowth lifts the ceiling — there's always more, scarcity rarely bites, and the dynamics shift toward distribution and status rather than survival. The contrast between these two regimes is one of the oldest debates in human history.",
+  },
+  {
+    key: "substrate",
+    question: "Does the land itself move?",
+    framing:
+      "Resources can sit still on each patch, or the ground can behave like a living surface — abundance seeping into bare cells, exhaustion creeping outward from worn ground.",
+    theoryHook:
+      "By default the landscape is inert scenery: each patch regrows on its own, blind to its neighbours. Switch this on and the substrate becomes a cellular automaton in its own right — standing resources diffuse toward emptier cells, and a patch's fertility drifts toward its neighbours', so heavy use spreads like desertification while fertile land slowly reseeds the ground beside it. The agents stay an agent-based model; only the earth under them gains its own local rules. The interesting question is what changes when scarcity can travel: do depleted regions heal, or do dust bowls march across the map faster than anyone can outrun them?",
   },
   {
     key: "vision",
@@ -326,6 +335,22 @@ segregated → sort by wealth, fill one quadrant at a time`,
     stock[i] = next > max[i] ? max[i] : next;  // grow, but cap at full
   }
 }`,
+    },
+  ],
+  substrate: [
+    {
+      plain:
+        "When the substrate is alive, every tick each patch shares some of its standing resources with the four cells touching it, and nudges its fertility toward theirs — so depletion and abundance both spread.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "775-790",
+      snippet: `// resources flow toward emptier neighbours (mass-preserving)
+let flux = 0;
+if (x > 0)     flux += stock[i - 1] - s;
+if (x < w - 1) flux += stock[i + 1] - s;
+if (y > 0)     flux += stock[i - w] - s;
+if (y < h - 1) flux += stock[i + w] - s;
+out[i] = s + STOCK_DIFFUSION * flux;`,
     },
   ],
   vision: [
@@ -812,6 +837,25 @@ function StepBody({
     );
   }
 
+  if (step === "substrate") {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <BigChoiceCard
+          active={draft.world.substrateDiffusion}
+          onClick={() => patchWorld({ substrateDiffusion: true })}
+          label="Living ground"
+          hint="The landscape is a cellular automaton: resources diffuse and fertility spreads, so exhaustion and abundance travel across the map."
+        />
+        <BigChoiceCard
+          active={!draft.world.substrateDiffusion}
+          onClick={() => patchWorld({ substrateDiffusion: false })}
+          label="Inert ground"
+          hint="Each patch regrows alone, blind to its neighbours. The land is fixed scenery the agents move across."
+        />
+      </div>
+    );
+  }
+
   if (step === "vision") {
     const active = bucketIndex(VISION_BUCKETS, draft.world.physics.vision);
     return (
@@ -1215,6 +1259,11 @@ function SummaryReview({
           label="Regrowth"
           value={REGROWTH_BUCKETS[regrowthIdx].label}
           onEdit={() => jumpToStep("regrowth")}
+        />
+        <SummaryRow
+          label="Substrate"
+          value={draft.world.substrateDiffusion ? "Living ground" : "Inert ground"}
+          onEdit={() => jumpToStep("substrate")}
         />
         <SummaryRow
           label="Vision"

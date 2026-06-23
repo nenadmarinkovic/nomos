@@ -65,6 +65,13 @@ export interface WorldConfig {
   /** Conflict — power-motivated agents may take a share of a weaker
    *  neighbour's holdings. Power motivation gets actual teeth. */
   conflict: boolean;
+  /** Substrate diffusion — turns the landscape itself into a cellular
+   *  automaton. Standing resources bleed into adjacent cells (rich patches
+   *  feed exhausted ones) and each cell's fertility relaxes toward its
+   *  neighbours', so depletion spreads like desertification and fertile land
+   *  slowly reseeds the worn ground beside it. The agents stay an ABM; only
+   *  the ground they stand on gains CA dynamics. */
+  substrateDiffusion: boolean;
   physics: WorldPhysics;
 }
 
@@ -502,6 +509,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     culturalTransmission: true,
     inheritance: true,
     conflict: true,
+    substrateDiffusion: true,
     physics: DEFAULT_PHYSICS,
   },
   agents: {
