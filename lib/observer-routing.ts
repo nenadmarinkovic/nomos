@@ -64,9 +64,16 @@ const PRIORITY: Record<EventKind, ObserverKey[]> = {
    *  along ties. */
   motivation_shift: ["bourdieu", "schelling", "granovetter"],
 
-  /** A burst of expropriation — Marx names it dispossession, Durkheim the
-   *  violated norm, Flack the policing that fails or holds. */
-  coercion_wave: ["marx", "durkheim", "flack"],
+  /** A burst of expropriation. Axelrod first — the same data, read as
+   *  defection drawing retaliation, is exactly what TfT is *for*. Marx,
+   *  Durkheim, Flack rotate in behind so the lens isn't monolithic. */
+  coercion_wave: ["axelrod", "marx", "durkheim", "flack"],
+
+  /** Cooperation winning — sustained sanctioning of defectors, tokens
+   *  beginning to circulate. Axelrod's home turf; Granovetter for the
+   *  embedded relations carrying it; Flack for the slow variables that
+   *  let it lock in; Epstein for the macro-from-micro story. */
+  cooperation_thickens: ["axelrod", "granovetter", "flack", "epstein"],
 
   /** The trade web dissolving — Granovetter's structure unravelling,
    *  Flack's slow variables eroding, Polanyi's disembedding. */
@@ -105,6 +112,7 @@ const PRIORITY: Record<EventKind, ObserverKey[]> = {
     "turchin",
     "farmer",
     "flack",
+    "axelrod",
   ],
 };
 

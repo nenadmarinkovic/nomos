@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { PageWelcome } from "@/components/page-welcome";
+import { RunConditions } from "@/components/run-conditions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OBSERVER_INFO, type ObserverKey } from "@/lib/config";
 import { useSimulationStore, type ChronicleEntry } from "@/lib/store";
@@ -86,6 +87,10 @@ export function NarratorPage() {
       <ScrollArea className="flex-1">
         <div className="mx-auto w-full max-w-3xl px-6 pb-16 pt-8">
           <Header />
+
+          <div className="mt-6">
+            <RunConditions />
+          </div>
 
           {groups.length === 0 ? (
             <EmptyState

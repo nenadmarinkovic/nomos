@@ -34,7 +34,8 @@ export type ObserverKey =
   | "turchin"
   | "schelling"
   | "farmer"
-  | "flack";
+  | "flack"
+  | "axelrod";
 
 export interface WorldPhysics {
   /** Resources consumed by each agent per turn. */
@@ -488,6 +489,15 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
     watches:
       "How policing and conflict management coarse-grain the world, where collective computation lives, and what fails when slow variables erode.",
   },
+  axelrod: {
+    label: "Axelrod",
+    name: "Robert Axelrod",
+    era: "contemporary",
+    lens: "evolution of cooperation, tit-for-tat",
+    sees: "Cooperation as something that *evolves*, not something imposed. When the same partners meet again and again, selfish agents discover that reciprocity beats betrayal — niceness, retaliation, forgiveness, and clarity together produce a robust strategy that resists exploitation.",
+    watches:
+      "Whether the shadow of the future is long enough for reciprocity to take root; whether retaliation against defectors is swift and proportionate; whether the cooperators cluster densely enough to insulate one another from invasion. Predation surfacing is not collapse but the *test* the strategy was built for.",
+  },
 };
 
 export const DEFAULT_PHYSICS: WorldPhysics = {
@@ -528,5 +538,5 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     },
     topology: "spatial",
   },
-  observers: ["epstein", "marx", "bourdieu", "durkheim"],
+  observers: ["epstein", "marx", "bourdieu", "durkheim", "axelrod"],
 };

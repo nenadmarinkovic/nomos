@@ -23,6 +23,12 @@ import {
 } from "@/lib/observer-routing";
 import { useSimulationStore } from "@/lib/store";
 
+/** Minimum wall-clock interval between narrations, in milliseconds.
+ *  Chosen as a comfortable reading pace for a 2–3 sentence theorist
+ *  paragraph; keeps the chronicle legible at 4× and 8× sim speeds where
+ *  turn-based cooldowns alone fire too fast. */
+const MIN_NARRATION_INTERVAL_MS = 12000;
+
 /**
  * Headless component. Watches the simulation's macro metrics, detects the
  * rare significant events worth narrating, picks the single best-fit
@@ -53,6 +59,8 @@ export function ObserverNarrator() {
     extremeInequalityArmed: true,
     oligarchyArmed: true,
     consecutivePassages: 0,
+    lastFireByKind: {},
+    cooperationThickensArmed: true,
   });
   const seenRef = useRef<Set<string>>(new Set());
   const historyRef = useRef<MetricPoint[]>([]);
@@ -61,6 +69,15 @@ export function ObserverNarrator() {
   const recentEventsRef = useRef<
     { turn: number; kind: string; title: string }[]
   >([]);
+  /** Wall-clock timestamp (ms) of the last narration dispatched. The
+   *  detector cooldowns are in *turns*, which means at 4× speed the
+   *  chronicle fires four times faster than at 1× — unreadable. This
+   *  gate keeps the *perceived* pace constant regardless of sim speed:
+   *  detected events are skipped when their dispatch would land less
+   *  than MIN_NARRATION_INTERVAL_MS after the previous one. Skipped
+   *  events re-detect on the next tick, so nothing is permanently lost
+   *  as long as the underlying condition persists. */
+  const lastNarrationAtRef = useRef<number>(0);
 
   // Reset everything when a new run begins.
   useEffect(() => {
@@ -74,10 +91,13 @@ export function ObserverNarrator() {
       extremeInequalityArmed: true,
       oligarchyArmed: true,
       consecutivePassages: 0,
+      lastFireByKind: {},
+      cooperationThickensArmed: true,
     };
     seenRef.current = new Set();
     historyRef.current = [];
     recentEventsRef.current = [];
+    lastNarrationAtRef.current = 0;
     resetObserverRotation();
   }, [runId]);
 
@@ -115,8 +135,18 @@ export function ObserverNarrator() {
     const event = detectEvent(snapshot, hist, detector);
     if (!event || seenRef.current.has(event.id)) return;
 
+    // Pace gate. If we'd be firing inside the reading-pace window of the
+    // previous narration, skip without updating any latches so the event
+    // re-detects on the next tick.
+    const now = Date.now();
+    if (now - lastNarrationAtRef.current < MIN_NARRATION_INTERVAL_MS) {
+      return;
+    }
+    lastNarrationAtRef.current = now;
+
     seenRef.current.add(event.id);
     detector.lastEventTurn = event.turn;
+    detector.lastFireByKind[event.kind] = event.turn;
     // Track consecutive passages so the detector can throttle the heartbeat
     // when the world has truly settled. Any non-passage event resets it.
     if (event.kind === "passage") {
