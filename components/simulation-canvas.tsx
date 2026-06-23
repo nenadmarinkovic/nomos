@@ -138,7 +138,9 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     const cellW = W / world.width;
     const cellH = H / world.height;
     const shapeSize = Math.min(cellW, cellH);
-    const agentSize = Math.max(shapeSize * 0.72, 5);
+    // Floor at 6 CSS pixels so agents stay legible even at city scale,
+    // where each cell on a typical viewport is only ~9 px wide.
+    const agentSize = Math.max(shapeSize * 0.78, 6);
     const ease = easeInOutCubic(progress);
 
     // Resource layer — only repaint when the world's turn has changed.

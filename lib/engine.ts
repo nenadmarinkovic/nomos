@@ -11,8 +11,8 @@ import type {
 
 const GRID_SIZE: Record<Scale, number> = {
   village: 50,
-  town: 90,
-  city: 160,
+  town: 80,
+  city: 110,
 };
 
 const AGENT_COUNT: Record<Scale, number> = {
