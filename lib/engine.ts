@@ -10,15 +10,15 @@ import type {
 } from "@/lib/config";
 
 const GRID_SIZE: Record<Scale, number> = {
-  village: 40,
-  town: 70,
-  city: 110,
+  village: 50,
+  town: 90,
+  city: 160,
 };
 
 const AGENT_COUNT: Record<Scale, number> = {
-  village: 200,
-  town: 800,
-  city: 3000,
+  village: 500,
+  town: 1000,
+  city: 5000,
 };
 
 /** Each trait ∈ [0,1]. All behaviour rules read from these. */

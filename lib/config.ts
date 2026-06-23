@@ -132,9 +132,9 @@ export const SCALE_INFO: Record<
   Scale,
   { label: string; agents: number; hint: string }
 > = {
-  village: { label: "Village", agents: 200, hint: "Individual lives visible" },
-  town: { label: "Town", agents: 800, hint: "Institutions crystallize" },
-  city: { label: "City", agents: 3000, hint: "Civilizations rise and fall" },
+  village: { label: "Village", agents: 500, hint: "Individual lives visible" },
+  town: { label: "Town", agents: 1000, hint: "Institutions crystallize" },
+  city: { label: "City", agents: 5000, hint: "Civilizations rise and fall" },
 };
 
 export function equalityBucket(v: Equality): { label: string; hint: string } {
