@@ -1,3 +1,4 @@
+import { DEFAULT_MUTATION_RATE } from "@/lib/config";
 import type {
   AgentMotivation,
   AgentSophistication,
@@ -377,6 +378,9 @@ export class Engine {
   /** Used at birth: rare mutations resample the child's trait centroid
    *  from the configured motivation mix. */
   private mutationMotivation: () => AgentMotivation;
+  /** Per-birth probability of mutation, taken from config (default 0.04
+   *  for legacy configs that pre-date the slider). */
+  private mutationRate: number;
 
   constructor(config: SimulationConfig) {
     this.rng = mulberry32(config.seed || 1);
@@ -428,6 +432,10 @@ export class Engine {
       config.agents.motivation,
       "material",
       this.rng,
+    );
+    this.mutationRate = Math.max(
+      0,
+      Math.min(1, config.agents.mutationRate ?? DEFAULT_MUTATION_RATE),
     );
 
     this.agents = spawnAgents(this, config, Math.min(requested, total - 1));
@@ -682,8 +690,7 @@ export class Engine {
     const cx = idx % this.width;
     const cy = Math.floor(idx / this.width);
 
-    const MUTATION_RATE = 0.04;
-    const inheritSeed = this.rng() >= MUTATION_RATE;
+    const inheritSeed = this.rng() >= this.mutationRate;
     const childTraits: AgentTraits = inheritSeed
       ? driftTraits(parent.traits, this.rng)
       : sampleTraits(this.mutationMotivation(), this.rng);
