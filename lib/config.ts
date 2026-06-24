@@ -83,7 +83,14 @@ export interface AgentModel {
   sophistication: WeightedSelection<AgentSophistication>;
   motivation: WeightedSelection<AgentMotivation>;
   topology: InteractionTopology;
+  /** Per-birth probability a child's traits are resampled from the
+   *  configured motivation mix instead of inherited from the parent.
+   *  Higher = more diversity rebleeds in after a monoculture takes over;
+   *  0 = strict heritability, monocultures lock in permanently. */
+  mutationRate?: number;
 }
+
+export const DEFAULT_MUTATION_RATE = 0.04;
 
 export function normalizeWeights<K extends string>(
   weights: WeightedSelection<K>,
@@ -537,6 +544,7 @@ export const DEFAULT_CONFIG: SimulationConfig = {
       power: 1,
     },
     topology: "spatial",
+    mutationRate: DEFAULT_MUTATION_RATE,
   },
   observers: ["epstein", "marx", "bourdieu", "durkheim", "axelrod"],
 };

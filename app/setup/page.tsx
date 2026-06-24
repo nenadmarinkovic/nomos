@@ -29,6 +29,7 @@ import {
   AgentMotivation,
   AgentSophistication,
   DEFAULT_CONFIG,
+  DEFAULT_MUTATION_RATE,
   describeMix,
   equalityBucket,
   HETEROGENEITY_BUCKETS,
@@ -923,16 +924,48 @@ function StepBody({
   }
 
   if (step === "motivation") {
+    const rate = draft.agents.mutationRate ?? DEFAULT_MUTATION_RATE;
     return (
-      <WeightedPickGrid<AgentMotivation>
-        weights={draft.agents.motivation}
-        options={(Object.keys(MOTIVATION_INFO) as AgentMotivation[]).map((m) => ({
-          key: m,
-          label: MOTIVATION_INFO[m].label,
-          hint: MOTIVATION_INFO[m].hint,
-        }))}
-        onChange={(next) => patchAgents({ motivation: next })}
-      />
+      <div className="space-y-6">
+        <WeightedPickGrid<AgentMotivation>
+          weights={draft.agents.motivation}
+          options={(Object.keys(MOTIVATION_INFO) as AgentMotivation[]).map((m) => ({
+            key: m,
+            label: MOTIVATION_INFO[m].label,
+            hint: MOTIVATION_INFO[m].hint,
+          }))}
+          onChange={(next) => patchAgents({ motivation: next })}
+        />
+        <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="font-sans text-[13px] font-medium text-foreground">
+              Mutation rate
+            </span>
+            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+              {Math.round(rate * 100)}%
+            </span>
+          </div>
+          <p className="mt-1 font-sans text-[12px] text-muted-foreground">
+            Per-birth chance a child's traits are resampled from the mix above
+            instead of inherited from the parent. Higher = diversity rebleeds
+            in after a monoculture takes over; 0 = strict heritability, once
+            one motivation wins it stays won.
+          </p>
+          <div className="mt-3">
+            <Slider
+              value={[Math.round(rate * 100)]}
+              min={0}
+              max={20}
+              step={1}
+              onValueChange={(v) => {
+                const next = Array.isArray(v) ? v[0] : v;
+                if (typeof next === "number")
+                  patchAgents({ mutationRate: next / 100 });
+              }}
+            />
+          </div>
+        </div>
+      </div>
     );
   }
 

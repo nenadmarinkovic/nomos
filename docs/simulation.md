@@ -134,7 +134,7 @@ Birth probability per agent is `BASE_RATE × ageFactor × wealthFactor × popula
 - **wealthFactor** — saturating; 0 when broke, around 1 at modest holdings, capped at 2.
 - **populationFactor** — soft logistic brake, `max(0, 1 − alive / cap)`.
 
-Children inherit parents' traits with small drift. Rare mutations (4%) resample from the configured motivation mix.
+Children inherit parents' traits with small drift. Per-birth mutations resample from the configured motivation mix; the default rate is 4% and is exposed as a slider on the setup screen. At 0% a monoculture locks in permanently; raising it (e.g. to 10–15%) keeps minority motivations on life support after one dominates.
 
 ### 10. Refresh motivation labels
 
@@ -195,7 +195,7 @@ The most useful constants, all in `lib/engine.ts`:
 | `TOKEN_PRIOR_LIABILITY = 4` | new-issuer credit floor |
 | `TIE_DECAY = 0.97` | trade relationship decay |
 | `WITNESS_PROSOCIALITY_THRESHOLD = 0.65` | who shames coercion |
-| `MUTATION_RATE = 0.04` | reproduction mutation rate |
+| `mutationRate` (config, default `0.04`) | per-birth resample rate; exposed as setup slider |
 
 Run the bench script to see how a constant change moves dynamics across village, town, and city without firing up the dev server:
 
