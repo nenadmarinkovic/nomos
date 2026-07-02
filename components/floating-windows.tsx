@@ -532,9 +532,6 @@ function NarratorWindow() {
       title="Narrator"
       meta={pending ? "···" : undefined}
     >
-      {/* Match the chart-window body height (h-24 chart + caption ≈ 121px)
-       * so the narrator doesn't shrink or grow with text length — the next
-       * window below it would otherwise drift away from a uniform 10px gap. */}
       <div className="min-h-[121px]">
         {!latest ? (
           <p className="font-sans text-[13px] leading-relaxed text-muted-foreground">

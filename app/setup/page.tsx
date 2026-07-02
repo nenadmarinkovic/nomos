@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
 import {
   ArrowCounterClockwiseIcon,
@@ -14,6 +15,12 @@ import {
   PlayIcon,
   XIcon,
 } from "@phosphor-icons/react";
+import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
+import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript";
+import {
+  oneDark,
+  oneLight,
+} from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import {
   Accordion,
@@ -56,6 +63,8 @@ import {
   type WorldPhysics,
 } from "@/lib/config";
 import { useSimulationStore } from "@/lib/store";
+
+SyntaxHighlighter.registerLanguage("typescript", typescript);
 
 type StepKey =
   | "scale"
@@ -242,67 +251,141 @@ const STEP_CODE: Partial<Record<StepKey, CodeAnchor[]>> = {
         "Your pick sets how wide the world is and how many agents are born into it.",
       mode: "real",
       file: "lib/engine.ts",
-      lines: "10-20",
-      snippet: `const GRID_SIZE   = { village: 40,  town: 70,  city: 110 };  // world width
-const AGENT_COUNT = { village: 200, town: 800, city: 3000 }; // people`,
+      lines: "13-23",
+      snippet: `const GRID_SIZE: Record<Scale, number> = {
+  village: 50,
+  town: 80,
+  city: 110,
+};
+
+const AGENT_COUNT: Record<Scale, number> = {
+  village: 500,
+  town: 1000,
+  city: 5000,
+};`,
     },
   ],
   equality: [
     {
       plain:
-        "Each agent's starting wealth is blended between a flat baseline everyone shares and a lucky random draw. The more inequality you ask for, the more the random draw takes over.",
-      mode: "pseudo",
+        "Each agent's starting wealth is blended between a flat baseline everyone shares and an exponential random draw. The more inequality you ask for, the more the draw dominates.",
+      mode: "real",
       file: "lib/engine.ts",
-      lines: "606-617",
-      snippet: `// equality 0 → everyone gets the same baseline
-// equality 1 → wealth is a pure (lucky) random draw
-wealth = baseline * (1 - equality)
-       + randomDraw *  equality`,
+      lines: "1868-1879",
+      snippet: `const baseline = 15;
+const eq = config.world.equality;
+for (let i = 0; i < count; i++) {
+  if (eq === 0) {
+    wealths.push(baseline);
+  } else {
+    const u = Math.max(0.001, rng());
+    const exp = -Math.log(u) * baseline;    // heavy-tailed draw
+    wealths.push(baseline * (1 - eq) + exp * eq);
+  }
+}`,
     },
   ],
   landscape: [
     {
       plain:
-        "Resources are piled up at a few 'peaks' and fade with distance. Your choice decides where those peaks sit.",
-      mode: "pseudo",
+        "Resources are piled up at a few 'peaks' and fade with Gaussian distance. Your choice decides where those peaks sit.",
+      mode: "real",
       file: "lib/engine.ts",
-      lines: "496-545",
-      snippet: `flat       → sugar & spice spread evenly everywhere
-two_peaks  → two sugar zones E–W, two spice zones N–S
-centre     → sugar at the core, spice in the corners
-scattered  → six random patches of each
-// every cell fades with distance from its nearest peak`,
+      lines: "1751-1791",
+      snippet: `if (landscape === "flat") {
+  sugar.fill(3);
+  spice.fill(3);
+  return;
+}
+if (landscape === "two_peaks") {
+  sugarPeaks = [{ x: width * 0.27, y: height * 0.5 },
+                { x: width * 0.73, y: height * 0.5 }];
+  spicePeaks = [{ x: width * 0.5,  y: height * 0.27 },
+                { x: width * 0.5,  y: height * 0.73 }];
+} else if (landscape === "centre") {
+  sugarPeaks = [{ x: width * 0.5,  y: height * 0.5 }];
+  spicePeaks = [{ x: width * 0.2,  y: height * 0.2 },
+                { x: width * 0.8,  y: height * 0.8 }];
+} else if (landscape === "scattered") {
+  for (let i = 0; i < 6; i++) {
+    sugarPeaks.push({ x: rng() * width, y: rng() * height });
+    spicePeaks.push({ x: rng() * width, y: rng() * height });
+  }
+}
+fillGaussian(sugar, width, height, sugarPeaks, sigma);
+fillGaussian(spice, width, height, spicePeaks, sigma);`,
     },
   ],
   settlement: [
     {
       plain:
-        "On turn one the agents have to be placed somewhere. Your choice picks the pattern.",
-      mode: "pseudo",
+        "On turn one the agents have to be placed somewhere. Your choice picks the pattern — random cells, a single Gaussian blob, a few clusters, or wealth-sorted quadrants.",
+      mode: "real",
       file: "lib/engine.ts",
-      lines: "660-758",
-      snippet: `scattered  → drop each agent on a random free cell
-single     → gather everyone around the centre
-clustered  → pick a few hubs, settle agents near them
-segregated → sort by wealth, fill one quadrant at a time`,
+      lines: "1968-2037",
+      snippet: `if (settlement === "scattered") {
+  for (let i = 0; i < count; i++) tryPlace(i, rng() * W, rng() * H);
+  return positions;
+}
+if (settlement === "single") {
+  const cx = W / 2, cy = H / 2;
+  const sigma = Math.min(W, H) / 12;
+  for (let i = 0; i < count; i++)
+    tryPlace(i, cx + normal() * sigma, cy + normal() * sigma);
+  return positions;
+}
+if (settlement === "clustered") {
+  const k = Math.min(5, Math.max(2, Math.floor(count / 100)));
+  const centroids = pickCentroids(k);   // k random hubs, per run
+  const sigma = Math.min(W, H) / 10;
+  for (let i = 0; i < count; i++) {
+    const c = centroids[Math.floor(rng() * k)];
+    tryPlace(i, c.x + normal() * sigma, c.y + normal() * sigma);
+  }
+  return positions;
+}
+// segregated: sort by wealth desc, fill each quadrant in order
+const order = [...Array(count).keys()].sort((a, b) => wealths[b] - wealths[a]);
+const quadrants = [tl, tr, bl, br];
+const groupSize = Math.ceil(count / 4);
+for (let oi = 0; oi < order.length; oi++) {
+  const q = quadrants[Math.min(3, Math.floor(oi / groupSize))];
+  tryPlace(order[oi],
+           q.x0 + rng() * (q.x1 - q.x0),
+           q.y0 + rng() * (q.y1 - q.y0));
+}`,
     },
   ],
   reproduction: [
     {
       plain:
-        "When an agent dies, if inheritance is on, a newborn appears elsewhere carrying the parent's starting wealth and traits. If it's off, the agent is simply gone.",
+        "If inheritance is on, each living agent gets a per-turn chance to bear a child — highest at mid-life, boosted by wealth, damped by crowding. Off, the population only shrinks.",
       mode: "real",
       file: "lib/engine.ts",
-      lines: "376-407",
-      snippet: `private killAgent(a: Agent) {
-  a.alive = false;
-  if (!this.reproduction) return;          // off → no heir
-  const child: Agent = {
-    sugar: a.initialSugar, spice: a.initialSpice, // parent's wealth
-    vision: a.vision, maxAge: a.maxAge,           // and its traits
-    age: 0,
-  };
-  this.agents.push(child);
+      lines: "652-682",
+      snippet: `private reproductionPhase(livingIds: number[]): void {
+  if (!this.reproduction) return;
+
+  const populationFactor =
+    Math.max(0, 1 - livingIds.length / this.populationCap);
+  if (populationFactor <= 0) return;
+
+  const BASE_RATE = 0.04;
+  for (const id of livingIds) {
+    const a = this.agents[id];
+    if (!a.alive) continue;
+
+    // Triangular bell: peak fertility at mid-life, zero at the extremes.
+    const ageNorm = a.age / a.maxAge;
+    const ageFactor = Math.max(0, 1 - Math.abs(ageNorm - 0.5) * 2.5);
+    if (ageFactor <= 0) continue;
+
+    // Capped so one hoarder can't dominate births.
+    const wealthFactor = Math.min(2, (a.sugar + a.spice) / 20);
+
+    const p = BASE_RATE * ageFactor * wealthFactor * populationFactor;
+    if (this.rng() < p) this.bear(a);
+  }
 }`,
     },
   ],
@@ -312,27 +395,47 @@ segregated → sort by wealth, fill one quadrant at a time`,
         "Every turn each agent burns a little of both goods just to stay alive. Run either one down to nothing and it dies.",
       mode: "real",
       file: "lib/engine.ts",
-      lines: "231-239",
-      snippet: `private consume(a: Agent) {
-  a.sugar -= a.sugarMetab;   // burn food just to stay alive
+      lines: "1077-1094",
+      snippet: `private consume(a: Agent): void {
+  if (a.sophistication === "adaptive") {
+    const now = holdings(a);
+    a.boldness =
+      now > a.lastHoldings
+        ? Math.min(1, a.boldness + 0.05)
+        : Math.max(0.05, a.boldness - 0.05);
+    a.lastHoldings = now;
+  }
+
+  a.sugar -= a.sugarMetab;
   a.spice -= a.spiceMetab;
   a.age++;
-  if (a.sugar <= 0 || a.spice <= 0 || a.age >= a.maxAge)
-    this.killAgent(a);       // starved (or too old)
+
+  if (a.sugar <= 0 || a.spice <= 0 || a.age >= a.maxAge) {
+    this.killAgent(a);           // starved, or past its lifespan
+  }
 }`,
     },
   ],
   regrowth: [
     {
       plain:
-        "Each patch of land grows back a slice of its maximum every turn, and never past full.",
+        "Each patch grows back a slice of its ceiling every turn — but the rate breathes seasonally (~30–170% of base over 60 turns) and drops to 40% while a blight is active.",
       mode: "real",
       file: "lib/engine.ts",
-      lines: "175-183",
-      snippet: `private regrow(stock, max) {
+      lines: "745-768",
+      snippet: `private regrow(stock: Float32Array, max: Float32Array, isSugar: boolean): void {
+  // Seasonal swing — regrowth between ~30% and ~170% of base over 60 turns.
+  const seasonal =
+    1 + 0.7 * Math.sin((this.turn * 2 * Math.PI) / 60);
+  const blightActive = isSugar && this.turn < this.blightUntilTurn;
+  const rate = this.regrowthRate * seasonal * (blightActive ? 0.4 : 1);
+
   for (let i = 0; i < stock.length; i++) {
-    const next = stock[i] + this.regrowthRate * max[i];
-    stock[i] = next > max[i] ? max[i] : next;  // grow, but cap at full
+    const m = max[i];
+    if (m > 0) {
+      const next = stock[i] + rate * m;
+      stock[i] = next > m ? m : next;   // grow, but cap at full
+    }
   }
 }`,
     },
@@ -340,113 +443,209 @@ segregated → sort by wealth, fill one quadrant at a time`,
   substrate: [
     {
       plain:
-        "When the substrate is alive, every tick each patch shares some of its standing resources with the four cells touching it, and nudges its fertility toward theirs — so depletion and abundance both spread.",
+        "When substrate diffusion is on, every tick each cell exchanges standing resources with its four orthogonal neighbours (mass-preserving), and separately relaxes its fertility toward theirs.",
       mode: "real",
       file: "lib/engine.ts",
-      lines: "775-790",
-      snippet: `// resources flow toward emptier neighbours (mass-preserving)
-let flux = 0;
-if (x > 0)     flux += stock[i - 1] - s;
-if (x < w - 1) flux += stock[i + 1] - s;
-if (y > 0)     flux += stock[i - w] - s;
-if (y < h - 1) flux += stock[i + w] - s;
-out[i] = s + STOCK_DIFFUSION * flux;`,
+      lines: "788-805",
+      snippet: `private diffuseStock(stock: Float32Array): void {
+  const w = this.width, h = this.height;
+  const out = this.diffScratch;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const s = stock[i];
+      let flux = 0;
+      if (x > 0)     flux += stock[i - 1] - s;
+      if (x < w - 1) flux += stock[i + 1] - s;
+      if (y > 0)     flux += stock[i - w] - s;
+      if (y < h - 1) flux += stock[i + w] - s;
+      out[i] = s + STOCK_DIFFUSION * flux;
+    }
+  }
+  stock.set(out);   // commit synchronously — this is a CA, not a sweep
+}`,
     },
   ],
   vision: [
     {
       plain:
-        "An agent looks outward ring by ring, as far as its vision reaches, and moves to the richest cell it can find.",
+        "An agent scans the four cardinal directions ring by ring, up to its vision, and moves to the highest-scoring free cell — ties break toward the nearer one.",
       mode: "real",
       file: "lib/engine.ts",
-      lines: "191-213",
-      snippet: `for (let d = 1; d <= a.vision; d++) {       // look out to its vision
-  const targets = [[a.x+d,a.y],[a.x-d,a.y],[a.x,a.y+d],[a.x,a.y-d]];
-  for (const [cx, cy] of targets) {
-    const score = this.scoreCell(a, cx, cy);
-    if (score > bestScore) { bestScore = score; bestX = cx; bestY = cy; }
+      lines: "972-996",
+      snippet: `private greedyMove(a: Agent, vision: number): { x: number; y: number } {
+  let bestX = a.x, bestY = a.y;
+  let bestScore = this.scoreCell(a, a.x, a.y);
+  let bestDist = 0;
+
+  for (let d = 1; d <= vision; d++) {
+    for (const [cx, cy] of this.axisTargets(a, d)) {
+      if (!this.inBounds(cx, cy)) continue;
+      const idx = cy * this.width + cx;
+      if (!this.isFree(idx, a)) continue;
+      const score = this.scoreCell(a, cx, cy);
+      if (
+        score > bestScore ||
+        (score === bestScore && bestDist > 0 && d < bestDist)
+      ) {
+        bestScore = score;
+        bestX = cx; bestY = cy;
+        bestDist = d;
+      }
+    }
   }
-}
-// then move to the best cell found`,
+  return { x: bestX, y: bestY };
+}`,
     },
   ],
   lifespan: [
     {
       plain:
-        "Agents age one turn at a time and die the moment they pass their maximum age — even if they're well fed.",
+        "Agents age one turn at a time; the same check that catches starvation kills any agent past its maximum age, however well fed.",
       mode: "real",
       file: "lib/engine.ts",
-      lines: "234-237",
-      snippet: `a.age++;                  // one turn older
-if (a.age >= a.maxAge)    // past its lifespan?
-  this.killAgent(a);      // dies, even if well fed`,
+      lines: "1089-1093",
+      snippet: `a.age++;
+
+if (a.sugar <= 0 || a.spice <= 0 || a.age >= a.maxAge) {
+  this.killAgent(a);   // starved, or past its lifespan
+}`,
     },
   ],
   heterogeneity: [
     {
       plain:
-        "Each agent's vision, metabolism, and lifespan are drawn around the average. Zero heterogeneity makes everyone identical; higher widens the spread.",
+        "Each agent's vision, metabolism, and lifespan are drawn around the configured average. Zero heterogeneity makes everyone identical; higher widens the spread linearly.",
       mode: "real",
       file: "lib/engine.ts",
-      lines: "578-581",
-      snippet: `const sampleAttr = (mean) => {
-  if (h === 0) return mean;                // h = 0 → everyone identical
-  return mean * (1 - h + 2 * h * rng());   // bigger h → wider spread
+      lines: "1852-1919",
+      snippet: `const sampleAttr = (mean: number) => {
+  if (h === 0) return mean;
+  return mean * (1 - h + 2 * h * rng());   // [mean·(1−h), mean·(1+h)]
 };
-// drawn per agent for vision, metabolism and lifespan`,
+
+// applied per agent when spawning:
+vision:     Math.max(1,   Math.round(sampleAttr(physics.vision))),
+sugarMetab: Math.max(0.1, sampleAttr(metabMean)),
+spiceMetab: Math.max(0.1, sampleAttr(metabMean)),
+maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
     },
   ],
   sophistication: [
     {
       plain:
-        "How agents think — from blind reaction to social imitation. Your choice is recorded with the society, but the cognitive behaviours below aren't wired into the engine yet.",
-      mode: "planned",
-      snippet: `minimal  → go straight to the best cell you can see
-bounded  → settle for a 'good enough' cell, not always the best
-adaptive → remember what paid off and do more of it
-social   → copy whatever nearby agents are doing`,
+        "Each turn's movement rule dispatches on the agent's sophistication — greedy optimum, satisfice a short horizon, follow learned boldness, or imitate the wealthiest visible neighbour.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "939-950",
+      snippet: `private chooseTarget(a: Agent): { x: number; y: number } {
+  switch (a.sophistication) {
+    case "bounded_rational":
+      return this.satisficeMove(a);         // good-enough at half vision
+    case "adaptive":
+      return this.adaptiveMove(a);          // vision × learned boldness
+    case "social":
+      return this.imitativeMove(a);         // follow the richest neighbour
+    default:                                 // "minimal"
+      return this.greedyMove(a, a.vision);  // best cell in full vision
+  }
+}`,
     },
   ],
   motivation: [
     {
       plain:
-        "What an agent wants changes how it rates a cell — pure resources, or resources plus the pull of wealthy or crowded neighbours.",
+        "Motivation isn't a switch anymore — it's a four-dimensional trait vector. Each named motivation seeds its own centroid, then each agent is jittered around it.",
       mode: "real",
       file: "lib/engine.ts",
-      lines: "267-278",
-      snippet: `// resources on the cell, plus the pull of nearby agents:
-switch (a.motivation) {
-  case "symbolic":  return resources + avgWealth * 0.08; // chase status
-  case "normative": return resources + count * 0.6;      // chase company
-  case "power":     return own > avgWealth               // chase dominance
-      ? resources + count * 0.7 : resources;
-  default:          return resources;                    // chase material
+      lines: "64-69",
+      snippet: `const MOTIVATION_TRAIT_CENTROID: Record<AgentMotivation, AgentTraits> = {
+  material:  { greed: 0.7, prosociality: 0.5, dominance: 0.3, statusSeeking: 0.3 },
+  symbolic:  { greed: 0.4, prosociality: 0.5, dominance: 0.2, statusSeeking: 0.8 },
+  normative: { greed: 0.3, prosociality: 0.9, dominance: 0.1, statusSeeking: 0.4 },
+  power:     { greed: 0.6, prosociality: 0.1, dominance: 0.9, statusSeeking: 0.5 },
+};`,
+    },
+    {
+      plain:
+        "A cell's score reads directly off those traits — greed weights raw resources, prosociality weights company, dominance turns nearby weaker neighbours into prey, and statusSeeking chases high-wealth surroundings.",
+      mode: "real",
+      file: "lib/engine.ts",
+      lines: "223-240",
+      snippet: `function scoreCellByTraits(
+  t: AgentTraits,
+  resources: number,
+  neighbourCount: number,
+  neighbourAvgWealth: number,
+  ownWealth: number,
+): number {
+  const resourceWeight  = 0.6 + 0.5 * t.greed;
+  const proximityWeight = 0.6 * t.prosociality;
+  const predatoryWeight =
+    ownWealth > neighbourAvgWealth ? 0.8 * t.dominance : 0;
+  const statusWeight    = 0.1 * t.statusSeeking;
+  return (
+    resources * resourceWeight +
+    neighbourCount * (proximityWeight + predatoryWeight) +
+    neighbourAvgWealth * statusWeight
+  );
 }`,
     },
   ],
   topology: [
     {
       plain:
-        "Who an agent can trade with each turn — random strangers, only the cells touching it, or a wider neighbourhood that grows with its vision.",
-      mode: "pseudo",
+        "Who an agent can trade with each turn — four random strangers from anywhere, only the eight cells touching it, or a wider box that grows with its vision (capped at 4).",
+      mode: "real",
       file: "lib/engine.ts",
-      lines: "311-338",
-      snippet: `random  → meet a few agents from anywhere in the world
-spatial → only the agents in the cells touching you
-network → a wider neighbourhood that grows with your vision`,
+      lines: "1158-1184",
+      snippet: `private partnersFor(a: Agent): number[] {
+  const out: number[] = [];
+  if (this.topology === "random") {
+    // Random meetings: a few draws from the whole field.
+    for (let i = 0; i < 4; i++) {
+      const j = Math.floor(this.rng() * this.agents.length);
+      const other = this.agents[j];
+      if (other && other.alive && other.id !== a.id) out.push(other.id);
+    }
+    return out;
+  }
+  // Spatial = adjacent; network = within vision (further reach).
+  const radius = this.topology === "network" ? Math.min(a.vision, 4) : 1;
+  for (let dy = -radius; dy <= radius; dy++) {
+    const ny = a.y + dy;
+    if (ny < 0 || ny >= this.height) continue;
+    for (let dx = -radius; dx <= radius; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = a.x + dx;
+      if (nx < 0 || nx >= this.width) continue;
+      const occ = this.occupants[ny * this.width + nx];
+      if (occ !== -1 && occ !== a.id) out.push(occ);
+    }
+  }
+  return out;
+}`,
     },
   ],
   observers: [
     {
       plain:
-        "Each theorist you pick gets the same factual event, wrapped in a prompt that tells the AI to read it through that thinker's own vocabulary.",
-      mode: "pseudo",
+        "Each observer's system prompt fixes the theorist's persona; the user prompt hands them the same neutral event. One such pair is issued per chosen observer, per significant event.",
+      mode: "real",
       file: "lib/observers.ts",
-      lines: "26-63",
-      snippet: `system: "You are Marx, the theorist. Read events through your lens…"
-user:   "Event (turn 42): the top 10% now hold 60% of all wealth.
-         Narrate what you see."
-// one such prompt per chosen observer, per significant event`,
+      lines: "51-69",
+      snippet: `export function buildSystemPrompt(observer: ObserverKey): string {
+  const info = OBSERVER_INFO[observer];
+  return [
+    \`You are \${info.name}, the social theorist, observing an emerging society.\`,
+    \`Your lens: \${info.lens}.\`,
+    \`How you see the social world: \${info.sees}\`,
+    \`What you watch for: \${info.watches}\`,
+    "",
+    "You are handed a neutral, factual description of something that just happened. Read it through your own perspective…",
+    // Rules follow: 2–3 sentences, present tense, stay in character…
+  ].join("\\n");
+}`,
     },
   ],
 };
@@ -1429,6 +1628,9 @@ function CodeAnchors({ anchors }: { anchors: CodeAnchor[] }) {
 }
 
 function CodeAnchorBlock({ anchor }: { anchor: CodeAnchor }) {
+  const { resolvedTheme } = useTheme();
+  const codeStyle = resolvedTheme === "dark" ? oneDark : oneLight;
+
   return (
     <div className="space-y-3">
       <span
@@ -1444,9 +1646,29 @@ function CodeAnchorBlock({ anchor }: { anchor: CodeAnchor }) {
       <p className="font-serif text-[15px] leading-relaxed text-foreground/80">
         {anchor.plain}
       </p>
-      <pre className="overflow-x-auto rounded-lg border border-foreground/10 bg-foreground/[0.03] px-4 py-3.5 font-mono text-[12px] leading-relaxed text-foreground/85">
-        <code>{anchor.snippet}</code>
-      </pre>
+      <div className="overflow-hidden rounded-md border border-foreground/10 bg-card/40">
+        <div className="flex items-center justify-between border-b border-foreground/10 px-3 py-1.5">
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            typescript
+          </span>
+        </div>
+        <SyntaxHighlighter
+          language="typescript"
+          style={codeStyle}
+          customStyle={{
+            margin: 0,
+            padding: "12px 14px",
+            background: "transparent",
+            fontSize: "13.5px",
+            lineHeight: "1.55",
+          }}
+          codeTagProps={{
+            style: { fontFamily: "var(--font-mono)" },
+          }}
+        >
+          {anchor.snippet}
+        </SyntaxHighlighter>
+      </div>
       {anchor.file && (
         <a
           href={blobHref(anchor.file, anchor.lines)}

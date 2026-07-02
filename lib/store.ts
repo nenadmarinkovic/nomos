@@ -92,13 +92,13 @@ export const WIN_HEIGHTS: Record<ViewKey, number> = {
 };
 
 export const DEFAULT_WINDOW_POSITIONS: Record<ViewKey, WindowPosition> = {
-  gini: { anchor: "tl", offsetX: 10, offsetY: 10 },
-  alive: { anchor: "tl", offsetX: 10, offsetY: 202 },
-  wealth: { anchor: "tl", offsetX: 10, offsetY: 394 },
-  price: { anchor: "tl", offsetX: 10, offsetY: 586 },
-  narrator: { anchor: "tr", offsetX: 10, offsetY: 10 },
-  stream: { anchor: "tr", offsetX: 10, offsetY: 202 },
-  network: { anchor: "tr", offsetX: 10, offsetY: 414 },
+  gini: { anchor: "tr", offsetX: 10, offsetY: 10 },
+  narrator: { anchor: "tr", offsetX: 10, offsetY: 202 },
+  price: { anchor: "tr", offsetX: 10, offsetY: 394 },
+  alive: { anchor: "tr", offsetX: 10, offsetY: 586 },
+  wealth: { anchor: "tl", offsetX: 10, offsetY: 10 },
+  stream: { anchor: "tl", offsetX: 10, offsetY: 202 },
+  network: { anchor: "tl", offsetX: 10, offsetY: 394 },
 };
 
 export function resolveWindowPosition(
@@ -188,10 +188,10 @@ export const useSimulationStore = create<SimulationState>()(
       canvasSize: { width: 0, height: 0 },
       views: {
         gini: true,
-        alive: true,
-        wealth: true,
-        price: true,
-        stream: true,
+        alive: false,
+        wealth: false,
+        price: false,
+        stream: false,
         narrator: true,
         network: false,
       },
@@ -349,7 +349,7 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 16,
+      version: 19,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         config: s.config,
@@ -360,10 +360,10 @@ export const useSimulationStore = create<SimulationState>()(
         config: DEFAULT_CONFIG,
         views: {
           gini: true,
-          alive: true,
-          wealth: true,
+          alive: false,
+          wealth: false,
           price: true,
-          stream: true,
+          stream: false,
           narrator: true,
           network: false,
         },
