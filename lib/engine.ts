@@ -22,7 +22,7 @@ const AGENT_COUNT: Record<Scale, number> = {
   city: 5000,
 };
 
-/** Each trait ∈ [0,1]. All behaviour rules read from these. */
+/** Trait values ∈ [0,1]. Every rule reads only from these. */
 export interface AgentTraits {
   greed: number;
   prosociality: number;
@@ -35,7 +35,7 @@ export interface Agent {
   alive: boolean;
   x: number;
   y: number;
-  /** Position at the start of this tick — used to interpolate the render. */
+  /** Position at tick start — used to interpolate the render. */
   prevX: number;
   prevY: number;
   sugar: number;
@@ -47,20 +47,22 @@ export interface Agent {
   maxAge: number;
   initialSugar: number;
   initialSpice: number;
-  /** Derived label — recomputed each tick from traits. Not the source of truth. */
+  /** Derived from traits each tick — a label, not a driver. */
   motivation: AgentMotivation;
   traits: AgentTraits;
   sophistication: AgentSophistication;
-  /** Adaptive agents: learned willingness to range far (0..1). */
+  /** Adaptive movement: learned willingness to range far (0..1). */
   boldness: number;
-  /** Adaptive agents: last tick's holdings, to detect gain or loss. */
+  /** Adaptive movement: last tick's holdings, to detect gain or loss. */
   lastHoldings: number;
-  /** Turn after which others may trade with this agent again. */
+  /** Others may trade with this agent again after this turn. */
   shamedUntilTurn: number;
+  /** Recent good trade partners — copied by cultural imitation. */
+  favouredPartners: number[];
 }
 
-/** Seed positions for each named motivation. New agents are drawn around one
- *  of these with jitter; the label is then derived back from the trait vector. */
+/** Seed for each named motivation. New agents draw a jittered vector
+ *  around one of these; the motivation label is derived from the vector. */
 const MOTIVATION_TRAIT_CENTROID: Record<AgentMotivation, AgentTraits> = {
   material: { greed: 0.7, prosociality: 0.5, dominance: 0.3, statusSeeking: 0.3 },
   symbolic: { greed: 0.4, prosociality: 0.5, dominance: 0.2, statusSeeking: 0.8 },
@@ -85,8 +87,7 @@ function sampleTraits(
   };
 }
 
-/** Small random walk around a starting point. Used at birth so children
- *  inherit parents but don't clone them. */
+/** Small random walk around the parent — children inherit, not clone. */
 function driftTraits(base: AgentTraits, rng: () => number): AgentTraits {
   const TRAIT_DRIFT = 0.05;
   const step = (v: number) =>
@@ -107,7 +108,7 @@ function traitDistance(a: AgentTraits, b: AgentTraits): number {
   return Math.sqrt(dg * dg + dp * dp + dd * dd + ds * ds);
 }
 
-/** Move `traits` a fraction `rate` of the way toward `target`. */
+/** Linear pull: `rate` = 0 keeps `traits`, `rate` = 1 becomes `target`. */
 function pullTraitsToward(
   traits: AgentTraits,
   target: AgentTraits,
@@ -124,11 +125,9 @@ function pullTraitsToward(
   };
 }
 
-// All rule helpers below take an agent's traits and return a behaviour
-// number. They are the only place sociological intuitions are encoded.
+// Trait-only rule helpers. This is where sociological intuitions live.
 
-/** Greedy agents harvest more; dominant agents harvest less (they
- *  specialise in seizure, not gathering). */
+/** Greedy → harvest more. Dominant → harvest less (they seize instead). */
 function sugarYieldFromTraits(t: AgentTraits): number {
   return clamp01_5(0.6 + 0.8 * t.greed - 0.8 * t.dominance);
 }
@@ -144,8 +143,7 @@ function clamp01_5(v: number): number {
   return v < 0.3 ? 0.3 : v > 1.5 ? 1.5 : v;
 }
 
-/** Return the named motivation whose centroid is closest to `t`. The
- *  label is *derived*, not configured — it's a description, not an input. */
+/** Nearest centroid label. The label describes behaviour, doesn't drive it. */
 function motivationFromTraits(t: AgentTraits): AgentMotivation {
   let best: AgentMotivation = "material";
   let bestDist = Infinity;
@@ -165,46 +163,38 @@ function motivationFromTraits(t: AgentTraits): AgentMotivation {
   return best;
 }
 
-/** Per-tick chance this agent tries to seize from a neighbour. Squaring
- *  dominance makes borderline-dominant agents rarely attack. */
+/** Per-tick attack chance. Squared so borderline-dominant rarely attack. */
 function attackPropensity(t: AgentTraits): number {
   const ATTEMPT_RATE = 0.18;
   return ATTEMPT_RATE * t.dominance * t.dominance * (1 - t.prosociality);
 }
 
-/** A nearby agent above this prosociality witnesses coercion and shames
- *  the attacker. */
+/** Prosociality above this threshold triggers the shaming latch. */
 const WITNESS_PROSOCIALITY_THRESHOLD = 0.65;
 
-/** Chance this agent refuses to trade with a shamed partner. Below
- *  prosociality 0.4 they don't care; above 0.8 they always refuse. */
+/** Refuse-shamed odds. Ignore below 0.4, always refuse above 0.8. */
 function refuseShamedProbability(t: AgentTraits): number {
   const p = t.prosociality;
   return p < 0.4 ? 0 : Math.min(1, (p - 0.4) / 0.4);
 }
 
-/** Bonus rate on a trade. Geometric: a defector partner kills the bonus
- *  even if the other side is highly prosocial. */
+/** Trade bonus. Geometric so one defector kills it. */
 function cooperativeBonus(a: AgentTraits, b: AgentTraits): number {
   return 0.1 * Math.min(a.prosociality, b.prosociality);
 }
 
-/** Chance an agent looks for a richer neighbour to imitate this tick. */
+/** Odds an agent looks for a richer neighbour to imitate this tick. */
 function imitationPropensity(t: AgentTraits): number {
   const BASE = 0.03;
   return BASE * t.statusSeeking;
 }
 
-/** Soft denominator giving fresh issuers a baseline trustworthiness.
- *  Tuned up after the bench showed `wealth / (liability + 1)` collapsed
- *  too fast after the first issuance — tokens reached one holder and
- *  then never circulated to a third. */
+/** Baseline for issuer trustworthiness so fresh IOUs don't collapse
+ *  before reaching a third holder. */
 const TOKEN_PRIOR_LIABILITY = 4;
 
-/** Probability the seller accepts a token. The 0.08 floor is the
- *  bootstrap term — without it, third-party sellers with no personal
- *  tie to the issuer almost always refused, and tokens never crossed
- *  the threshold from bilateral credit into circulating money. */
+/** Seller-side accept probability. The 0.08 floor lets tokens reach
+ *  third-party sellers with no personal tie to the issuer. */
 function tokenAcceptanceProb(
   sellerTraits: AgentTraits,
   trustInIssuer: number,
@@ -217,23 +207,23 @@ function tokenAcceptanceProb(
   );
 }
 
-/** Score a cell for movement. Greed values raw resources; prosocial
- *  agents seek company; dominant agents want crowds they can dominate;
- *  status-seekers chase wealthy neighbours. */
 function scoreCellByTraits(
   t: AgentTraits,
   resources: number,
   neighbourCount: number,
   neighbourAvgWealth: number,
   ownWealth: number,
+  fertility: number,
 ): number {
   const resourceWeight = 0.6 + 0.5 * t.greed;
   const proximityWeight = 0.6 * t.prosociality;
   const predatoryWeight =
     ownWealth > neighbourAvgWealth ? 0.8 * t.dominance : 0;
   const statusWeight = 0.1 * t.statusSeeking;
+  // Barren cells discount raw resources, so agents drift off worn ground.
+  const foresight = 0.4 + 0.6 * fertility;
   return (
-    resources * resourceWeight +
+    resources * resourceWeight * foresight +
     neighbourCount * (proximityWeight + predatoryWeight) +
     neighbourAvgWealth * statusWeight
   );
@@ -259,19 +249,15 @@ function welfare(sugar: number, spice: number, ms: number, msp: number): number 
 export const WEALTH_BIN_EDGES = [5, 10, 20, 40, 80] as const;
 export const WEALTH_BIN_LABELS = ["<5", "5–10", "10–20", "20–40", "40–80", "80+"] as const;
 
-// Tie weight bumps by INCREMENT per successful trade, decays per tick,
-// drops below THRESHOLD, and never exceeds CAP.
+// Tie weight: +INCREMENT per trade, ×DECAY per tick, drops at THRESHOLD, capped at CAP.
 const TIE_INCREMENT = 1;
 const TIE_DECAY = 0.97;
 const TIE_THRESHOLD = 0.25;
 const TIE_CAP = 8;
 
-// Substrate cellular-automaton step (only when substrateDiffusion is on).
-// STOCK_DIFFUSION: share of the gap to each neighbour that standing
-// resources flow across per tick — must stay < 0.25 for stability with
-// four neighbours. FERTILITY_SPREAD: how fast a cell's fertility (its
-// max ÷ pristine ceiling) relaxes toward its neighbours' — the rate at
-// which exhaustion spreads and fertile land reseeds the worn ground.
+// Substrate CA constants (used only when substrateDiffusion is on).
+// STOCK_DIFFUSION < 0.25 for four-neighbour stability.
+// FERTILITY_SPREAD sets how fast worn ground reseeds from fertile neighbours.
 const STOCK_DIFFUSION = 0.12;
 const FERTILITY_SPREAD = 0.05;
 
@@ -281,62 +267,63 @@ export interface EngineSnapshot {
   gini: number;
   totalWealth: number;
   wealthBins: number[];
-  /** Geometric-mean exchange rate (sugar per spice) of trades this turn, or 0 if none. */
+  /** Geometric mean of this turn's trade prices (sugar/spice), or 0. */
   tradePrice: number;
-  /** Number of trades executed this turn. */
   tradeVolume: number;
-  /** Per-motivation alive count, in the canonical motivation order. */
   motivationCounts: {
     material: number;
     symbolic: number;
     normative: number;
     power: number;
   };
-  /** Spatial assortativity of motivation, 0..1. 0 = neighbours are a random
-   *  draw of the population; 1 = every agent sits only beside its own kind. */
+  /** Spatial sorting of motivation. 0 = fully mixed, 1 = fully sorted. */
   segregation: number;
   /** Successful seizures this turn. */
   coercionCount: number;
-  /** Coercions a prosocial witness sanctioned this turn. */
+  /** Seizures that drew a prosocial-witness sanction this turn. */
   shamingCount: number;
   tieCount: number;
-  /** Share (0..1) of living agents with no surviving trade tie. */
+  /** Share of living agents with no surviving trade tie. */
   isolateShare: number;
   blightActive: boolean;
-  /** Turn the most recent blight began, or -9999 if none yet. */
+  /** Turn the current/last blight began; -9999 if none. */
   blightStartedTurn: number;
-  /** Deaths from plague *this turn* (0 otherwise). */
+  /** Plague deaths this turn (0 otherwise). */
   plagueDeathsThisTurn: number;
-  /** 0..1 — how much carrying capacity the landscape has lost vs pristine. */
+  /** Carrying capacity lost vs pristine landscape, 0..1. */
   landDegradation: number;
-  /** Total tokens currently held across all agents. */
+  /** Total tokens held across all agents. */
   tokenSupply: number;
-  /** Trades paid in tokens this tick. */
   tokenTradeVolume: number;
-  /** Agent with the largest current liability — closest thing to a bank.
-   *  -1 if no tokens are in circulation. */
+  /** Biggest issuer by outstanding liability; -1 if none. */
   topIssuerId: number;
   topIssuerLiability: number;
-  /** Issuers whose tokens are held by ≥3 distinct agents — these are the
-   *  ones whose IOUs have begun to *circulate*, i.e. emergent money. */
+  /** Issuers held by ≥3 distinct agents — the "money" threshold. */
   circulatingIssuers: number;
+  /** Top agent by inbound trust weight; -1 if none. */
+  topInfluencerId: number;
+  topInfluencerCentrality: number;
+  /** Share of population distrusting the top issuer, 0..1. */
+  topIssuerMistrust: number;
+  /** True on the turn a run on the top issuer's tokens fires. */
+  bankRunActive: boolean;
+  bankRunStartedTurn: number;
 }
 
 export class Engine {
   readonly width: number;
   readonly height: number;
-  /** Mutable: cells lose capacity on harvest, recover when fallow. */
+  /** Loses capacity on harvest, recovers when fallow. */
   maxCells: Float32Array;
   readonly cells: Float32Array;
   maxSpice: Float32Array;
   readonly spice: Float32Array;
   readonly occupants: Int32Array;
-  /** Pristine ceiling for each cell — what `maxCells`/`maxSpice` recover
-   *  toward but never exceed. */
+  /** Pristine ceilings. `maxCells`/`maxSpice` recover toward these. */
   private originalMaxCells: Float32Array;
   private originalMaxSpice: Float32Array;
   private pristineLandTotal: number;
-  /** Reusable write buffer for the synchronous substrate CA step. */
+  /** Scratch buffer for the synchronous substrate CA step. */
   private diffScratch: Float32Array;
   agents: Agent[];
   turn = 0;
@@ -346,19 +333,33 @@ export class Engine {
   private lastCoercionCount = 0;
   private lastShamingCount = 0;
 
-  /** Blight halves regrowth while active; plague kills a random share in
-   *  one tick. Both triggers depend on the world's own state — see
-   *  `rollShocks`. */
+  /** Blight halves regrowth for a stretch; plague kills a random share.
+   *  See `rollShocks` — both are gated by the world's own state. */
   private blightUntilTurn = 0;
   private lastBlightTurn = -9999;
   private lastPlagueTurn = -9999;
   private lastPlagueDeaths = 0;
 
-  /** Sparse: outer key = lower agent id, inner = higher. */
+  /** Sparse pair map. Outer key = lower agent id, inner key = higher. */
   private tiesMap = new Map<number, Map<number, number>>();
 
-  // Token economy. tokenHoldings[holder][issuer] = qty held.
-  // tokenLiability[issuer] = total outstanding (sum over holders).
+  /** distrust[witness][offender] — grows on witnessed coercion, spreads
+   *  along ties, decays per turn. This is where an emergent norm lives. */
+  private distrust = new Map<number, Map<number, number>>();
+
+  /** issuerDistrust[witness][issuer] — grows on witnessed default, damps
+   *  future acceptance of that issuer's tokens. */
+  private issuerDistrust = new Map<number, Map<number, number>>();
+
+  private offenderNotoriety = new Map<number, number>();
+
+  private lastInfluencerId = -1;
+  private lastInfluencerCentrality = 0;
+
+  private bankRunTurn = -9999;
+  private bankRunIssuerId = -1;
+
+  // Token ledger. Holdings[holder][issuer] = qty. Liability[issuer] = sum.
   private tokenHoldings = new Map<number, Map<number, number>>();
   private tokenLiability = new Map<number, number>();
   private tokenIssuedLifetime = new Map<number, number>();
@@ -373,26 +374,21 @@ export class Engine {
   private conflict: boolean;
   private substrateDiffusion: boolean;
   private topology: InteractionTopology;
-  /** Soft ceiling — birth rate scales down as population approaches it. */
+  /** Soft cap: birth rate scales down as population approaches this. */
   private populationCap: number;
-  /** Used at birth: rare mutations resample the child's trait centroid
-   *  from the configured motivation mix. */
+  /** Rare-mutation picker: resamples a child's trait centroid from the mix. */
   private mutationMotivation: () => AgentMotivation;
-  /** Per-birth probability of mutation, taken from config (default 0.04
-   *  for legacy configs that pre-date the slider). */
   private mutationRate: number;
 
   constructor(config: SimulationConfig) {
     this.rng = mulberry32(config.seed || 1);
     this.regrowthRate = config.world.physics.regrowthRate;
     this.reproduction = config.world.reproduction;
-    // Legacy configs predate these toggles — default them on.
+    // Legacy runs predate these toggles — default them on.
     this.culturalTransmission = config.world.culturalTransmission ?? true;
     this.inheritance = config.world.inheritance ?? true;
     this.conflict = config.world.conflict ?? true;
-    // Unlike the social toggles above, this one defaults *off* for legacy
-    // configs: it alters substrate physics, so a run saved before the
-    // feature existed must replay exactly as it was recorded.
+    // Default off: alters substrate physics, so old saves must replay unchanged.
     this.substrateDiffusion = config.world.substrateDiffusion ?? false;
     this.topology = config.agents.topology;
 
@@ -466,15 +462,15 @@ export class Engine {
       this.moveAndHarvest(a);
     }
 
-    // Combat runs before trade so any seizures price into the market.
+    // Combat before trade so seizures price into the market.
     this.combatPhase();
     this.tradePhase();
     this.decayTies();
-    // Cultural drift runs after trade so wealth comparisons use post-trade
-    // holdings, not stale ones.
+    this.decayReputations();
+    // Culture after trade so wealth reads are post-trade.
     this.culturalPhase();
 
-    // Snapshot the living set so this tick's newborns can't act yet.
+    // Freeze the living set before consume/reproduce so newborns can't act yet.
     const living: number[] = [];
     for (const a of this.agents) {
       if (a.alive) living.push(a.id);
@@ -487,11 +483,11 @@ export class Engine {
 
     this.reproductionPhase(living);
     this.refreshMotivationLabels();
+    this.refreshInfluencer();
 
     this.turn++;
   }
 
-  /** Recompute every agent's motivation label from their current traits. */
   private refreshMotivationLabels(): void {
     for (const a of this.agents) {
       if (!a.alive) continue;
@@ -499,16 +495,14 @@ export class Engine {
     }
   }
 
-  /** Every agent rolls against `attackPropensity`. Targets are visibly
-   *  poorer neighbours that aren't trade partners and aren't peers in
-   *  dominance (so high-dominance agents skip each other). */
+  /** Each agent rolls attack; targets a visibly poorer non-partner, non-peer. */
   private combatPhase(): void {
     if (!this.conflict) return;
 
     const MIN_GAP = 4;
     const TAKE_FRACTION = 0.3;
-    // Targets whose dominance is ≥ PEER_RATIO × attacker's are treated
-    // as peers and skipped — prevents the dynamic collapsing into a
+    // Skip near-equal-dominance peers so it doesn't collapse into a
+    // dominance-on-dominance free-for-all.
     // dominance-on-dominance free-for-all.
     const PEER_RATIO = 0.7;
 
@@ -535,8 +529,7 @@ export class Engine {
           const t = this.agents[occ];
           if (!t.alive) continue;
           if (t.traits.dominance >= peerThreshold) continue;
-          // Trade partners are off-limits — embedded relationships shield
-          // against predation.
+          // Trade partners are off-limits — embedded relationships shield.
           if (this.getTie(a.id, t.id) > TIE_THRESHOLD) continue;
           const gap = myWealth - (t.sugar + t.spice);
           if (gap > bestGap) {
@@ -555,25 +548,30 @@ export class Engine {
       a.sugar += sugarTaken;
       a.spice += spiceTaken;
       this.lastCoercionCount++;
-      // Trust between these two is destroyed by the seizure.
       this.crashTie(a.id, bestTarget.id);
 
-      // A nearby prosocial witness shames the attacker for SHAME_TURNS;
-      // others may then refuse to trade with them.
+      this.bumpDistrust(bestTarget.id, a.id, 0.7);
+      this.offenderNotoriety.set(
+        a.id,
+        Math.min(1, (this.offenderNotoriety.get(a.id) ?? 0) + 0.15),
+      );
+
       const SHAME_TURNS = 15;
       const SHAME_VISION = 3;
       let witnessed = false;
-      for (let dy = -SHAME_VISION; dy <= SHAME_VISION && !witnessed; dy++) {
+      for (let dy = -SHAME_VISION; dy <= SHAME_VISION; dy++) {
         const ny = bestTarget.y + dy;
         if (ny < 0 || ny >= this.height) continue;
-        for (let dx = -SHAME_VISION; dx <= SHAME_VISION && !witnessed; dx++) {
+        for (let dx = -SHAME_VISION; dx <= SHAME_VISION; dx++) {
           const nx = bestTarget.x + dx;
           if (nx < 0 || nx >= this.width) continue;
           const occ = this.occupants[ny * this.width + nx];
           if (occ === -1 || occ === a.id) continue;
           const w = this.agents[occ];
+          if (!w?.alive) continue;
+          this.bumpDistrust(w.id, a.id, 0.25 + 0.35 * w.traits.prosociality);
           if (
-            w?.alive &&
+            !witnessed &&
             w.traits.prosociality >= WITNESS_PROSOCIALITY_THRESHOLD
           ) {
             witnessed = true;
@@ -587,9 +585,9 @@ export class Engine {
     }
   }
 
-  /** Agents drift toward the traits of a wealthier visible neighbour, at
-   *  a speed scaled by `statusSeeking`. Each step costs wealth in
-   *  proportion to how far the traits moved — identity change isn't free. */
+  /** Drift each agent's traits toward a wealthier visible neighbour.
+   *  Speed scales with `statusSeeking`; distance travelled costs wealth
+   *  (habitus inertia — identity change isn't free). */
   private culturalPhase(): void {
     if (!this.culturalTransmission) return;
 
@@ -629,9 +627,6 @@ export class Engine {
         bestNeighbour.traits,
         driftRate,
       );
-      // Wealth cost proportional to trait-space distance travelled.
-      // Without this, subcultures never stabilise — anyone flips toward
-      // whoever happens to be rich today.
       const drift = traitDistance(a.traits, newTraits);
       if (drift > 0) {
         const HABITUS_COST_PER_UNIT = 6;
@@ -644,11 +639,37 @@ export class Engine {
         }
       }
       a.traits = newTraits;
+
+      // Copy the neighbour's strongest distrust — "stay clear of X" spreads.
+      const nbDistrust = this.distrust.get(bestNeighbour.id);
+      if (nbDistrust && nbDistrust.size > 0) {
+        let bestOffender = -1;
+        let bestWeight = 0;
+        for (const [off, w] of nbDistrust) {
+          if (off === a.id) continue;
+          if (w > bestWeight) {
+            bestWeight = w;
+            bestOffender = off;
+          }
+        }
+        if (bestOffender >= 0) {
+          this.bumpDistrust(a.id, bestOffender, bestWeight * 0.5);
+        }
+      }
+
+      // Practice imitation: adopt one of the neighbour's favoured partners.
+      const nbFavs = bestNeighbour.favouredPartners;
+      if (nbFavs.length > 0) {
+        const pick = nbFavs[Math.floor(this.rng() * nbFavs.length)];
+        if (pick !== a.id && !a.favouredPartners.includes(pick)) {
+          a.favouredPartners.push(pick);
+          if (a.favouredPartners.length > 6) a.favouredPartners.shift();
+        }
+      }
     }
   }
 
-  /** Birth probability per agent scales with wealth, age, and a soft
-   *  brake as population approaches the cap. */
+  /** Birth chance per agent: wealth × mid-life bell × soft population brake. */
   private reproductionPhase(livingIds: number[]): void {
     if (!this.reproduction) return;
 
@@ -664,7 +685,7 @@ export class Engine {
       const a = this.agents[id];
       if (!a.alive) continue;
 
-      // Triangular bell: peak fertility at mid-life, zero at the extremes.
+      // Bell curve: peak fertility mid-life, zero at the extremes.
       const ageNorm = a.maxAge > 0 ? a.age / a.maxAge : 0.5;
       const ageFactor = Math.max(0, 1 - Math.abs(ageNorm - 0.5) * 2.5);
       if (ageFactor <= 0) continue;
@@ -681,8 +702,7 @@ export class Engine {
     }
   }
 
-  /** Place a child near the parent. Inherits the parent's traits with
-   *  small drift; rare mutations resample from the configured mix. */
+  /** Place a child near the parent. Inherits with drift; rare mutations resample. */
   private bear(parent: Agent): void {
     let idx = this.findEmptyCellNear(parent.x, parent.y, parent.vision);
     if (idx < 0) idx = this.findEmptyCell();
@@ -718,6 +738,7 @@ export class Engine {
       boldness: 0.5,
       lastHoldings: parent.initialSugar + parent.initialSpice,
       shamedUntilTurn: 0,
+      favouredPartners: parent.favouredPartners.slice(-3),
     };
     this.agents.push(child);
     this.occupants[idx] = child.id;
@@ -743,7 +764,7 @@ export class Engine {
   }
 
   private regrow(stock: Float32Array, max: Float32Array, isSugar: boolean): void {
-    // Seasonal swing — regrowth between ~30% and ~170% of base over 60 turns.
+    // Regrowth swings ~30–170% over a 60-turn season.
     const SEASON_PERIOD = 60;
     const SEASON_AMPLITUDE = 0.7;
     const seasonal =
@@ -751,7 +772,7 @@ export class Engine {
     const blightActive = isSugar && this.turn < this.blightUntilTurn;
     const blightFactor = blightActive ? 0.4 : 1;
     const rate = this.regrowthRate * seasonal * blightFactor;
-    // Fallow (un-occupied) cells slowly recover their carrying capacity.
+    // Empty cells slowly recover carrying capacity toward pristine.
     const RECOVERY_RATE = 0.0008;
     const original = isSugar ? this.originalMaxCells : this.originalMaxSpice;
     for (let i = 0; i < stock.length; i++) {
@@ -767,14 +788,10 @@ export class Engine {
     }
   }
 
-  /** One synchronous cellular-automaton step over the substrate. Standing
-   *  resources diffuse to the four orthogonal neighbours (rich cells bleed
-   *  into exhausted ones), and each cell's fertility relaxes toward its
-   *  neighbours' — so worn ground spreads like desertification and fertile
-   *  land slowly reseeds the depleted cells beside it. Every cell is
-   *  computed from the *old* grid and written to a scratch buffer before
-   *  being committed, so the update is a true CA, not a sequential sweep.
-   *  No RNG is consumed, so the diffusion never shifts the agent stream. */
+  /** Substrate CA step: rich cells bleed into exhausted neighbours, and
+   *  each cell's fertility relaxes toward its neighbours' — desertification
+   *  and reseeding both spread. Written via scratch buffer so it's a true
+   *  CA, not a sequential sweep. Consumes no RNG. */
   private diffuseSubstrate(): void {
     this.diffuseStock(this.cells);
     this.diffuseStock(this.spice);
@@ -782,9 +799,7 @@ export class Engine {
     this.spreadFertility(this.maxSpice, this.originalMaxSpice);
   }
 
-  /** Conservative diffusion of a standing-resource grid. Reflecting (no-flux)
-   *  boundaries — edge cells simply have fewer neighbours — so total stock is
-   *  preserved exactly. */
+  /** Conservative diffusion with reflecting boundaries — total stock preserved. */
   private diffuseStock(stock: Float32Array): void {
     const w = this.width;
     const h = this.height;
@@ -804,11 +819,9 @@ export class Engine {
     stock.set(out);
   }
 
-  /** Relax each cell's fertility — its current ceiling as a fraction of its
-   *  pristine ceiling — toward the mean of its fertile neighbours'. Working
-   *  in fraction space keeps the landscape's underlying shape intact (a peak
-   *  stays a peak): only *depletion* spreads and heals, never the base relief.
-   *  Naturally barren cells (no pristine capacity) take no part. */
+  /** Pull each cell's fertility fraction (current / pristine) toward its
+   *  neighbours'. Fraction space keeps peaks as peaks — only depletion
+   *  travels. Naturally barren cells stay out. */
   private spreadFertility(max: Float32Array, original: Float32Array): void {
     const w = this.width;
     const h = this.height;
@@ -852,10 +865,10 @@ export class Engine {
     max.set(out);
   }
 
-  /** Blight risk grows with land degradation; plague risk grows with
-   *  density. Both depend on what the society has done, not on dice. */
+  /** Blight risk grows with degradation; plague risk with density.
+   *  Both gated on the society's own state, not a stochastic dice roll. */
   private rollShocks(): void {
-    // Quiet during the first 100 turns so the society can establish.
+    // Quiet grace period so the society can establish.
     if (this.turn < 100) return;
     if (this.turn < this.blightUntilTurn) return;
     if (this.turn - this.lastPlagueTurn < 60) return;
@@ -870,7 +883,7 @@ export class Engine {
         : 1;
     const degradation = Math.max(0, 1 - landRatio);
     const BLIGHT_BASE = 0.0005;
-    // Squared so mild degradation is almost harmless and severe is fatal.
+    // Squared: mild degradation harmless, severe degradation fatal.
     const blightRate = BLIGHT_BASE + 0.02 * Math.pow(degradation, 2);
 
     let alive = 0;
@@ -918,7 +931,7 @@ export class Engine {
     a.spice += spiceGain;
     this.cells[idx] = 0;
     this.spice[idx] = 0;
-    // Each harvest nibbles a small fraction off the cell's carrying capacity.
+    // Each harvest nibbles the cell's carrying capacity.
     if (this.originalMaxCells[idx] > 0 || this.originalMaxSpice[idx] > 0) {
       const DEGRADE_PER_HARVEST = 0.004;
       this.maxCells[idx] = Math.max(
@@ -932,10 +945,8 @@ export class Engine {
     }
   }
 
-  /** Movement rule depends on the agent's sophistication: greedy =
-   *  optimise over full vision; bounded = satisfice in a shorter horizon;
-   *  adaptive = vision depends on learned boldness; social = follow the
-   *  wealthiest neighbour. */
+  /** Move dispatch: greedy (full vision), satisfice (short horizon),
+   *  adaptive (vision × learned boldness), social (follow the richest). */
   private chooseTarget(a: Agent): { x: number; y: number } {
     switch (a.sophistication) {
       case "bounded_rational":
@@ -1011,15 +1022,15 @@ export class Engine {
     return { x: a.x, y: a.y };
   }
 
-  /** With probability `boldness` use full vision; otherwise just look 1
-   *  cell. Boldness is updated in `consume` based on whether holdings rose. */
+  /** With prob `boldness` use full vision, else look 1 cell. Boldness
+   *  is updated in `consume` from whether holdings rose. */
   private adaptiveMove(a: Agent): { x: number; y: number } {
     const vision = this.rng() < a.boldness ? a.vision : 1;
     return this.greedyMove(a, vision);
   }
 
-  /** Move one step toward the wealthiest visible neighbour; occasionally
-   *  copy their motivation. Falls back to greedy if nobody is richer. */
+  /** Step toward the richest visible neighbour; sometimes copy their
+   *  motivation. Falls back to greedy if nobody is richer. */
   private imitativeMove(a: Agent): { x: number; y: number } {
     let exemplar = -1;
     let exemplarWealth = holdings(a);
@@ -1094,17 +1105,21 @@ export class Engine {
   }
 
   private scoreCell(a: Agent, x: number, y: number): number {
-    const resources =
-      this.cells[y * this.width + x] + this.spice[y * this.width + x];
+    const idx = y * this.width + x;
+    const resources = this.cells[idx] + this.spice[idx];
+    const pristine =
+      this.originalMaxCells[idx] + this.originalMaxSpice[idx];
+    const fertility =
+      pristine > 0 ? (this.maxCells[idx] + this.maxSpice[idx]) / pristine : 1;
 
-    // Fast path: pure-greed agents ignore neighbours, so skip the scan.
+    // Fast path: pure-greed agents don't need the neighbour scan.
     const t = a.traits;
     if (
       t.prosociality < 0.05 &&
       t.dominance < 0.05 &&
       t.statusSeeking < 0.05
     ) {
-      return resources * (0.6 + 0.5 * t.greed);
+      return resources * (0.6 + 0.5 * t.greed) * (0.4 + 0.6 * fertility);
     }
 
     let count = 0;
@@ -1125,12 +1140,18 @@ export class Engine {
       }
     }
     const avgWealth = count > 0 ? totalWealth / count : 0;
-    return scoreCellByTraits(t, resources, count, avgWealth, holdings(a));
+    return scoreCellByTraits(
+      t,
+      resources,
+      count,
+      avgWealth,
+      holdings(a),
+      fertility,
+    );
   }
 
-  /** Every agent meets partners (chosen by the configured topology) and
-   *  trades spice for sugar whenever both come out ahead. The aggregate
-   *  of pairwise clearing prices is the emergent market price. */
+  /** Pairwise spice-for-sugar exchange. The aggregate of clearing prices
+   *  each turn is the emergent market price. */
   private tradePhase(): void {
     let logPriceSum = 0;
     let volume = 0;
@@ -1159,40 +1180,50 @@ export class Engine {
   private partnersFor(a: Agent): number[] {
     const out: number[] = [];
     if (this.topology === "random") {
-      // Random meetings: a few draws from the whole field.
       for (let i = 0; i < 4; i++) {
         const j = Math.floor(this.rng() * this.agents.length);
         const other = this.agents[j];
         if (other && other.alive && other.id !== a.id) out.push(other.id);
       }
-      return out;
+    } else {
+      const radius = this.topology === "network" ? Math.min(a.vision, 4) : 1;
+      for (let dy = -radius; dy <= radius; dy++) {
+        const ny = a.y + dy;
+        if (ny < 0 || ny >= this.height) continue;
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = a.x + dx;
+          if (nx < 0 || nx >= this.width) continue;
+          const occ = this.occupants[ny * this.width + nx];
+          if (occ !== -1 && occ !== a.id) out.push(occ);
+        }
+      }
     }
-    // Spatial = adjacent; network = within vision (further reach).
-    const radius = this.topology === "network" ? Math.min(a.vision, 4) : 1;
-    for (let dy = -radius; dy <= radius; dy++) {
-      const ny = a.y + dy;
-      if (ny < 0 || ny >= this.height) continue;
-      for (let dx = -radius; dx <= radius; dx++) {
-        if (dx === 0 && dy === 0) continue;
-        const nx = a.x + dx;
-        if (nx < 0 || nx >= this.width) continue;
-        const occ = this.occupants[ny * this.width + nx];
-        if (occ !== -1 && occ !== a.id) out.push(occ);
+    // Prepend one still-living favoured partner so copied taste in
+    // relationships actually bites against the raw topology.
+    for (let i = a.favouredPartners.length - 1; i >= 0; i--) {
+      const fid = a.favouredPartners[i];
+      const other = this.agents[fid];
+      if (other?.alive && !out.includes(fid)) {
+        out.unshift(fid);
+        break;
       }
     }
     return out;
   }
 
-  /** One spice-for-sugar exchange. Executes only if both sides end up
-   *  strictly better off. Returns the price (sugar per spice), or 0. */
   private tryTrade(a: Agent, b: Agent): number {
-    // A shamed partner: each party rolls their refuse-shamed probability.
     if (b.shamedUntilTurn > this.turn) {
       if (this.rng() < refuseShamedProbability(a.traits)) return 0;
     }
     if (a.shamedUntilTurn > this.turn) {
       if (this.rng() < refuseShamedProbability(b.traits)) return 0;
     }
+    // Peer-learned distrust: norm-followers act on it, defectors ignore it.
+    const distrustA = this.getDistrust(a.id, b.id);
+    const distrustB = this.getDistrust(b.id, a.id);
+    if (distrustA > 0 && this.rng() < distrustA * a.traits.prosociality) return 0;
+    if (distrustB > 0 && this.rng() < distrustB * b.traits.prosociality) return 0;
 
     const mrsA = mrs(a);
     const mrsB = mrs(b);
@@ -1209,11 +1240,10 @@ export class Engine {
 
     if (seller.spice <= spiceQty) return 0;
 
-    // Pick a payment mode. Tokens get *first* try whenever the buyer
-    // already holds third-party IOUs (use-them-or-lose-them: an issuer
-    // can default at any tick), and as a fallback when the buyer can't
-    // cover in sugar. The chosen plan's acceptance roll commits here
-    // but the actual token movement waits for the welfare check.
+    // Try tokens first if the buyer holds any (use-them-or-lose-them —
+    // issuers can default), or fall back to tokens if buyer is short on
+    // sugar. Acceptance rolls here; token movement waits for the Pareto
+    // check below.
     let tokenChoice:
       | { issuerId: number; trustworthiness: number; transfer: boolean }
       | null = null;
@@ -1224,9 +1254,8 @@ export class Engine {
     if (tryTokensFirst) {
       const proposal = this.chooseTokenPayment(buyer, seller, sugarQty);
       if (proposal) {
-        // Provisional take: the welfare check below decides. If the
-        // discounted value fails Pareto, we fall through to a normal
-        // sugar trade (when buyer can afford it).
+        // Provisional: if discounted value fails Pareto below, fall
+        // through to sugar trade (when buyer can afford it).
         const sellerValue = sugarQty * proposal.trustworthiness;
         const sellerBefore = welfare(seller.sugar, seller.spice, seller.sugarMetab, seller.spiceMetab);
         const sellerAfter = welfare(seller.sugar + sellerValue, seller.spice - spiceQty, seller.sugarMetab, seller.spiceMetab);
@@ -1257,8 +1286,7 @@ export class Engine {
     buyer.spice += spiceQty;
     seller.spice -= spiceQty;
 
-    // Cooperative dividend — scales with the pair's min prosociality and
-    // with their existing trust.
+    // Bonus scales with the pair's min prosociality plus existing trust.
     const trust = this.getTie(a.id, b.id);
     const trustBonus = (Math.min(trust, TIE_CAP) / TIE_CAP) * 0.05;
     const bonus = cooperativeBonus(a.traits, b.traits) + trustBonus;
@@ -1268,7 +1296,85 @@ export class Engine {
     }
 
     this.bumpTie(a.id, b.id);
+    this.rememberPartner(a, b.id);
+    this.rememberPartner(b, a.id);
     return price;
+  }
+
+  private rememberPartner(a: Agent, partnerId: number): void {
+    if (partnerId === a.id) return;
+    const idx = a.favouredPartners.indexOf(partnerId);
+    if (idx >= 0) a.favouredPartners.splice(idx, 1);
+    a.favouredPartners.push(partnerId);
+    if (a.favouredPartners.length > 6) a.favouredPartners.shift();
+  }
+
+  private getDistrust(witnessId: number, offenderId: number): number {
+    return this.distrust.get(witnessId)?.get(offenderId) ?? 0;
+  }
+
+  private bumpDistrust(witnessId: number, offenderId: number, w: number): void {
+    if (witnessId === offenderId) return;
+    let row = this.distrust.get(witnessId);
+    if (!row) {
+      row = new Map();
+      this.distrust.set(witnessId, row);
+    }
+    const next = Math.min(1, (row.get(offenderId) ?? 0) + w);
+    row.set(offenderId, next);
+  }
+
+  private getIssuerDistrust(witnessId: number, issuerId: number): number {
+    return this.issuerDistrust.get(witnessId)?.get(issuerId) ?? 0;
+  }
+
+  private bumpIssuerDistrust(
+    witnessId: number,
+    issuerId: number,
+    w: number,
+  ): void {
+    if (witnessId === issuerId) return;
+    let row = this.issuerDistrust.get(witnessId);
+    if (!row) {
+      row = new Map();
+      this.issuerDistrust.set(witnessId, row);
+    }
+    const next = Math.min(1, (row.get(issuerId) ?? 0) + w);
+    row.set(issuerId, next);
+  }
+
+  private decayReputations(): void {
+    const DISTRUST_DECAY = 0.98;
+    const DISTRUST_FLOOR = 0.05;
+    for (const [wit, row] of this.distrust) {
+      for (const [off, w] of row) {
+        const next = w * DISTRUST_DECAY;
+        if (next < DISTRUST_FLOOR) row.delete(off);
+        else row.set(off, next);
+      }
+      if (row.size === 0) this.distrust.delete(wit);
+    }
+    for (const [wit, row] of this.issuerDistrust) {
+      for (const [iss, w] of row) {
+        const next = w * DISTRUST_DECAY;
+        if (next < DISTRUST_FLOOR) row.delete(iss);
+        else row.set(iss, next);
+      }
+      if (row.size === 0) this.issuerDistrust.delete(wit);
+    }
+    for (const [id, n] of this.offenderNotoriety) {
+      const next = n * DISTRUST_DECAY;
+      if (next < DISTRUST_FLOOR) this.offenderNotoriety.delete(id);
+      else this.offenderNotoriety.set(id, next);
+    }
+  }
+
+  private scrubReputations(id: number): void {
+    this.distrust.delete(id);
+    this.issuerDistrust.delete(id);
+    this.offenderNotoriety.delete(id);
+    for (const row of this.distrust.values()) row.delete(id);
+    for (const row of this.issuerDistrust.values()) row.delete(id);
   }
 
   private bumpTie(idA: number, idB: number): void {
@@ -1283,14 +1389,14 @@ export class Engine {
     row.set(hi, next);
   }
 
-  /** Tie weight between two agents (0 if none). Doubles as a trust score. */
+  /** Tie weight for a pair (0 if none). Doubles as a trust score. */
   private getTie(idA: number, idB: number): number {
     const lo = idA < idB ? idA : idB;
     const hi = idA < idB ? idB : idA;
     return this.tiesMap.get(lo)?.get(hi) ?? 0;
   }
 
-  /** Erase the dyad's tie — used when coercion destroys trust. */
+  /** Erase the pair's tie — coercion destroys trust. */
   private crashTie(idA: number, idB: number): void {
     const lo = idA < idB ? idA : idB;
     const hi = idA < idB ? idB : idA;
@@ -1300,8 +1406,7 @@ export class Engine {
     if (row.size === 0) this.tiesMap.delete(lo);
   }
 
-  /** Credit `qty` of `issuer`'s tokens to `holder` and grow the issuer's
-   *  outstanding liability. */
+  /** Credit `qty` tokens to `holder` and grow issuer's liability. */
   private addToken(holderId: number, issuerId: number, qty: number): void {
     if (qty <= 0) return;
     let row = this.tokenHoldings.get(holderId);
@@ -1316,9 +1421,8 @@ export class Engine {
     );
   }
 
-  /** Debit `qty` of `issuer`'s tokens from `holder`. `retire` drops the
-   *  liability too — pass `false` when this is part of a transfer, since
-   *  the new holder will re-add it. */
+  /** Debit `qty` from `holder`. `retire` drops the issuer's liability
+   *  too; pass `false` for transfers (new holder re-adds it). */
   private removeToken(
     holderId: number,
     issuerId: number,
@@ -1344,7 +1448,7 @@ export class Engine {
     return true;
   }
 
-  /** 0..1 — collateral ratio (wealth ÷ liability) discounted by death risk. */
+  /** Wealth ÷ liability, discounted by the issuer's death risk. 0..1. */
   private trustworthiness(issuer: Agent): number {
     if (!issuer.alive) return 0;
     const wealth = issuer.sugar + issuer.spice;
@@ -1354,10 +1458,9 @@ export class Engine {
     return Math.max(0, Math.min(1, collateral)) * Math.max(0, survival);
   }
 
-  /** Pick a token plan the seller will accept. Returns null if every
-   *  option was refused. Preferred order: spend tokens already held;
-   *  print a fresh IOU only as last resort. The acceptance roll is
-   *  consumed here so the caller can preview welfare safely. */
+  /** Pick a token plan the seller accepts, or null. Prefers spending
+   *  held tokens; a fresh IOU is the last resort. Acceptance rolls here
+   *  so the caller can preview welfare safely. */
   private chooseTokenPayment(
     buyer: Agent,
     seller: Agent,
@@ -1400,10 +1503,12 @@ export class Engine {
 
     const trust = Math.min(1, this.getTie(buyer.id, seller.id) / TIE_CAP);
     for (const opt of options) {
+      const distrust = this.getIssuerDistrust(seller.id, opt.issuerId);
+      const effectiveTrustworthiness = opt.trustworthiness * (1 - distrust);
       const acceptProb = tokenAcceptanceProb(
         seller.traits,
         trust,
-        opt.trustworthiness,
+        effectiveTrustworthiness,
       );
       if (this.rng() >= acceptProb) continue;
       return opt;
@@ -1451,24 +1556,24 @@ export class Engine {
   }
 
   private killAgent(a: Agent): void {
-    // Bequeath holdings to trade-tie partners so wealth doesn't vanish
-    // every time a hoarder dies.
     if (this.inheritance) {
       this.bequeathToTies(a);
     }
     a.alive = false;
     this.occupants[a.y * this.width + a.x] = -1;
     this.scrubTies(a.id);
+    this.scrubReputations(a.id);
     this.dishonourTokens(a.id);
   }
 
-  /** All tokens this agent issued become worthless. Holders lose them. */
   private dishonourTokens(deadId: number): void {
     const outstanding = this.tokenLiability.get(deadId);
     if (outstanding === undefined) return;
+    const burnedHolders: number[] = [];
     for (const [holderId, row] of this.tokenHoldings) {
       const held = row.get(deadId);
       if (held === undefined) continue;
+      burnedHolders.push(holderId);
       row.delete(deadId);
       if (row.size === 0) this.tokenHoldings.delete(holderId);
     }
@@ -1477,19 +1582,28 @@ export class Engine {
       deadId,
       (this.tokenDefaultedLifetime.get(deadId) ?? 0) + outstanding,
     );
+    // Burned holders spread distrust onto every *other* issuer they hold,
+    // so a run doesn't need a second default to gather momentum.
+    for (const holderId of burnedHolders) {
+      const holder = this.agents[holderId];
+      if (!holder?.alive) continue;
+      const otherIssuers = this.tokenHoldings.get(holderId);
+      if (!otherIssuers) continue;
+      for (const iss of otherIssuers.keys()) {
+        this.bumpIssuerDistrust(holderId, iss, 0.35);
+      }
+    }
   }
 
-  /** Split the dying agent's wealth among its living tie partners,
-   *  weighted by tie strength. Only the *positive* part of each good is
-   *  bequeathed: a starved agent dies because one good ran below zero, and
-   *  that debt is not a thing heirs can inherit — passing it on would push
-   *  living agents negative, which then poisons `mrs`/price with NaNs. */
+  /** Split the dying agent's wealth among living tie partners weighted
+   *  by tie strength. Only the positive part is bequeathed — a starved
+   *  agent's negative balance would poison heirs' MRS/price with NaNs. */
   private bequeathToTies(a: Agent): void {
     const sugar = a.sugar > 0 ? a.sugar : 0;
     const spice = a.spice > 0 ? a.spice : 0;
     if (sugar + spice <= 0) return;
 
-    // Ties are stored once per (lo, hi) pair, so look in both directions.
+    // Ties store each pair once as (lo, hi) — look in both directions.
     const partners: { id: number; weight: number }[] = [];
     const lowMap = this.tiesMap.get(a.id);
     if (lowMap) {
@@ -1587,6 +1701,27 @@ export class Engine {
       }
     }
 
+    const tokens = this.tokenSnapshot();
+    const topIssuerMistrust = this.computeTopIssuerDistrust(
+      tokens.topIssuerId,
+      alive,
+    );
+    const BANK_RUN_THRESHOLD = 0.35;
+    const BANK_RUN_COOLDOWN = 60;
+    let bankRunActive = false;
+    if (
+      tokens.topIssuerId >= 0 &&
+      topIssuerMistrust >= BANK_RUN_THRESHOLD &&
+      this.turn - this.bankRunTurn > BANK_RUN_COOLDOWN
+    ) {
+      this.executeBankRun(tokens.topIssuerId);
+      this.bankRunTurn = this.turn;
+      this.bankRunIssuerId = tokens.topIssuerId;
+      bankRunActive = true;
+    } else if (this.turn === this.bankRunTurn) {
+      bankRunActive = true;
+    }
+
     return {
       turn: this.turn,
       alive,
@@ -1611,8 +1746,43 @@ export class Engine {
       plagueDeathsThisTurn:
         this.turn === this.lastPlagueTurn ? this.lastPlagueDeaths : 0,
       landDegradation: this.computeLandDegradation(),
-      ...this.tokenSnapshot(),
+      ...tokens,
+      topInfluencerId: this.lastInfluencerId,
+      topInfluencerCentrality: this.lastInfluencerCentrality,
+      topIssuerMistrust,
+      bankRunActive,
+      bankRunStartedTurn: this.bankRunTurn,
     };
+  }
+
+  /** A run on the biggest issuer: holders redeem what the issuer can
+   *  cover (out of its own sugar) and burn the rest. Credit collapses. */
+  private executeBankRun(issuerId: number): void {
+    const issuer = this.agents[issuerId];
+    if (!issuer?.alive) return;
+    const outstanding = this.tokenLiability.get(issuerId) ?? 0;
+    if (outstanding <= 0) return;
+
+    let redeemable = issuer.sugar * 0.7;
+    for (const [holderId, row] of this.tokenHoldings) {
+      const held = row.get(issuerId);
+      if (held === undefined) continue;
+      const holder = this.agents[holderId];
+      const pay = Math.min(held, redeemable);
+      if (holder?.alive && pay > 0) {
+        holder.sugar += pay;
+        issuer.sugar -= pay;
+        redeemable -= pay;
+      }
+      row.delete(issuerId);
+      if (row.size === 0) this.tokenHoldings.delete(holderId);
+      if (holder?.alive) this.bumpIssuerDistrust(holder.id, issuerId, 0.8);
+    }
+    this.tokenLiability.delete(issuerId);
+    this.tokenDefaultedLifetime.set(
+      issuerId,
+      (this.tokenDefaultedLifetime.get(issuerId) ?? 0) + outstanding,
+    );
   }
 
   private tokenSnapshot(): {
@@ -1632,7 +1802,7 @@ export class Engine {
         topId = issuerId;
       }
     }
-    // ≥3 distinct holders = the issuer's tokens have started to circulate.
+    // ≥3 distinct holders = the tokens have started circulating as money.
     const holdersPerIssuer = new Map<number, number>();
     for (const row of this.tokenHoldings.values()) {
       for (const issuerId of row.keys()) {
@@ -1661,11 +1831,54 @@ export class Engine {
     return Math.max(0, 1 - current / this.pristineLandTotal);
   }
 
+  private refreshInfluencer(): void {
+    if (this.tiesMap.size === 0) {
+      this.lastInfluencerId = -1;
+      this.lastInfluencerCentrality = 0;
+      return;
+    }
+    const inbound = new Map<number, number>();
+    const add = (id: number, w: number) => {
+      inbound.set(id, (inbound.get(id) ?? 0) + w);
+    };
+    for (const [lo, row] of this.tiesMap) {
+      for (const [hi, w] of row) {
+        add(lo, w);
+        add(hi, w);
+      }
+    }
+    let topId = -1;
+    let topW = 0;
+    for (const [id, w] of inbound) {
+      if (w > topW && this.agents[id]?.alive) {
+        topW = w;
+        topId = id;
+      }
+    }
+    this.lastInfluencerId = topId;
+    this.lastInfluencerCentrality = topW;
+  }
+
+  private computeTopIssuerDistrust(topIssuerId: number, alive: number): number {
+    if (topIssuerId < 0 || alive <= 0) return 0;
+    let sum = 0;
+    let n = 0;
+    for (const row of this.issuerDistrust.values()) {
+      const w = row.get(topIssuerId);
+      if (w !== undefined) {
+        sum += w;
+        n++;
+      }
+    }
+    if (n === 0) return 0;
+    return sum / alive;
+  }
+
   randomFloat(): number {
     return this.rng();
   }
 
-  /** Flat [idA, idB, weight, …] view of the trade-tie map. */
+  /** Flat [loId, hiId, weight, …] view of the tie map, for the worker. */
   get ties(): Float32Array {
     let count = 0;
     for (const row of this.tiesMap.values()) count += row.size;
@@ -1702,8 +1915,7 @@ function shuffle<T>(arr: T[], rng: () => number): void {
   }
 }
 
-/** Spatial sorting of motivation, 0..1. 0 = neighbours are a random draw
- *  of the population; 1 = agents sit only beside their own kind.
+/** Spatial sorting of motivation. 0 = fully mixed, 1 = fully sorted.
  *  Normalised against the random baseline Σpₘ². */
 function segregationIndex(
   samePairs: number,
@@ -1737,9 +1949,8 @@ function giniCoefficient(values: number[]): number {
   return (2 * weighted) / (n * total) - (n + 1) / n;
 }
 
-/** Lay down sugar and spice on the grid. The two goods peak in different
- *  places so settling anywhere means you're rich in one and short on the
- *  other — that's what makes trade worth doing. */
+/** Sugar and spice peak in different places so any settled agent is
+ *  rich in one and short on the other — the precondition for trade. */
 function buildLandscape(
   sugar: Float32Array,
   spice: Float32Array,
@@ -1891,14 +2102,13 @@ function spawnAgents(
   for (let i = 0; i < count; i++) {
     const p = positions[i];
     if (!p) continue;
-    // Uneven split so each agent starts rich in one good and short on the
-    // other — the precondition for trade.
+    // Uneven split — each agent starts rich in one, short on the other.
     const frac = 0.3 + rng() * 0.4;
     const sugar = Math.max(1, wealths[i] * frac);
     const spice = Math.max(1, wealths[i] * (1 - frac));
     const metabMean = physics.metabolism;
-    // Configured motivation seeds the trait centroid; the displayed label
-    // is then derived from the jittered trait vector.
+    // The chosen motivation seeds a trait centroid; the label is later
+    // derived back from the jittered vector.
     const seedMotivation = pickMotivation();
     const traits = sampleTraits(seedMotivation, rng);
     agents.push({
@@ -1923,12 +2133,12 @@ function spawnAgents(
       boldness: 0.5,
       lastHoldings: sugar + spice,
       shamedUntilTurn: 0,
+      favouredPartners: [],
     });
   }
 
-  // Stagger ages so the cohort is demographically mixed from turn one —
-  // otherwise everyone reaches fertility together and the breeding pool
-  // is mostly dead by then.
+  // Stagger ages so the cohort is demographically mixed from turn one.
+  // Otherwise everyone hits fertility together and the pool dies at once.
   for (const a of agents) {
     a.age = Math.floor(rng() * a.maxAge * 0.6);
   }

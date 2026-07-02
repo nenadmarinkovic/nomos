@@ -2,13 +2,8 @@ import type { AgentMotivation } from "@/lib/config";
 import type { EngineSnapshot } from "@/lib/engine";
 
 /**
- * Significant-event detection.
- *
- * The observers do not narrate every tick — that would be noise (and a Mistral
- * call per observer per tick). Instead we watch the macro metrics and surface
- * the handful of moments that actually mean something: a founding, a crash, a
- * surge in inequality, a collapse. Each detected event carries a factual
- * summary that becomes the raw material a theorist reads through their lens.
+ * Detect the handful of moments per run worth narrating — founding, crash,
+ * inequality surge, collapse — and hand the observer a factual summary.
  */
 
 export type EventKind =
@@ -30,19 +25,21 @@ export type EventKind =
   | "oligarchy"
   | "shock_blight"
   | "shock_plague"
+  | "leadership_emerges"
+  | "bank_run"
   | "passage";
 
 export interface MetricPoint {
   turn: number;
   alive: number;
   gini: number;
-  /** Emergent exchange rate this turn (sugar per spice), 0 if no trade. */
+  /** Sugar per spice this turn, 0 if no trade. */
   tradePrice: number;
-  /** Spatial assortativity of motivation, 0..1. */
+  /** Spatial sorting of motivation. 0 = mixed, 1 = fully sorted. */
   segregation: number;
-  /** Share (0..1) of living agents with no surviving trade tie. */
+  /** Share of living agents with no trade tie. */
   isolateShare: number;
-  /** Population share (0..1) per motivation at this point. */
+  /** Population share per motivation. */
   motivationShares: Record<AgentMotivation, number>;
 }
 
@@ -51,90 +48,71 @@ export interface EventMetrics {
   alive: number;
   gini: number;
   totalWealth: number;
-  /** Change in living population over the detection window. */
+  /** Change over the detection window. */
   deltaAlive: number;
-  /** Change in Gini over the detection window. */
   deltaGini: number;
-  /** Share of the living population sitting in the wealthiest bin (0..1). */
+  /** Living-population share in the wealthiest bin (0..1). */
   topWealthShare: number;
-  /** Emergent exchange rate this turn (sugar per spice), 0 if no trade. */
+  /** Sugar per spice this turn, 0 if no trade. */
   tradePrice: number;
-  /** Trades executed this turn. */
   tradeVolume: number;
-  /** Spatial assortativity of motivation, 0..1. */
   segregation: number;
-  /** Coercive seizures executed this turn. */
   coercionCount: number;
-  /** Coercions this turn that drew a community sanction. */
   shamingCount: number;
-  /** Share (0..1) of living agents trading with no one. */
   isolateShare: number;
   /** Motivation surging in a `motivation_shift`, if any. */
   risingMotivation?: AgentMotivation;
-  /** Its population share at the window's start and now (0..1). */
+  /** Its population share at window start and now (0..1). */
   motivationFrom?: number;
   motivationTo?: number;
-  /** Tokens currently in circulation across all holders (phase 6). */
   tokenSupply: number;
-  /** Issuers whose IOUs are held by ≥3 distinct agents — the threshold
-   *  past which we can talk about *emergent money* rather than bilateral credit. */
+  /** Issuers with ≥3 distinct holders — the money threshold. */
   circulatingIssuers: number;
-  /** Trades paid in tokens this turn. */
   tokenTradeVolume: number;
+  /** Inbound tie weight of the most-trusted agent. */
+  topInfluencerCentrality?: number;
+  /** Share of population distrusting the top issuer, 0..1. */
+  topIssuerMistrust?: number;
 }
 
 export interface SignificantEvent {
   id: string;
   turn: number;
   kind: EventKind;
-  /** Short human-readable label for the chronicle. */
+  /** Short label for the chronicle. */
   title: string;
-  /** Factual, theory-neutral description handed to the model. */
+  /** Theory-neutral facts handed to the model. */
   summary: string;
   severity: "minor" | "major";
   metrics: EventMetrics;
 }
 
 export interface DetectorState {
-  /** Highest living population seen so far this run. */
   peakAlive: number;
-  /** Turn of the last event we emitted, or null if none yet. */
   lastEventTurn: number | null;
-  /** Whether a market has already been announced this run. */
   marketFormed: boolean;
-  /** Hysteresis latch for segregation: false after a sorting event fires,
-   *  re-armed only once the index relaxes back below `SEGREGATION_REARM`, so
-   *  oscillation around the line doesn't refire every cooldown. */
+  /** Hysteresis latch — re-arms only when segregation dips below rearm. */
   segregationArmed: boolean;
-  /** First turn Gini stayed above the extreme threshold without dipping.
-   *  null while below the threshold. Used to fire `extreme_inequality` only
-   *  after a sustained period of high concentration. */
+  /** First turn Gini stayed above the extreme threshold. Null when below. */
   giniHighSince: number | null;
-  /** First turn top-decile wealth share stayed above the oligarchy threshold.
-   *  null while below. Used to fire `oligarchy` after sustained capture. */
+  /** First turn top-decile share stayed above the oligarchy threshold. */
   topShareHighSince: number | null;
-  /** Latches so a sustained-state event fires once, then re-arms only after
-   *  the underlying metric relaxes back below the rearm line. */
+  /** Sustained-state latches — fire once, re-arm on relaxation below rearm. */
   extremeInequalityArmed: boolean;
   oligarchyArmed: boolean;
-  /** Number of `passage` events fired consecutively (with no other event
-   *  kind in between). Cap on this so a stable world goes silent instead
-   *  of producing N rephrasings of the same fact. */
+  /** Consecutive heartbeat events. Capped so stable worlds go quiet. */
   consecutivePassages: number;
-  /** Per-event-kind last-fire turn, used by the per-kind cooldown table.
-   *  Some event kinds (coercion_wave, cooperation_thickens) need to fire
-   *  much less often than the global cooldown allows, otherwise they
-   *  dominate the chronicle and crowd everything else out. */
+  /** Per-kind last-fire turn — some kinds need longer cooldowns than global. */
   lastFireByKind: Partial<Record<EventKind, number>>;
+  /** Leadership latch — fires once, re-arms below `LEADERSHIP_REARM`. */
+  leadershipArmed: boolean;
 }
 
-/** Turns back we compare against when measuring change. */
+/** Turns back for delta measurements. */
 const WINDOW = 8;
 /** Minimum turns between non-founding events. */
 const COOLDOWN = 12;
-/** Per-kind cooldowns that override the global one upward. Without this,
- *  loud recurring events (coercion_wave) monopolise the chronicle and
- *  the user hears the same theorist on the same theme every 12 turns. */
+/** Longer cooldowns for kinds that would otherwise monopolise the chronicle. */
 const KIND_COOLDOWN: Partial<Record<EventKind, number>> = {
   coercion_wave: 60,
   cooperation_thickens: 60,
@@ -159,10 +137,12 @@ const TITLES: Record<EventKind, string> = {
   oligarchy: "An oligarchy consolidates",
   shock_blight: "Blight on the land",
   shock_plague: "Plague sweeps through",
+  leadership_emerges: "An anchor of trust appears",
+  bank_run: "The token loses its footing",
   passage: "The chronicle continues",
 };
 
-/** Human phrasing for each motivation, used in `motivation_shift` summaries. */
+/** Human phrasing per motivation, used in `motivation_shift` summaries. */
 const MOTIVATION_LABEL: Record<AgentMotivation, string> = {
   material: "material gain",
   symbolic: "status and display",
@@ -170,58 +150,45 @@ const MOTIVATION_LABEL: Record<AgentMotivation, string> = {
   power: "domination over others",
 };
 
-/** Turns of silence after which a heartbeat `passage` event fires regardless
- *  of whether anything notable happened. Keeps the chronicle alive during
- *  stable phases — observers comment on the current state instead of waiting
- *  for the next inflection. */
+/** Silence limit — after this many turns, a heartbeat `passage` fires. */
 const PASSAGE_INTERVAL = 30;
-/** Cap on consecutive passages. Past this, the heartbeat goes silent until
- *  a dynamic event fires, so the chronicle doesn't fill with 80 rephrasings
- *  of "the world is still at Gini 0.65." */
+/** Cap consecutive passages so a stable world eventually goes quiet. */
 const MAX_CONSECUTIVE_PASSAGES = 3;
 
-/** Trades per turn before we call it a genuine market rather than barter noise. */
+/** Trades per turn before "market" beats barter noise. */
 const MARKET_THRESHOLD = 12;
 
-/** Coercion telemetry. A wave is called when seizures in a single turn clear
- *  both an absolute floor and a per-capita rate, so it scales with population
- *  instead of firing constantly at city scale. Loosened so mid-run combat
- *  surfaces as a wave instead of staying invisible. */
+/** Coercion wave: needs both an absolute floor and a per-capita rate,
+ *  so city scale doesn't fire it constantly. */
 const COERCION_FLOOR = 3;
 const COERCION_RATE = 0.004;
 
-/** Segregation threshold. The index is noisy turn to turn, so we fire only
- *  when it crosses *up* through a genuinely notable level (having been below
- *  it at the window's start), not on every upward wobble. */
+/** Segregation hysteresis: fire only when crossing up through the line. */
 const SEGREGATION_LINE = 0.18;
 const SEGREGATION_REARM = 0.12;
 
-/** A motivation must gain at least this much population share over the window
- *  and reach at least this dominance for a takeover to register. */
+/** A motivation must grow this much and reach this share to count as a shift. */
 const MOTIVATION_SURGE = 0.05;
 
-/** Sustained-state detectors. These watch absolute levels, not deltas — so
- *  a society that has been at Gini 0.65 for thousands of turns *gets read*
- *  rather than disappearing behind the heartbeat. */
+/** Sustained-state levels — watch absolute values, not deltas, so a
+ *  long-lived Gini 0.65 gets read rather than buried by the heartbeat. */
 const EXTREME_INEQUALITY_LEVEL = 0.6;
 const EXTREME_INEQUALITY_REARM = 0.5;
 const OLIGARCHY_LEVEL = 0.8;
 const OLIGARCHY_REARM = 0.6;
-/** Turns of continuous high before a sustained-state event fires. ~30 sec at
- *  1× speed: long enough to mean "this is the new normal," short enough to
- *  fire reliably mid-run. */
+/** Turns above threshold before a sustained-state event fires (~30s at 1×). */
 const SUSTAINED_HIGH_DURATION = 80;
 const MOTIVATION_DOMINANCE = 0.4;
 
-/** Isolation must climb this much over the window, to at least this level,
- *  before we call the trade web fractured. */
+/** Isolation surge required to call the trade web fractured. */
 const ISOLATE_SURGE = 0.15;
 const ISOLATE_LEVEL = 0.4;
 
-/**
- * Inspect the latest snapshot against recent history and return a single
- * significant event, or `null` if nothing notable happened this turn.
- */
+/** Leadership signal: absolute tie-weight (engine TIE_CAP = 8). */
+const LEADERSHIP_LEVEL = 24;
+const LEADERSHIP_REARM = 14;
+
+/** Return a significant event this turn, or null. */
 export function detectEvent(
   snapshot: EngineSnapshot,
   history: MetricPoint[],
@@ -232,7 +199,7 @@ export function detectEvent(
   const topWealthShare =
     total > 0 ? wealthBins[wealthBins.length - 1] / total : 0;
 
-  // The founding: emitted once, before anything has happened.
+  // Founding — fires once, before anything has happened.
   if (turn === 0) {
     return makeEvent("founding", "major", snapshot, {
       deltaAlive: 0,
@@ -241,7 +208,6 @@ export function detectEvent(
     });
   }
 
-  // Reference point ~WINDOW turns back for measuring change.
   const ref = referencePoint(history, turn);
   if (!ref) return null;
 
@@ -249,8 +215,6 @@ export function detectEvent(
     return null;
   }
 
-  // Per-kind throttle that overrides the global cooldown upward. Wraps
-  // the existing `makeEvent` returns below.
   const respectsKindCooldown = (kind: EventKind): boolean => {
     const limit = KIND_COOLDOWN[kind];
     if (limit === undefined) return true;
@@ -263,10 +227,7 @@ export function detectEvent(
   const alivePct = ref.alive > 0 ? deltaAlive / ref.alive : 0;
   const shared = { deltaAlive, deltaGini, topWealthShare };
 
-  // Exogenous shocks take priority — they're the engine handing the
-  // observers a moment of "something is happening to us, not by us."
-  // The seenRef dedup in the caller handles "same plague, same turn" so
-  // we don't need a separate latch here.
+  // Shocks first — the seenRef dedup in the caller handles same-turn repeats.
   if ((snapshot.plagueDeathsThisTurn ?? 0) > 0) {
     return makeEvent("shock_plague", "major", snapshot, {
       ...shared,
@@ -277,13 +238,13 @@ export function detectEvent(
     return makeEvent("shock_blight", "major", snapshot, shared);
   }
 
-  // The first time trade thickens into a real market.
+  // First time trade thickens into a real market.
   if (!state.marketFormed && tradeVolume >= MARKET_THRESHOLD) {
     state.marketFormed = true;
     return makeEvent("market_forming", "major", snapshot, shared);
   }
 
-  // Collapse takes priority: the society is all but gone.
+  // Collapse: the society is all but gone.
   if (state.peakAlive > 20 && alive <= state.peakAlive * 0.18) {
     return makeEvent("collapse", "major", snapshot, shared);
   }
@@ -296,12 +257,12 @@ export function detectEvent(
     return makeEvent("inequality_surge", "major", snapshot, shared);
   }
 
-  // Crossing the 0.5 Gini line is a qualitative threshold of its own.
+  // Crossing Gini 0.5 is a qualitative threshold.
   if (ref.gini < 0.5 && gini >= 0.5) {
     return makeEvent("stratification", "major", snapshot, shared);
   }
 
-  // A sharp swing in the exchange rate, once a market is actually running.
+  // Sharp exchange-rate swing while a market is running.
   if (
     state.marketFormed &&
     tradeVolume >= MARKET_THRESHOLD / 2 &&
@@ -322,12 +283,9 @@ export function detectEvent(
     return makeEvent("population_boom", "minor", snapshot, shared);
   }
 
-  // Cooperation thickening — fire when tokens have started to circulate
-  // (≥1 issuer held by 3+ agents) OR when most of this turn's predation
-  // drew a sanction. Throttled by the per-kind 60-turn cooldown only —
-  // the previous hysteresis latch fired once and never re-armed under
-  // a sustained cooperative regime, which made the event ironically
-  // invisible exactly when cooperation was holding.
+  // Cooperation thickening: money circulating, or most predation sanctioned.
+  // Per-kind cooldown only — a hysteresis latch here would go silent under
+  // sustained cooperation, exactly when it should be firing.
   const circulating = snapshot.circulatingIssuers ?? 0;
   const sanctioned =
     (snapshot.coercionCount ?? 0) >= 3 &&
@@ -339,9 +297,8 @@ export function detectEvent(
     return makeEvent("cooperation_thickens", "major", snapshot, shared);
   }
 
-  // A burst of predation this turn — major when the community sanctioned
-  // the aggressors. Throttled per-kind so it doesn't crowd out the rest
-  // of the chronicle in a violent stretch.
+  // Predation burst — major when sanctioned. Per-kind cooldown so a
+  // violent stretch doesn't crowd the chronicle.
   const coercionFloor = Math.max(
     COERCION_FLOOR,
     Math.round(alive * COERCION_RATE),
@@ -358,9 +315,8 @@ export function detectEvent(
     );
   }
 
-  // Spatial sorting — agents crossing up into a notably clustered regime.
-  // Latched so a society hovering near the line reports the transition once,
-  // not on every cooldown; re-arms when it relaxes back below the lower band.
+  // Spatial sorting — up-crossing only, latched so an oscillating index
+  // doesn't refire every cooldown.
   const seg = snapshot.segregation ?? 0;
   const refSeg = ref.segregation ?? 0;
   if (seg < SEGREGATION_REARM) state.segregationArmed = true;
@@ -373,9 +329,8 @@ export function detectEvent(
     return makeEvent("segregation", "minor", snapshot, shared);
   }
 
-  // Cultural takeover — one motivation's population share has surged. Reads
-  // cultural transmission and imitation, which are otherwise invisible to the
-  // macro metrics.
+  // Cultural takeover — one motivation's share surging. Otherwise invisible
+  // to the macro metrics.
   const shift = detectMotivationShift(snapshot, ref);
   if (shift) {
     return makeEvent("motivation_shift", "minor", snapshot, {
@@ -384,8 +339,7 @@ export function detectEvent(
     });
   }
 
-  // The trade web frays — isolation climbing as ties decay faster than they
-  // form. Granovetter's structure dissolving.
+  // Trade web frays — isolation climbing as ties decay faster than they form.
   const refIso = ref.isolateShare ?? snapshot.isolateShare ?? 0;
   if (
     (snapshot.isolateShare ?? 0) - refIso >= ISOLATE_SURGE &&
@@ -394,12 +348,21 @@ export function detectEvent(
     return makeEvent("network_fracture", "minor", snapshot, shared);
   }
 
-  // --- Sustained-state detectors. Fire when a metric has *been* extreme for
-  // long enough, even if it's no longer changing. Each uses a hysteresis
-  // latch so the event fires once, then re-arms only when the metric relaxes
-  // back below the rearm line. This is what was missing for late-run reads:
-  // when a society sits at Gini 0.65 for 3,000 turns, *that fact* should be
-  // surfaced, not buried under generic passage heartbeats.
+  // Bank run — the engine sets `bankRunActive` only on the firing turn.
+  if (snapshot.bankRunActive && snapshot.bankRunStartedTurn === turn) {
+    return makeEvent("bank_run", "major", snapshot, shared);
+  }
+
+  // Emergent leadership — one node's incoming trust weight dominates.
+  const centrality = snapshot.topInfluencerCentrality ?? 0;
+  if (centrality < LEADERSHIP_REARM) state.leadershipArmed = true;
+  if (state.leadershipArmed && centrality >= LEADERSHIP_LEVEL) {
+    state.leadershipArmed = false;
+    return makeEvent("leadership_emerges", "minor", snapshot, shared);
+  }
+
+  // Sustained-state detectors — fire on *level*, not delta, so a long-lived
+  // regime like Gini 0.65 gets read once instead of hiding behind passages.
   if (gini >= EXTREME_INEQUALITY_LEVEL) {
     if (state.giniHighSince === null) state.giniHighSince = turn;
     if (
@@ -430,9 +393,7 @@ export function detectEvent(
     if (topWealthShare <= OLIGARCHY_REARM) state.oligarchyArmed = true;
   }
 
-  // Heartbeat — passage events only fire if we haven't been emitting them in
-  // a row. After MAX_CONSECUTIVE_PASSAGES, the chronicle goes silent until
-  // a real dynamic event happens.
+  // Heartbeat, capped so a stable world eventually goes quiet.
   if (
     state.lastEventTurn !== null &&
     turn - state.lastEventTurn >= PASSAGE_INTERVAL &&
@@ -444,12 +405,8 @@ export function detectEvent(
   return null;
 }
 
-/**
- * Detect whether a single motivation has captured a meaningful slice of the
- * population over the detection window. Compares each motivation's current
- * share against its share at the reference point and returns the strongest
- * riser that also clears the surge and dominance thresholds, or null.
- */
+/** Strongest motivation riser over the window that also clears the surge
+ *  and dominance thresholds, or null. */
 function detectMotivationShift(
   snapshot: EngineSnapshot,
   ref: MetricPoint,
@@ -488,7 +445,7 @@ function referencePoint(
     if (p.turn <= targetTurn) ref = p;
     else break;
   }
-  // Fall back to the oldest point we have if the window predates the run.
+  // Oldest point if the window predates the run.
   return ref ?? history[0];
 }
 
@@ -518,6 +475,8 @@ function makeEvent(
     tokenSupply: snapshot.tokenSupply ?? 0,
     circulatingIssuers: snapshot.circulatingIssuers ?? 0,
     tokenTradeVolume: snapshot.tokenTradeVolume ?? 0,
+    topInfluencerCentrality: snapshot.topInfluencerCentrality ?? 0,
+    topIssuerMistrust: snapshot.topIssuerMistrust ?? 0,
     ...partial,
   };
   return {
@@ -607,9 +566,17 @@ function summarize(kind: EventKind, m: EventMetrics): string {
     case "oligarchy":
       return `By turn ${m.turn} the top wealth tier has held more than 80% of the population's standing for a sustained period (now ${topPct}%). A small elite has consolidated; the rest of the ${alive} living agents share the remainder. Gini sits at ${gini}.`;
     case "shock_blight":
-      return `At turn ${m.turn} a blight has fallen on the land: sugar regrowth has been cut sharply for a stretch. ${alive} agents are alive; Gini ${gini}. The lean about to fall on the population is exogenous — not produced by the society's own choices but by the substrate beneath it.`;
+      return `At turn ${m.turn} a blight has fallen on the land: sugar regrowth has been cut sharply for a stretch. ${alive} agents are alive; Gini ${gini}. Its likelihood rose with how heavily the population had already worked the land — the substrate is answering the pressure.`;
     case "shock_plague":
       return `At turn ${m.turn} a wave of mortality sweeps the population: ${dAlive} agents died at random in a single turn, leaving ${alive} alive. Gini sits at ${gini}. This is not famine or starvation — it is contingency, the world reminding the society that it is not its own master.`;
+    case "leadership_emerges": {
+      const c = (m.topInfluencerCentrality ?? 0).toFixed(1);
+      return `By turn ${m.turn} a single agent has accumulated more incoming trust than anyone else — total tie-weight ${c} — without holding any assigned office. Around this anchor, cooperation runs faster; ${alive} agents are alive, Gini ${gini}. It is a role produced by exchange, not conferred on it.`;
+    }
+    case "bank_run": {
+      const share = Math.round((m.topIssuerMistrust ?? 0) * 100);
+      return `At turn ${m.turn} confidence in the largest issuer's tokens collapses: ${share}% of the population has come to distrust them, and holders liquidate what they can. The IOUs that circulated as money moments ago cease to. ${alive} agents are alive, Gini ${gini}.`;
+    }
   }
 }
 

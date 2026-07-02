@@ -45,10 +45,9 @@ const MOTIVATION_COLOR_HEX: Record<string, number> = {
 const MOTIVATION_KEYS = ["material", "symbolic", "normative", "power"] as const;
 type MotivationKey = (typeof MOTIVATION_KEYS)[number];
 
-/** Pixi WebGL field renderer. Each alive agent is a motivation-coloured
- *  sprite (batched by Pixi); the resource grid is an off-screen Canvas2D
- *  blitted to a single GPU sprite each tick; selection is a Graphics
- *  layer with a pulsing two-pass ring. */
+/** Pixi WebGL field renderer. Agents are motivation-coloured sprites
+ *  (batched by Pixi); resources are an off-screen Canvas2D blitted to
+ *  one GPU sprite; selection is a Graphics layer with a pulsing ring. */
 export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -57,21 +56,17 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const agentLayerRef = useRef<Container | null>(null);
   const spritesRef = useRef<Map<number, Sprite>>(new Map());
   const texturesRef = useRef<Record<MotivationKey, Texture> | null>(null);
-  /** Selection overlay — vision lines + a two-pass ring with a subtle
-   *  pulsing alpha for a "live" feel that C2D's static ring doesn't have. */
+  /** Selection: vision lines + a two-pass ring with pulsing alpha. */
   const selectionLayerRef = useRef<Graphics | null>(null);
-  // The resource layer: an off-screen Canvas2D we redraw each tick, plus
-  // a single Pixi Sprite that wraps it as a texture. One draw call for
-  // ≤12k cells, with sharp pixels at any zoom.
+  // Resource layer: off-screen Canvas2D redrawn each tick, wrapped as one
+  // Pixi Sprite. One draw call for ≤12k cells, crisp at any zoom.
   const resourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const resourceTextureRef = useRef<Texture | null>(null);
   const resourceSpriteRef = useRef<Sprite | null>(null);
   const lastResourceTurnRef = useRef<number>(-1);
   const rafRef = useRef<number | null>(null);
-  // Canvas size: React state drives both the host's inline pixel dims
-  // (mirroring the Canvas2D path that's known to lay out correctly) and
-  // the Pixi renderer. The ref mirrors the same value so async callbacks
-  // (init().then) can read the latest without a stale closure.
+  // Size state drives both the host's inline dims and the Pixi renderer.
+  // The ref mirrors it so async callbacks avoid a stale closure.
   const [size, setSize] = useState({ width: 0, height: 0 });
   const currentSizeRef = useRef({ width: 0, height: 0 });
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -128,26 +123,19 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     const world = activeWorldRef.current;
     if (!app || !layer || !textures || !world) return;
 
-    // In Pixi v8, `renderer.width/height` are already CSS-space dimensions
-    // (the values passed to `resize()`); the framebuffer attribute is
-    // separately scaled by `resolution`. Dividing again here was the
-    // bug that made all content render at half size in the top-left
-    // quarter on retina displays.
+    // Pixi v8: renderer.width/height are CSS-space. Don't divide by dpr again.
     const W = app.renderer.width;
     const H = app.renderer.height;
     const cellW = W / world.width;
     const cellH = H / world.height;
     const shapeSize = Math.min(cellW, cellH);
-    // Floor at 6 CSS pixels so agents stay legible even at city scale,
-    // where each cell on a typical viewport is only ~9 px wide.
+    // 6px floor so agents stay legible at city scale (~9px cells).
     const agentSize = Math.max(shapeSize * 0.78, 6);
     const ease = easeInOutCubic(progress);
 
-    // Resource layer — only repaint when the world's turn has changed.
-    // The off-screen canvas is sized at framebuffer resolution (CSS × dpr)
-    // and drawn at that scale so retina displays render sharp; the Pixi
-    // sprite stays at CSS-pixel dimensions, so Pixi 1:1-maps texture
-    // pixels to framebuffer pixels.
+    // Resource layer — repaint only when the world's turn changes.
+    // Off-screen canvas is sized at framebuffer resolution (CSS × dpr)
+    // so retina displays render sharp.
     const resourceCanvas = resourceCanvasRef.current;
     const resourceSprite = resourceSpriteRef.current;
     let resourceTexture = resourceTextureRef.current;
@@ -158,10 +146,8 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       if (resourceCanvas.width !== bufW || resourceCanvas.height !== bufH) {
         resourceCanvas.width = bufW;
         resourceCanvas.height = bufH;
-        // Recreate the texture entirely so UVs match the new canvas
-        // dimensions. The old source/texture is destroyed; the new one
-        // is built via explicit constructors (not `Texture.from`) so
-        // Pixi's texture cache can't hand us back a stale entry.
+        // Recreate the texture so UVs match the new canvas. Explicit
+        // constructor (not `Texture.from`) avoids a stale cache hit.
         const oldTexture = resourceTexture;
         const newTexture = new Texture({
           source: new CanvasSource({ resource: resourceCanvas }),
@@ -237,10 +223,8 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       s.y = iy * cellH + cellH / 2;
       const scale = agentSize / 64;
       s.scale.set(scale);
-      // Wealth-based brightness. Broke agents dim toward α=0.45, rich
-      // agents stay at full brightness. The sqrt mapping handles the
-      // long-tail wealth distribution: most agents sit in the middle
-      // band, a few outliers anchor the "fully bright" reading.
+      // Wealth-based brightness. Sqrt mapping handles the long-tail wealth
+      // distribution so most agents don't collapse to a single dim band.
       const wealth = a.sugar + a.spice;
       const safeWealth = Number.isFinite(wealth) && wealth > 0 ? wealth : 0;
       s.alpha = 0.45 + 0.55 * Math.min(1, Math.sqrt(safeWealth / 30));
@@ -266,8 +250,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
           const cx = ax * cellW + cellW / 2;
           const cy = ay * cellH + cellH / 2;
 
-          // Vision lines — to every visible neighbour. Drawn first so the
-          // selection ring overlaps them at the centre.
+          // Vision lines drawn first so the ring sits on top at the centre.
           const lineWidth = Math.max(0.8, shapeSize * 0.06);
           for (let dy = -a.vision; dy <= a.vision; dy++) {
             const ny = a.y + dy;
@@ -291,9 +274,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
             }
           }
 
-          // Two-pass ring with breathing alpha. The outer halo stays
-          // steady; the inner ring pulses slowly so the selection feels
-          // alive without distracting from the agents.
+          // Steady outer halo + slow-pulsing inner ring.
           const r = Math.max(shapeSize * 0.9, 8);
           const t = performance.now() / 1000;
           const pulse = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2.4));
@@ -330,16 +311,15 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     return () => ro.disconnect();
   }, [setCanvasSize]);
 
-  // Bootstrap the Pixi Application. We measure the container synchronously
-  // BEFORE calling init() so Pixi starts at the right size — no race
-  // between init() resolving and a later resize call.
+  // Bootstrap Pixi. Measure synchronously before init() so it starts at
+  // the right size — no race with a later ResizeObserver callback.
   useEffect(() => {
     const host = hostRef.current;
     const container = containerRef.current;
     if (!host || !container) return;
     let cancelled = false;
 
-    // Synchronous measurement — forces layout, gives real dims.
+    // Sync measurement — forces layout, gives real dims.
     const r0 = container.getBoundingClientRect();
     const initW = Math.max(1, Math.round(r0.width));
     const initH = Math.max(1, Math.round(r0.height));
@@ -358,20 +338,16 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       })
       .then(() => {
         if (cancelled) {
-          // Strict-mode mount/unmount race: init finished after cleanup ran.
+          // Strict-mode race: init finished after cleanup ran.
           app.destroy(true, { children: true });
           return;
         }
-        // Apply CSS dimensions explicitly. Pixi sets the framebuffer
-        // attributes; we set the display CSS so the canvas fills the host.
+        // Pixi handles the framebuffer; we set CSS so the canvas fills the host.
         app.canvas.style.cssText = `position: absolute; left: 0; top: 0; display: block; width: ${initW}px; height: ${initH}px;`;
         host.appendChild(app.canvas);
         const stage = new Container();
-        // Resource layer first (below agents). The sprite's texture is
-        // an off-screen canvas we paint per tick; one Pixi draw call.
-        // Initial canvas is sized to the framebuffer right away so the
-        // first texture has correct UVs — `Texture.from(canvas)` reads
-        // the canvas dimensions at creation time and caches them.
+        // Size the initial resource canvas to the framebuffer so the first
+        // texture has correct UVs.
         const dprNow = app.renderer.resolution || 1;
         const initBufW = Math.max(2, Math.round(initW * dprNow));
         const initBufH = Math.max(2, Math.round(initH * dprNow));
@@ -385,7 +361,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         stage.addChild(resourceSprite);
         const agents = new Container();
         stage.addChild(agents);
-        // Selection overlay sits above agents so the ring isn't occluded.
+        // Selection above agents so the ring isn't occluded.
         const selectionLayer = new Graphics();
         stage.addChild(selectionLayer);
         app.stage.addChild(stage);
@@ -397,9 +373,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         resourceTextureRef.current = resourceTexture;
         resourceSpriteRef.current = resourceSprite;
         appRef.current = app;
-        // If the container has been resized between measurement and now
-        // (e.g., RO fired with a different size during the async init),
-        // catch up to the latest dims.
+        // Catch up if the container resized during async init.
         const s = currentSizeRef.current;
         if (s.width !== initW || s.height !== initH) {
           app.canvas.style.width = `${s.width}px`;
@@ -415,10 +389,9 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
       sprites.clear();
-      // Only destroy if appRef.current is populated — that flag is only
-      // set after init resolves, so this avoids the half-init crash
-      // (`this._cancelResize is not a function`). When init is still
-      // pending the then() above will destroy the app itself.
+      // Only destroy after init resolves — otherwise Pixi throws
+      // `this._cancelResize is not a function`. The pending init cleans
+      // up itself via `cancelled` in the then() above.
       if (appRef.current) {
         appRef.current.destroy(true, { children: true });
         appRef.current = null;
@@ -432,8 +405,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       resourceCanvasRef.current = null;
       lastResourceTurnRef.current = -1;
     };
-    // `paint` is stable (useCallback with []), so including it doesn't
-    // re-trigger Pixi init on every render.
+    // `paint` is stable, so including it doesn't re-trigger init.
   }, [paint]);
 
   // Drive Pixi's renderer from React state. Runs whenever size changes
@@ -449,8 +421,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     paint(1);
   }, [size, paint]);
 
-  // Repaint on every fresh tick when not running (paused), and on
-  // selection change so the ring updates immediately even while paused.
+  // Paused repaint on tick or selection change so the ring stays live.
   useEffect(() => {
     void turn;
     void selectedId;
@@ -576,10 +547,8 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   );
 }
 
-/** Pre-render each motivation's shape into a 64×64 RenderTexture once.
- *  Sprites then scale these to fit the current cell. Phase B will swap the
- *  filled-circle placeholders for the proper square/circle/triangle/diamond
- *  per motivation. */
+/** Pre-render each motivation shape once into a 64×64 texture; sprites
+ *  scale it to the current cell at render time. */
 function buildMotivationTextures(
   app: Application,
 ): Record<MotivationKey, Texture> {
@@ -595,9 +564,8 @@ function buildMotivationTextures(
   return out;
 }
 
-/** Draw the canonical motivation shape into a Graphics, centred in a 64×64
- *  box. The size argument is the *target* footprint; sprites scale this
- *  texture to fit the current cell at render time. */
+/** material=square, symbolic=circle, normative=triangle, power=diamond.
+ *  Centred in a 64×64 box for the pre-rendered texture. */
 function drawShape(g: Graphics, motivation: MotivationKey, color: number) {
   const cx = 32;
   const cy = 32;

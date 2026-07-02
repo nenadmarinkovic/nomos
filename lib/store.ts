@@ -35,6 +35,11 @@ const EMPTY_SNAPSHOT: EngineSnapshot = {
   topIssuerId: -1,
   topIssuerLiability: 0,
   circulatingIssuers: 0,
+  topInfluencerId: -1,
+  topInfluencerCentrality: 0,
+  topIssuerMistrust: 0,
+  bankRunActive: false,
+  bankRunStartedTurn: -9999,
 };
 
 export interface HistoryPoint {
@@ -42,6 +47,8 @@ export interface HistoryPoint {
   alive: number;
   gini: number;
   tradePrice: number;
+  tokenSupply: number;
+  circulatingIssuers: number;
   motivationCounts: {
     material: number;
     symbolic: number;
@@ -60,14 +67,13 @@ export type ViewKey =
   | "price"
   | "stream"
   | "narrator"
+  | "money"
   | "network";
 
 export type WindowAnchor = "tl" | "tr" | "bl" | "br";
 
-/** Window positions are stored as offsets from an anchored corner so they
- * follow the container when it reflows — sidebar collapse, viewport resize,
- * or DPR changes can't shake a top-right window loose from the top-right
- * corner. Offsets are measured from the anchored edges, not the origin. */
+/** Offsets from an anchored corner so windows follow container reflow
+ *  (sidebar collapse, resize) instead of drifting from their corner. */
 export interface WindowPosition {
   anchor: WindowAnchor;
   offsetX: number;
@@ -76,11 +82,8 @@ export interface WindowPosition {
 
 export const WIN_WIDTH = 288;
 
-/** Measured rendered heights, used so the default-stack and align-stack
- * produce the same visual gap horizontally and vertically. Chart windows
- * (header 37 + body 145) are ~182px; the stream legend adds ~20px; the
- * narrator is pinned to the chart height via min-h so it stays predictable
- * regardless of how long the latest reading is. */
+/** Measured heights. Chart windows ≈182px (header 37 + body 145),
+ *  stream adds a legend, network is the tallest. */
 export const WIN_HEIGHTS: Record<ViewKey, number> = {
   gini: 182,
   alive: 182,
@@ -88,6 +91,7 @@ export const WIN_HEIGHTS: Record<ViewKey, number> = {
   price: 182,
   stream: 202,
   narrator: 182,
+  money: 182,
   network: 380,
 };
 
@@ -98,7 +102,8 @@ export const DEFAULT_WINDOW_POSITIONS: Record<ViewKey, WindowPosition> = {
   alive: { anchor: "tr", offsetX: 10, offsetY: 586 },
   wealth: { anchor: "tl", offsetX: 10, offsetY: 10 },
   stream: { anchor: "tl", offsetX: 10, offsetY: 202 },
-  network: { anchor: "tl", offsetX: 10, offsetY: 394 },
+  money: { anchor: "tl", offsetX: 10, offsetY: 394 },
+  network: { anchor: "tl", offsetX: 10, offsetY: 596 },
 };
 
 export function resolveWindowPosition(
@@ -117,8 +122,7 @@ export function resolveWindowPosition(
     pos.anchor === "bl" || pos.anchor === "br"
       ? H - winH - pos.offsetY
       : pos.offsetY;
-  // Keep at least a sliver of the window on-screen so a too-small container
-  // can't push it fully outside the draggable surface.
+  // Keep at least a sliver on-screen so tiny containers can't lose windows.
   return {
     x: Math.max(0, Math.min(Math.max(0, W - 40), x)),
     y: Math.max(0, Math.min(Math.max(0, H - 40), y)),
@@ -193,6 +197,7 @@ export const useSimulationStore = create<SimulationState>()(
         price: false,
         stream: false,
         narrator: true,
+        money: false,
         network: false,
       },
       windowPositions: DEFAULT_WINDOW_POSITIONS,
@@ -210,8 +215,7 @@ export const useSimulationStore = create<SimulationState>()(
         })),
       replayRun: (config) =>
         set((s) => ({
-          // Keep the saved seed: the engine is deterministic, so the run
-          // unfolds exactly as it did when it was saved.
+          // Keep the saved seed — engine is deterministic, replay is exact.
           config,
           running: true,
           started: true,
@@ -258,6 +262,7 @@ export const useSimulationStore = create<SimulationState>()(
             "price",
             "stream",
             "narrator",
+            "money",
             "network",
           ];
           const visible = order.filter((k) => s.views[k]);
@@ -266,8 +271,7 @@ export const useSimulationStore = create<SimulationState>()(
 
           const cols = visible.length <= 2 ? 1 : 2;
 
-          // Row-major assignment: window i goes to column i % cols.
-          // Each column stacks independently using actual heights.
+          // Row-major: window i → column i%cols. Columns stack independently.
           const columns: ViewKey[][] = Array.from({ length: cols }, () => []);
           visible.forEach((key, i) => {
             const col = i % cols;
@@ -276,9 +280,7 @@ export const useSimulationStore = create<SimulationState>()(
 
           const positions = { ...s.windowPositions };
 
-          // With anchor-relative offsets, the only thing that flips with the
-          // corner choice is the anchor itself — the math is identical for
-          // all four corners (distance from the anchored edges).
+          // Same math for all corners — only the anchor flips.
           columns.forEach((colKeys, colIdx) => {
             const offsetX = margin + colIdx * (WIN_WIDTH + gap);
             let offsetY = margin;
@@ -300,6 +302,8 @@ export const useSimulationStore = create<SimulationState>()(
             alive: snapshot.alive,
             gini: snapshot.gini,
             tradePrice: snapshot.tradePrice,
+            tokenSupply: snapshot.tokenSupply,
+            circulatingIssuers: snapshot.circulatingIssuers,
             motivationCounts: snapshot.motivationCounts,
           });
           return { snapshot, turn: snapshot.turn, history: next };
@@ -307,9 +311,7 @@ export const useSimulationStore = create<SimulationState>()(
       openNarrations: (event, observers) =>
         set((s) => {
           const now = Date.now();
-          // Idempotent on `key`: dev's strict-mode double-mount and any
-          // future race condition both call this with the same event +
-          // observer set. Skip pairs we've already opened.
+          // Idempotent on `key` — safe under strict-mode double-mount.
           const existing = new Set(s.chronicle.map((e) => e.key));
           const pending: ChronicleEntry[] = observers
             .map((observer) => ({
@@ -349,7 +351,7 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 19,
+      version: 20,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         config: s.config,
@@ -362,9 +364,10 @@ export const useSimulationStore = create<SimulationState>()(
           gini: true,
           alive: false,
           wealth: false,
-          price: true,
+          price: false,
           stream: false,
           narrator: true,
+          money: false,
           network: false,
         },
         windowPositions: DEFAULT_WINDOW_POSITIONS,

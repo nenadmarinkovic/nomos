@@ -25,6 +25,7 @@ const VIEWS: { key: ViewKey; label: string }[] = [
   { key: "wealth", label: "Wealth" },
   { key: "price", label: "Price" },
   { key: "stream", label: "Motivations" },
+  { key: "money", label: "Money" },
   { key: "narrator", label: "Narrator" },
 ];
 

@@ -2,105 +2,74 @@ import type { ObserverKey } from "@/lib/config";
 import type { EventKind } from "@/lib/events";
 
 /**
- * Route a significant event to the single best-fit observer.
- *
- * The original design fired every active observer at every event, which
- * produced N paragraphs about the same moment and overwhelmed the reader.
- * The intellectual move ("same emergence, different vocabularies") still
- * lands across the run: a society throws many kinds of events, and each
- * kind picks the theorist whose lens has the most concrete purchase on it.
- *
- * Priority list per event kind: first match in the active set wins. A
- * round-robin counter shifts the starting index so repeated occurrences of
- * the same kind reach for a different available voice.
+ * Route each event to the single best-fit theorist. First match in the
+ * active set wins; a per-kind rotation counter shifts the starting index
+ * so repeated occurrences reach for a different voice.
  */
 
 const PRIORITY: Record<EventKind, ObserverKey[]> = {
-  /** The simulation begins — methodological self-reference fits best, with
-   *  Polanyi as backup for the pre-commodified opening, Durkheim for the
-   *  collective-conscience reading. */
+  /** Founding: methodological reference, Polanyi's pre-commodified opening,
+   *  Durkheim's collective conscience. */
   founding: ["epstein", "polanyi", "durkheim"],
 
-  /** Wealth concentrating — Marx's home turf, Bourdieu for cultural lock-in,
-   *  Turchin for the structural-demographic warning. */
+  /** Wealth concentrating: Marx, Bourdieu (lock-in), Turchin. */
   inequality_surge: ["marx", "bourdieu", "turchin"],
 
-  /** The gap narrows — Polanyi reads the counter-movement, Durkheim the
-   *  re-knit social tissue, Marx the redistribution. */
+  /** Gap narrows: Polanyi (counter-movement), Durkheim, Marx. */
   leveling: ["polanyi", "durkheim", "marx"],
 
-  /** Crossing the 0.5 Gini line — Bourdieu's distinction crystallises;
-   *  Marx names the class division; Turchin counts the elite. */
+  /** Crossing Gini 0.5: Bourdieu (distinction), Marx (class), Turchin. */
   stratification: ["bourdieu", "marx", "turchin"],
 
-  /** Population falls hard — Turchin's secular cycle, Flack's slow variables
-   *  failing, Epstein's grown-it-here. */
+  /** Hard population fall: Turchin (secular cycle), Flack, Epstein. */
   population_crash: ["turchin", "flack", "epstein"],
 
-  /** Population rises — Epstein on emergence, Granovetter on new ties,
-   *  Durkheim on the thickening collective. */
+  /** Population rises: Epstein, Granovetter, Durkheim. */
   population_boom: ["epstein", "granovetter", "durkheim"],
 
-  /** Exchange thickens into a market — exactly Polanyi's great
-   *  transformation, with Farmer reading the microstructure and
-   *  Granovetter the embedded relations. */
+  /** Market thickens: Polanyi (transformation), Farmer, Granovetter. */
   market_forming: ["polanyi", "farmer", "granovetter"],
 
-  /** Prices convulse — Farmer's complexity economics, then Polanyi's
-   *  fictitious-commodity stress, then Schelling's cascade. */
+  /** Price shock: Farmer, Polanyi, Schelling. */
   price_shock: ["farmer", "polanyi", "schelling"],
 
-  /** Society all but gone — Turchin's collapse phase, Flack's eroded
-   *  slow variables, Marx's contradictions resolved by rupture. */
+  /** Collapse: Turchin, Flack, Marx. */
   collapse: ["turchin", "flack", "marx"],
 
-  /** Agents sorting themselves in space — Schelling's tipping dynamics,
-   *  Bourdieu's distinction inscribed in territory, Durkheim's mechanical
-   *  solidarity of the like-with-like. */
+  /** Spatial sorting: Schelling first, then Bourdieu, Durkheim. */
   segregation: ["schelling", "bourdieu", "durkheim"],
 
-  /** One disposition spreading through the population — Bourdieu's habitus
-   *  reproducing, Schelling's preference cascade, Granovetter's contagion
-   *  along ties. */
+  /** One disposition spreading: Bourdieu, Schelling, Granovetter. */
   motivation_shift: ["bourdieu", "schelling", "granovetter"],
 
-  /** A burst of expropriation. Axelrod first — the same data, read as
-   *  defection drawing retaliation, is exactly what TfT is *for*. Marx,
-   *  Durkheim, Flack rotate in behind so the lens isn't monolithic. */
+  /** Predation burst: Axelrod (defection/TfT), Marx, Durkheim, Flack. */
   coercion_wave: ["axelrod", "marx", "durkheim", "flack"],
 
-  /** Cooperation winning — sustained sanctioning of defectors, tokens
-   *  beginning to circulate. Axelrod's home turf; Granovetter for the
-   *  embedded relations carrying it; Flack for the slow variables that
-   *  let it lock in; Epstein for the macro-from-micro story. */
+  /** Cooperation locking in: Axelrod, Granovetter, Flack, Epstein. */
   cooperation_thickens: ["axelrod", "granovetter", "flack", "epstein"],
 
-  /** The trade web dissolving — Granovetter's structure unravelling,
-   *  Flack's slow variables eroding, Polanyi's disembedding. */
+  /** Trade web unravelling: Granovetter, Flack, Polanyi. */
   network_fracture: ["granovetter", "flack", "polanyi"],
 
-  /** Inequality that has sat at an extreme level for a long stretch.
-   *  Marx names the calcified class division; Bourdieu reads the
-   *  reproduction; Turchin's elite overproduction has found its host. */
+  /** Calcified inequality: Marx, Bourdieu (reproduction), Turchin. */
   extreme_inequality: ["marx", "bourdieu", "turchin"],
 
-  /** A top tier holding most of the wealth indefinitely — oligarchic
-   *  consolidation. Turchin's elite capture; Marx's owners; Flack's
-   *  slow variables holding the asymmetry in place. */
+  /** Elite capture: Turchin, Marx, Flack. */
   oligarchy: ["turchin", "marx", "flack"],
 
-  /** Exogenous land-side shock (blight halving regrowth) — Polanyi reads
-   *  the substrate failing the embedded economy; Epstein the methodological
-   *  shock; Farmer the dynamical perturbation. */
+  /** Land-side shock: Polanyi, Epstein, Farmer. */
   shock_blight: ["polanyi", "epstein", "farmer"],
 
-  /** Exogenous mortality shock (a fraction of the population vanishes).
-   *  Turchin reads the secular cycle's mortality phase; Durkheim the
-   *  rupture of the social tissue; Flack the slow variables tested. */
+  /** Mortality shock: Turchin, Durkheim, Flack. */
   shock_plague: ["turchin", "durkheim", "flack"],
 
-  /** Heartbeat reading on a stable society. Cycles through every available
-   *  theorist so the user hears a different voice on each passage. */
+  /** Trust anchor emerges: Granovetter (centrality), Flack, Durkheim. */
+  leadership_emerges: ["granovetter", "flack", "durkheim"],
+
+  /** Run on the top issuer: Polanyi (fictitious commodity), Farmer, Marx. */
+  bank_run: ["polanyi", "farmer", "marx"],
+
+  /** Heartbeat: cycle through every theorist. */
   passage: [
     "epstein",
     "marx",
@@ -116,15 +85,10 @@ const PRIORITY: Record<EventKind, ObserverKey[]> = {
   ],
 };
 
-/** Module-scoped rotation counter: keys are event kinds, values are the
- *  next "starting offset" into the priority list. Resets per page load,
- *  which is fine — runs are session-scoped. */
+/** Per-kind rotation offset. Resets per page load — runs are session-scoped. */
 const rotation = new Map<EventKind, number>();
 
-/**
- * Pick the observer to narrate this event. Returns null only when the user
- * has no observers selected at all.
- */
+/** Pick the observer to narrate this event. Null only when no observers are selected. */
 export function pickObserver(
   kind: EventKind,
   available: readonly ObserverKey[],
@@ -143,16 +107,13 @@ export function pickObserver(
     }
   }
 
-  // None of the preferred theorists for this kind are selected — pick a
-  // deterministic fallback from whoever the user did select.
+  // No preferred theorist available — pick a deterministic fallback.
   const fallbackIdx = (offset + (available.length - 1)) % available.length;
   rotation.set(kind, offset + 1);
   return available[fallbackIdx];
 }
 
-/** Reset the rotation state. Called when a new run starts so the first
- *  event of each kind in the new run goes to the priority's top pick
- *  regardless of what happened in the previous session. */
+/** Reset per-run so each run's first-of-kind goes to the top priority pick. */
 export function resetObserverRotation(): void {
   rotation.clear();
 }

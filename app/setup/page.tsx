@@ -189,11 +189,11 @@ const STEPS: readonly StepDef[] = [
   },
   {
     key: "motivation",
-    question: "What do they want?",
+    question: "What kinds of dispositions seed the population?",
     framing:
-      "What agents try to maximize shapes everything that follows — economy, status games, ritual life, authority. Pick more than one if you want different drives to coexist.",
+      "Every agent carries a trait vector — greed, prosociality, dominance, status-seeking. The four options here are named centroids in that space; your mix decides which regions the initial population is drawn from. The motivation labels you'll see later are read back from where each agent's traits actually sit — not the input you gave here.",
     theoryHook:
-      "This is the deepest choice in the model, and the four options track four classical positions. Material agents chase resources — Marx's productive subject. Symbolic ones chase status and distinction — Bourdieu's capital game. Normative ones chase belonging and conformity — Durkheim's collective conscience. Power-seeking ones chase authority and control over others — the question of legitimate domination. Pick more than one and the population splits between drives — closer to real societies, where some chase money, others chase honour, others just follow the room, and some quietly try to rule it. When something emerges in a mixed population, the interesting question becomes: which drive produced it?",
+      "This is the deepest choice in the model, and the four centroids track four classical positions. Material seeds high greed with modest neighbour-pull — Marx's productive subject. Symbolic seeds high status-seeking — Bourdieu's capital game. Normative seeds high prosociality — Durkheim's collective conscience. Power seeds high dominance — the question of legitimate domination. Pick more than one and the initial population fans out across trait space. Once the run starts, cultural drift and imitation move traits around; the visible mix at turn 500 is what *emerged*, not what you set. When something surfaces — a moralistic wave, a coercion cycle — the interesting question becomes: which region of the trait space produced it?",
   },
   {
     key: "topology",
@@ -222,23 +222,21 @@ const STEPS: readonly StepDef[] = [
 ] as const;
 
 /**
- * "What the simulation actually does" — one or more anchors per step that show,
- * in plain English first and a short snippet second, where this decision takes
- * shape in the code. Aimed at non-developers: every anchor leads with a sentence
- * anyone can read, and the `mode` badge is honest about what the snippet is —
- * the real engine code, a faithful simplification, or a planned-but-unwired rule.
+ * One or more anchors per step. Each shows what the step actually does in
+ * plain English and in code. The `mode` badge is honest about what the
+ * snippet is — real, simplified, or planned-but-unwired.
  */
 type CodeMode = "real" | "pseudo" | "planned";
 
 interface CodeAnchor {
-  /** The rule in one ordinary sentence — shown above the snippet. */
+  /** One-sentence description shown above the snippet. */
   plain: string;
-  /** ≤ ~7 lines: real engine code, faithful pseudocode, or a planned sketch. */
+  /** ≤ ~7 lines: real code, faithful pseudocode, or a planned sketch. */
   snippet: string;
   mode: CodeMode;
-  /** Source file the snippet is drawn from. Omitted for planned rules. */
+  /** Source file the snippet is drawn from. Omitted for `planned`. */
   file?: string;
-  /** Line range, e.g. "191-213". Used to build the source link. */
+  /** Line range like "191-213". Used to build the source link. */
   lines?: string;
 }
 
@@ -1145,10 +1143,11 @@ function StepBody({
             </span>
           </div>
           <p className="mt-1 font-sans text-[12px] text-muted-foreground">
-            Per-birth chance a child's traits are resampled from the mix above
-            instead of inherited from the parent. Higher = diversity rebleeds
-            in after a monoculture takes over; 0 = strict heritability, once
-            one motivation wins it stays won.
+            Per-birth chance the child&apos;s traits are resampled from the
+            centroid mix above instead of drifting off the parent&apos;s.
+            Higher = diversity rebleeds in after a single region of trait
+            space has taken over; 0 = strict heritability, and once a trait
+            cluster wins it stays won.
           </p>
           <div className="mt-3">
             <Slider

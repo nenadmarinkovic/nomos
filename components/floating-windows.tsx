@@ -52,6 +52,9 @@ const histogramConfig: ChartConfig = {
 const priceConfig: ChartConfig = {
   tradePrice: { label: "Price", color: "#D69E5A" },
 };
+const moneyConfig: ChartConfig = {
+  tokenSupply: { label: "Tokens", color: "#8B5CF6" },
+};
 
 export function FloatingWindows() {
   const started = useSimulationStore((s) => s.started);
@@ -72,14 +75,13 @@ export function FloatingWindows() {
     const H = canvas.height || 600;
     const winH = WIN_HEIGHTS[key];
 
-    // Where the window actually ended up, in absolute container coords.
+    // Absolute drop position in container coords.
     const start = resolveWindowPosition(current, key, canvas);
     const nextX = start.x + e.delta.x;
     const nextY = start.y + e.delta.y;
 
-    // Anchor follows the corner closest to the window's center, so a drag
-    // toward the top-right ends with a top-right anchor — and that anchor
-    // is what keeps it pinned through later container reflows.
+    // Anchor to the nearest corner — that anchor pins the window through
+    // later reflows.
     const centerX = nextX + WIN_WIDTH / 2;
     const centerY = nextY + winH / 2;
     const anchor: WindowAnchor =
@@ -111,6 +113,7 @@ export function FloatingWindows() {
         <WealthWindow />
         <PriceWindow />
         <StreamWindow />
+        <MoneyWindow />
         <NarratorWindow />
       </div>
     </DndContext>
@@ -138,8 +141,7 @@ function FloatingWindow({
 
   if (!visible) return null;
 
-  // Resolve on every render: container size changes (sidebar collapse,
-  // viewport resize) re-derive x/y from the same anchor + offset.
+  // Re-resolve every render so container reflow keeps the corner offset stable.
   const resolved = resolveWindowPosition(position, windowKey, canvasSize);
   const x = resolved.x + (transform?.x ?? 0);
   const y = resolved.y + (transform?.y ?? 0);
@@ -344,8 +346,7 @@ function PriceWindow() {
   const history = useSimulationStore((s) => s.history);
   const snapshot = useSimulationStore((s) => s.snapshot);
 
-  // Gaps (turns with no trade) become nulls so the line connects across them
-  // instead of plunging to zero.
+  // No-trade turns become nulls so the line skips over them, not plunges.
   const data = useMemo(
     () =>
       history.map((p) => ({
@@ -516,6 +517,67 @@ function StreamWindow() {
           );
         })}
       </div>
+    </FloatingWindow>
+  );
+}
+
+function MoneyWindow() {
+  const history = useSimulationStore((s) => s.history);
+  const snapshot = useSimulationStore((s) => s.snapshot);
+
+  const data = useMemo(
+    () =>
+      history.map((p) => ({
+        turn: p.turn,
+        tokenSupply: p.tokenSupply,
+        circulatingIssuers: p.circulatingIssuers,
+      })),
+    [history],
+  );
+
+  const meta =
+    snapshot.tokenSupply > 0
+      ? `${Math.round(snapshot.tokenSupply).toLocaleString()} · ${
+          snapshot.circulatingIssuers
+        } circulating`
+      : "no tokens";
+
+  return (
+    <FloatingWindow windowKey="money" title="Money" meta={meta}>
+      <ChartContainer config={moneyConfig} className="aspect-auto h-24 w-full">
+        <AreaChart
+          data={data}
+          margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+        >
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="turn" hide />
+          <YAxis hide />
+          <ChartTooltip
+            cursor={false}
+            content={
+              <ChartTooltipContent
+                indicator="line"
+                labelFormatter={(_v, payload) => {
+                  const p = payload?.[0]?.payload as { turn?: number } | undefined;
+                  return `Turn ${p?.turn ?? 0}`;
+                }}
+              />
+            }
+          />
+          <Area
+            type="monotone"
+            dataKey="tokenSupply"
+            stroke="var(--color-tokenSupply)"
+            fill="var(--color-tokenSupply)"
+            fillOpacity={0.18}
+            strokeWidth={1.5}
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ChartContainer>
+      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+        IOUs outstanding · issuers whose tokens ≥3 holders
+      </p>
     </FloatingWindow>
   );
 }

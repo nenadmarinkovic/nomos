@@ -54,17 +54,15 @@ const MOTIVATION_LABEL: Record<string, string> = {
 };
 
 const REBUILD_EVERY_N_TURNS = 20;
-/** Keep only each agent's K strongest trade ties — cuts the hairball. */
+/** Cap each agent to its K strongest ties — cuts the hairball. */
 const TOP_K_PER_AGENT = 3;
-/** Past this point the graph is an unreadable hairball; keep only the
- *  most-embedded nodes. */
+/** Past this, keep only the most-embedded nodes. */
 const MAX_RENDERED_NODES = 1200;
 
-/** Module-scoped so it survives component remounts. A useRef would reset
- *  on every Field ↔ Network switch and re-fit the camera each time. */
+/** Module-scoped so remounts don't refit the camera on every Field↔Network switch. */
 let hasFitCamera = false;
 
-// Three.js-backed; no SSR.
+// Three.js backend, no SSR.
 const ForceGraph3D = dynamic(
   async () => (await import("react-force-graph-3d")).default,
   { ssr: false },
@@ -72,9 +70,9 @@ const ForceGraph3D = dynamic(
 
 const NODE_RADIUS = 6;
 
-/** Shared GPU resources — one geometry per motivation, one material per
- *  (motivation, selection) pair. Building these per-node leaked VRAM at
- *  town scale and was the dominant render cost. */
+/** Shared GPU resources: one geometry per motivation, one material per
+ *  (motivation, selection). Per-node construction was the dominant cost
+ *  and leaked VRAM at town scale. */
 const MOTIVATION_GEOMETRY: Record<string, THREE.BufferGeometry> = {
   symbolic: new THREE.SphereGeometry(NODE_RADIUS, 16, 16),
   normative: new THREE.ConeGeometry(NODE_RADIUS, NODE_RADIUS * 1.8, 4),
@@ -104,8 +102,7 @@ function getNodeMaterial(
   return mat;
 }
 
-/** 3D force-directed view. Nodes = alive agents; edges = each agent's
- *  three strongest trade partners. */
+/** 3D force graph: node = alive agent, edge = top-3 trade partners. */
 export function NetworkCanvas() {
   const turn = useSimulationStore((s) => s.turn);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -113,8 +110,7 @@ export function NetworkCanvas() {
   const lastBuiltTurn = useRef<number>(-9999);
   const prevNodeIdsRef = useRef<Set<number>>(new Set());
   const prevLinkKeysRef = useRef<Set<string>>(new Set());
-  // Reuse the same node objects across rebuilds so react-force-graph's
-  // layout state survives and the sim warm-starts instead of cold-restarting.
+  // Reuse node objects across rebuilds so react-force-graph warm-starts.
   const nodeCacheRef = useRef<Map<number, GraphNode>>(new Map());
 
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -146,13 +142,11 @@ export function NetworkCanvas() {
     return () => ro.disconnect();
   }, []);
 
-  // Rebuild the graph from the live world on a slow cadence so the layout has
-  // time to settle and you don't get "new graph every second" jitter. Each
-  // rebuild also diffs against the previous one so the badge can name what
-  // changed and the event ticker can list births / deaths / new ties.
+  // Slow-cadence rebuild so the layout settles and the diff can name
+  // added/removed nodes and ties instead of jittering.
   useEffect(() => {
-    // A turn reset means a new run started; wipe diff bookkeeping so the
-    // first frame is treated as a baseline instead of a mass-death event.
+    // Turn reset = new run → clear diff bookkeeping so the first frame
+    // is a baseline, not a mass-death event.
     if (turn === 0 && lastBuiltTurn.current > 0) {
       prevNodeIdsRef.current = new Set();
       prevLinkKeysRef.current = new Set();
@@ -178,7 +172,6 @@ export function NetworkCanvas() {
       world.ties,
       nodeCacheRef.current,
     );
-    // Sync the worker-sourced graph into React state for the 3rd-party graph.
     setData({ nodes, links });
     setStats({
       nodes: nodes.length,
@@ -186,7 +179,7 @@ export function NetworkCanvas() {
       alive: aliveAgents.length,
     });
 
-    // Diff bookkeeping — feeds the "recent changes" ticker.
+    // Diff into the "recent changes" ticker.
     const prevIds = prevNodeIdsRef.current;
     const prevKeys = prevLinkKeysRef.current;
     const currentIds = new Set<number>();
@@ -242,8 +235,8 @@ export function NetworkCanvas() {
     setSelectedId(n.id as number);
     const g = graphRef.current;
     if (!g || typeof g.cameraPosition !== "function") return;
-    // Skip if d3-force-3d hasn't placed the node yet — otherwise
-    // cameraPosition crashes on undefined coords.
+    // Skip if d3-force-3d hasn't placed the node — cameraPosition crashes
+    // on undefined coords.
     const nx = typeof n.x === "number" ? n.x : 0;
     const ny = typeof n.y === "number" ? n.y : 0;
     const nz = typeof n.z === "number" ? n.z : 0;
@@ -292,7 +285,7 @@ export function NetworkCanvas() {
             d3AlphaDecay={0.06}
             d3VelocityDecay={0.5}
             onEngineStop={() => {
-              // Auto-fit once per session on the first non-empty layout.
+              // Fit once per session on the first non-empty layout.
               if (hasFitCamera || data.nodes.length === 0) return;
               const g = graphRef.current;
               if (g && typeof g.zoomToFit === "function") {
@@ -304,8 +297,8 @@ export function NetworkCanvas() {
             controlType="orbit"
             showNavInfo={false}
             nodeThreeObject={(n: any) => {
-              // Uniform size and full saturation — wealth is intentionally not
-              // visualised here to avoid dimming the late-game population.
+              // Uniform size; wealth intentionally not visualised (would
+              // dim the late-game population).
               const motivation = n.motivation as string;
               const geom =
                 MOTIVATION_GEOMETRY[motivation] ?? MOTIVATION_GEOMETRY.material;
@@ -554,8 +547,7 @@ function buildTieGraph(
   const aliveById = new Map<number, RenderAgent>();
   for (const a of alive) aliveById.set(a.id, a);
 
-  // Total tie weight per agent — used both to cap the rendered set and
-  // to score edges for the top-K filter below.
+  // Tie-weight sum per agent — caps the rendered set and scores top-K edges.
   const embeddedness = new Map<number, number>();
   for (let i = 0; i < ties.length; i += 3) {
     const a = ties[i] | 0;
@@ -566,7 +558,7 @@ function buildTieGraph(
     embeddedness.set(b, (embeddedness.get(b) ?? 0) + w);
   }
 
-  // At city scale render only the most-embedded agents; the rest is hairball.
+  // Render only the most-embedded agents at city scale; the rest is hairball.
   let rendered: RenderAgent[];
   if (alive.length > MAX_RENDERED_NODES) {
     const sorted = [...alive].sort(
@@ -580,16 +572,14 @@ function buildTieGraph(
   const renderedIds = new Set<number>();
   for (const a of rendered) renderedIds.add(a.id);
 
-  // Reuse cached node objects so the layout state attached by the force
-  // graph (x/y/z/vx/vy/vz) survives between rebuilds.
+  // Reuse cached nodes so force-graph's layout state (x/y/z/vx/vy/vz) survives.
   for (const id of cache.keys()) {
     if (!renderedIds.has(id)) cache.delete(id);
   }
   const nodes: GraphNode[] = new Array(rendered.length);
   for (let i = 0; i < rendered.length; i++) {
     const a = rendered[i];
-    // Guard against NaN/Infinity/negative wealth — Three.js crashes
-    // the bounding-sphere computation otherwise.
+    // Guard against NaN/Infinity/negative wealth — Three.js crashes on those.
     const w = a.sugar + a.spice;
     const safeWealth = Number.isFinite(w) && w > 0 ? w : 0;
     let node = cache.get(a.id);

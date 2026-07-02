@@ -1,9 +1,8 @@
 import type { AgentMotivation } from "@/lib/config";
 
-// The tick loop runs in a Web Worker. The main thread never holds the
-// engine directly — it reads `WorldView` snapshots posted across the
-// worker boundary. The engine itself implements `WorldView`, so the same
-// reader code works on both sides.
+// The engine runs in a Web Worker. Main thread reads `WorldView` snapshots
+// posted across the boundary. Engine itself implements `WorldView`, so the
+// reader code is the same on both sides.
 
 export const MOTIVATIONS: readonly AgentMotivation[] = [
   "material",
@@ -12,8 +11,7 @@ export const MOTIVATIONS: readonly AgentMotivation[] = [
   "power",
 ];
 
-/** Mirror of `AgentTraits` from the engine, duplicated to keep the worker
- *  boundary loose. */
+/** Mirror of engine `AgentTraits`. Duplicated so the worker boundary stays loose. */
 export interface RenderAgentTraits {
   greed: number;
   prosociality: number;
@@ -51,13 +49,12 @@ export interface WorldView {
   occupants: Int32Array;
   /** Indexed by agent id. */
   agents: readonly RenderAgent[];
-  /** Flat [idA, idB, weight, …] of decaying trade-partner ties. */
+  /** Flat [loId, hiId, weight, …] of decaying trade ties. */
   ties: Float32Array;
 }
 
-/** A world packed into transferable buffers for postMessage. Agents go
- *  into one Float32 buffer (stride = STRIDE) so the whole frame moves as
- *  a handful of transferable ArrayBuffers. */
+/** Packed transferable buffers. Agents share one Float32 buffer (stride =
+ *  STRIDE) so the whole frame moves as a handful of ArrayBuffers. */
 export interface WorldFrame {
   width: number;
   height: number;
@@ -92,10 +89,8 @@ const T_PROSOCIALITY = 15;
 const T_DOMINANCE = 16;
 const T_STATUS = 17;
 
-/** Pack a world into transferable buffers ready for postMessage. Grids are
- *  copied via `.slice()` because the engine needs to keep using them after
- *  the buffers are transferred. Integer fields fit in Float32, so one
- *  agent buffer carries everything. */
+/** Pack a world into transferable buffers. Grids `.slice()` first because
+ *  the engine keeps using them after transfer. Integer fields fit in Float32. */
 export function serializeWorld(view: WorldView): {
   frame: WorldFrame;
   transfer: ArrayBuffer[];
