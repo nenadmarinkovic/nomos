@@ -9,10 +9,10 @@ Each observer has a `name`, `era`, `lens`, `sees`, and `watches` description (in
 | theorist | lens | what they uniquely surface |
 |---|---|---|
 | **Marx** | class, surplus, consciousness | Surplus extraction, alienation, contradictions. Private IOUs as new chains; the commons devoured by accumulation. |
-| **Polanyi** | embedded economy, great transformation | When trade disembeds from kinship into impersonal price. Fictitious commodity stress. Promises hardening into circulating money. |
+| **Polanyi** | embedded economy, great transformation | When trade disembeds from kinship into impersonal price. Fictitious commodity stress. Promises hardening into circulating money — and, when confidence goes, dissolving in a run. |
 | **Bourdieu** | capital, field, habitus | How habitus reproduces across generations even as trait drift moves agents. Capital converting between forms. Symbolic violence. |
 | **Durkheim** | solidarity, anomie, social facts | Mechanical vs organic solidarity. Anomie when shared norms loosen. Ritual force of shaming. Credit requiring shared conscience. |
-| **Granovetter** | embeddedness, weak ties | Brokerage between clusters. Embedded trust shielding from predation. An issuer's notes travelling through the network until strangers accept. |
+| **Granovetter** | embeddedness, weak ties | Brokerage between clusters. Embedded trust shielding from predation. An issuer's notes travelling through the network until strangers accept. Trust centrality as leadership without a role. |
 | **Schelling** | thresholds, segregation | Tipping points. Spatial sorting. The moment when one issuer's notes tip from a one-off favour into circulating money. |
 | **Turchin** | elite overproduction | Structural-demographic preconditions of crisis. Soil's carrying capacity declining beneath population. Financialisation as late-cycle marker. |
 | **Farmer** | complexity economics | Emergent price formation. Endogenous money creation. Discount priced by default risk. Positive feedback concentrating wealth. |
@@ -44,8 +44,10 @@ The detector lives in `lib/events.ts`. Every tick, the latest snapshot is compar
 | `network_fracture` | isolate share rising ≥ 15% to ≥ 40% | trade web dissolving |
 | `extreme_inequality` | Gini ≥ 0.6 for 80+ consecutive turns | sustained-state |
 | `oligarchy` | top-decile wealth share ≥ 80% for 80+ turns | sustained-state |
-| `shock_blight` | engine fires blight | endogenous |
-| `shock_plague` | engine fires plague | endogenous |
+| `shock_blight` | engine fires blight | rate = f(land degradation) |
+| `shock_plague` | engine fires plague | rate = f(density) |
+| `leadership_emerges` | top agent's inbound tie weight ≥ 24 | latched; re-arms at 14 |
+| `bank_run` | mistrust in top issuer crosses 0.35 | 60-turn cooldown |
 | `passage` | 30 turns elapsed without other events | heartbeat, max 3 in a row |
 
 Detection uses hysteresis latches for sustained-state events (Gini holds, oligarchy holds) so they fire *once* when the regime locks in, not on every cooldown.
@@ -60,6 +62,8 @@ cooperation_thickens: ["axelrod", "granovetter", "flack", "epstein"]
 market_forming:       ["polanyi", "farmer", "granovetter"]
 stratification:       ["bourdieu", "marx", "turchin"]
 segregation:          ["schelling", "bourdieu", "durkheim"]
+leadership_emerges:   ["granovetter", "flack", "durkheim"]
+bank_run:             ["polanyi", "farmer", "marx"]
 ```
 
 When an event fires, `pickObserver(kind, available)` walks the priority list starting at a per-kind rotation offset. The first available theorist (i.e. one the user selected at setup) wins; the offset advances so the next firing of the same kind reaches for a different voice. This is why a run with eight active observers produces visible rotation across `coercion_wave` events instead of Marx narrating every one.

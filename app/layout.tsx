@@ -31,6 +31,28 @@ export const metadata: Metadata = {
   title: "Nomos",
   description:
     "A society simulation where agents follow simple rules and AI theorists observe what emerges.",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      {
+        url: "/favicon.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/favicon-dark.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: dark)",
+      },
+      { url: "/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+    ],
+    apple: {
+      url: "/apple-touch-icon.png",
+      sizes: "180x180",
+      type: "image/png",
+    },
+  },
 };
 
 export default function RootLayout({

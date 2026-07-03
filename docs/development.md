@@ -126,7 +126,11 @@ Most useful constants in `lib/engine.ts`:
 | `RECOVERY_RATE = 0.0008` | fallow land recovery | land never recovers or recovers instantly |
 | `TOKEN_PRIOR_LIABILITY = 4` | new-issuer credit floor | tokens never circulate or always circulate |
 | `TIE_DECAY = 0.97` | trade relationship persistence | trade web too transient or too rigid |
+| `DISTRUST_DECAY = 0.98` | reputation memory persistence | copied norms fade too fast or forever |
 | `WITNESS_PROSOCIALITY_THRESHOLD = 0.65` | who shames coercion | sanctions never fire or fire too often |
+| `BANK_RUN_THRESHOLD = 0.35` | share distrusting the top issuer needed to run | runs never happen, or happen on every cycle |
+| `BANK_RUN_COOLDOWN = 60` | turns between successive runs | serial runs blur into one long collapse |
+| favoured-partner queue cap = 6 | how much practice imitation is stored | partner rolls too random or too static |
 
 In `lib/events.ts`:
 
@@ -137,6 +141,8 @@ In `lib/events.ts`:
 | `EXTREME_INEQUALITY_LEVEL = 0.6` | sustained-state inequality threshold |
 | `OLIGARCHY_LEVEL = 0.8` | sustained-state oligarchy threshold |
 | `SUSTAINED_HIGH_DURATION = 80` | turns of "this is the regime" before it fires |
+| `LEADERSHIP_LEVEL = 24` | inbound tie weight for `leadership_emerges` |
+| `LEADERSHIP_REARM = 14` | falls back below this to re-arm the latch |
 
 In `components/observer-narrator.tsx`:
 
@@ -158,8 +164,9 @@ Most rules live in `lib/engine.ts`. The pattern:
 
 1. **Read traits, not motivation.** The whole point of the trait refactor is that behaviour is `f(traits)`. If your new rule starts with `if (a.motivation === ...)`, you're regressing.
 2. **Use the rate-constant pattern.** Put any tunable number as a `const X = ...` near the top of the function (or in the constants block near the file top) so it's easy to find and tune via the bench.
-3. **Add the symptom to the snapshot.** If the rule produces a per-tick number you want to read or observe, add it to `EngineSnapshot`, to `getSnapshot()`, and to the bench output.
-4. **Re-run the bench** to confirm the new rule doesn't break existing dynamics (Gini, alive trajectory, tokens circulating).
+3. **If it involves memory, decay it and scrub it on death.** New per-agent or per-pair state should decay each tick (via `decayReputations` or the tie decay) and be wiped in `scrubReputations` / `scrubTies` when the agent dies. Otherwise long runs leak state and dead-agent references corrupt reputation reads.
+4. **Add the symptom to the snapshot.** If the rule produces a per-tick number you want to read or observe, add it to `EngineSnapshot`, to `getSnapshot()`, and to the bench output.
+5. **Re-run the bench** to confirm the new rule doesn't break existing dynamics (Gini, alive trajectory, tokens circulating).
 
 ## Notes on the rendering
 

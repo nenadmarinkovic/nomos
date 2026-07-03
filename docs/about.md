@@ -40,13 +40,19 @@ A `town`-scale run with an `egalitarian` start (everyone gets identical resource
 
 ### Aggressive seed collapses trust
 
-The same town, motivation mix skewed toward Power. High-dominance agents seize from weaker neighbours rapidly. Trade ties crash on each coercion. The sanction loop (prosocial witnesses refusing to trade with shamed aggressors) bites, but not enough. Population swings as predation outpaces reproduction. The chronicle reads as collapse — Turchin's disintegrative phase, Marx's rupture, Flack's slow variables eroding. Axelrod notes that the cooperative cluster never reached the density where tit-for-tat could insulate itself.
+The same town, motivation mix skewed toward Power. High-dominance agents seize from weaker neighbours rapidly. Trade ties crash on each coercion, and every visible peer picks up a memory of who the aggressor is. That memory then spreads: when a cultural-drift tick fires, agents copy their wealthier neighbours' distrust as well as their traits, so a norm ("stay clear of that one") propagates through the graph without any central authority declaring it. The sanction loop bites — but predation still outpaces reproduction. The chronicle reads as collapse — Turchin's disintegrative phase, Marx's rupture, Flack's slow variables eroding. Axelrod notes that the cooperative cluster never reached the density where tit-for-tat could insulate itself.
 
-### Patience produces emergent money
+### Patience produces emergent money — and, sometimes, a run
 
 A balanced mix, egalitarian start, run undisturbed for around 1000 turns. The token economy lights up: by turn 500 some agents are issuing IOUs and a few are held by three or more distinct other agents — the threshold at which we count an issuer as "circulating money." The chronicle now reads Polanyi (commodified trust hardening into a medium of exchange), Granovetter (notes travelling through the network from holder to holder), Farmer (endogenous money creation, discount priced by perceived default risk), and Axelrod (credit as the monetary form of repeated-game reciprocity). The most-held issuer is, in effect, an emergent private bank.
 
-These three are not coded presets. They are dynamics the engine produces from initial conditions.
+Then someone dies. The default cascade — burned holders growing wary of every *other* issuer they hold, no second failure required — sometimes pushes population-wide distrust in the largest remaining issuer over the threshold. Holders liquidate what they can, the rest burns, and Polanyi reads the fictitious commodity dissolving while Farmer reads the herd cascade priced by fear.
+
+### An anchor of trust appears
+
+In another balanced run, no single agent takes over the population, but one accumulates far more inbound trade ties than anyone else. Nobody made them a chief. Nothing gives them authority. They are just the node the population's tie graph has begun to organise around — the person everyone eventually trades through. Granovetter reads the centrality; Flack reads a slow variable finding its host; Durkheim reads the collective effervescence around it. Leadership emerging from exchange, not conferred on it.
+
+These are not coded presets. They are dynamics the engine produces from initial conditions.
 
 ## Running and saving
 
@@ -66,6 +72,8 @@ Every saved run also has a shareable URL that anyone can open to replay the same
 The early version was a clean Sugarscape (Epstein & Axtell, 1996): minimal agents, two goods, harvest plus trade. Then a request to add motivations led to a typed-agent enum (`material / symbolic / normative / power`) with hardcoded behaviour branches. That worked, but the engine was now _programming_ the things it was meant to _observe_.
 
 The refactor from typed motivations to continuous traits with post-hoc clustering is the move that made the project's framing ("theories as observers") actually true. A later phase added the token economy: agents short on sugar can pay sellers in private IOUs, which sometimes circulate widely enough to become a real medium of exchange. None of that is configured anywhere; it emerges from one rule — buyers may offer credit, sellers may or may not accept.
+
+The most recent round of work pushed on three residual gaps. Norms became emergent (a witness-driven distrust ledger that agents copy from wealthier neighbours during cultural drift). Leadership became legible (a trust-centrality signal computed each tick, surfaced as a `leadership_emerges` event when the graph consolidates). Money became fallible (an agent-learned issuer reputation and a bank-run cascade — the first default doesn't need a second one to trigger a run, because burned holders spread wariness onto every other issuer they hold). Practice imitation joined trait imitation, so a wealthier neighbour's *taste in partners* propagates alongside their dispositions.
 
 Adding Axelrod was deliberate. Without him every coercion event read as decline. With him the same predation-and-sanction data can read as _cooperation being defended_, not collapsing — same event, opposite interpretation. That disagreement is the point.
 

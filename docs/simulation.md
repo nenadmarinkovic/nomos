@@ -65,9 +65,12 @@ Fallow cells (no occupant) slowly recover lost carrying capacity at `RECOVERY_RA
 Each living agent picks a target cell via a continuous scoring function:
 
 - **resource weight** = `0.6 + 0.5 × greed`
+- **fertility factor** = `0.4 + 0.6 × fertility` (multiplies the resource term)
 - **proximity weight** = `0.6 × prosociality`
 - **predatory weight** = `0.8 × dominance` *if* own wealth > neighbours' average
 - **status weight** = `0.1 × statusSeeking`
+
+`fertility` is the cell's current ceiling divided by its pristine ceiling — how healthy the ground is. Barren cells score near zero even if they briefly hold surface resources. This is how agents *see* land degradation: they drift off worn ground without any global rule telling them to.
 
 The agent moves to the highest-scoring free cell within its movement horizon and harvests both goods. Harvest yields scale with traits:
 
@@ -88,7 +91,15 @@ Every living agent rolls against `0.18 × dominance² × (1 − prosociality)`. 
 - is not a peer in dominance (target's dominance ≥ 0.7 × attacker's is skipped — high-dominance agents form a mutually-restraining elite),
 - is not a trade partner (an existing tie above threshold shields the relationship).
 
-A successful seizure transfers 30% of the victim's holdings. The dyad's tie is crashed. Any prosocial witness within 3 cells (with `prosociality ≥ 0.65`) marks the attacker as shamed for 15 turns. Others may then refuse trade with them.
+A successful seizure transfers 30% of the victim's holdings. The dyad's tie is crashed.
+
+Three reputation effects fire from the seizure:
+
+- **Victim distrust** — the victim's `distrust[victim][attacker]` weight jumps by 0.7.
+- **Bystander distrust** — every visible peer within 3 cells learns some wariness: `distrust[witness][attacker]` grows by `0.25 + 0.35 × witness.prosociality`. Even neighbours who aren't prosocial enough to shame carry the memory.
+- **Public notoriety** — `offenderNotoriety[attacker]` grows by 0.15.
+
+If any prosocial witness (`prosociality ≥ 0.65`) saw it, the attacker is marked *shamed* for 15 turns and others may refuse to trade with them.
 
 ### 5. Trade
 
@@ -101,23 +112,31 @@ For each agent, the configured topology produces candidate partners:
 For each unordered pair, `tryTrade` runs:
 
 1. **Shame check** — if the partner is shamed, each side rolls `refuseShamedProbability` (a sigmoid on prosociality).
-2. **MRS comparison** — Cobb-Douglas marginal rate of substitution. Higher MRS = values spice more = buyer. Price = geometric mean of the two MRSs.
-3. **Payment selection** — if the buyer holds third-party tokens, they offer those first (issuers can default). Sugar is the fallback. Token payments are discounted at the issuer's trustworthiness.
-4. **Pareto check** — both sides must come out strictly better off. Otherwise no trade.
-5. **Cooperative dividend** — `0.1 × min(prosociality_a, prosociality_b)` plus a trust bonus from the dyad's tie. Pays out on the goods that moved.
-6. **Tie bump** — successful trade increases the dyad's tie by 1 (capped at 8).
+2. **Distrust check** — each side rolls `distrust[self][partner] × self.prosociality` to refuse. Norm-followers act on witnessed and copied distrust; defectors ignore it. This is where a peer-learned norm bites.
+3. **MRS comparison** — Cobb-Douglas marginal rate of substitution. Higher MRS = values spice more = buyer. Price = geometric mean of the two MRSs.
+4. **Payment selection** — if the buyer holds third-party tokens, they offer those first (issuers can default). Sugar is the fallback. Token payments are discounted at the issuer's trustworthiness, further discounted by the seller's `issuerDistrust` of that issuer.
+5. **Pareto check** — both sides must come out strictly better off. Otherwise no trade.
+6. **Cooperative dividend** — `0.1 × min(prosociality_a, prosociality_b)` plus a trust bonus from the dyad's tie. Pays out on the goods that moved.
+7. **Tie bump** — successful trade increases the dyad's tie by 1 (capped at 8).
+8. **Favoured-partner queue** — each side appends the other to a bounded queue (max 6). This is the substrate for practice imitation later in the tick.
 
 The aggregate of all pairwise clearing prices this tick is the emergent market price.
 
-### 6. Tie decay
+### 6. Tie and reputation decay
 
-All tie weights multiplied by `TIE_DECAY = 0.97`; weights below 0.25 are pruned. Relationships are sticky but not eternal.
+All tie weights multiplied by `TIE_DECAY = 0.97`; weights below `TIE_THRESHOLD = 0.25` are pruned. Relationships are sticky but not eternal.
 
-### 7. Cultural drift
+Reputation memory decays on the same beat: every `distrust`, `issuerDistrust`, and `offenderNotoriety` entry is multiplied by `DISTRUST_DECAY = 0.98`; anything below the `DISTRUST_FLOOR = 0.05` is dropped. A witnessed coercion is a ~30-turn shadow; a copied one is shorter.
 
-Each agent rolls `0.03 × statusSeeking`. On a hit, they pull their traits a fraction of the way toward the wealthiest visible neighbour's traits.
+### 7. Cultural drift and practice imitation
 
-**Habitus inertia:** the drift costs wealth proportional to the Euclidean distance moved (`HABITUS_COST_PER_UNIT = 6 × distance`). Without this cost, agents would flip toward whoever is rich today and no subculture would stabilise.
+Each agent rolls `0.03 × statusSeeking`. On a hit, they pick the wealthiest visible neighbour and do three things:
+
+**Trait drift.** Pull traits a fraction of the way toward the neighbour's. Habitus inertia costs wealth proportional to the Euclidean distance moved (`HABITUS_COST_PER_UNIT = 6 × distance`). Without this, agents would flip toward whoever is rich today and no subculture would stabilise.
+
+**Norm propagation.** Copy the neighbour's strongest distrust entry: `distrust[me][worst-offender-they-know] += 0.5 × neighbour.weight`. This is how a "stay clear of X" norm spreads through the tie graph without any central authority declaring it. If enough of a person's neighbours have distrusted the same offender, they end up distrusting too — even if they never witnessed the coercion.
+
+**Practice imitation.** Adopt one of the neighbour's `favouredPartners` into your own queue. Bourdieu's habitus is about taste in relationships as much as dispositions; here, imitating who a wealthier peer trades with biases your future partner rolls in `partnersFor` (one favoured partner is prepended to the candidate list each tick).
 
 ### 8. Consume, age, die
 
@@ -125,6 +144,7 @@ Pay metabolism, increment age. Negative holdings or age past `maxAge` kills the 
 
 - **Bequeath** — wealth is split among living trade-tie partners, weighted by tie strength, so wealth doesn't vanish when a hoarder dies.
 - **Default** — every token the agent issued becomes worthless. Holders silently lose the balance; the default volume is recorded.
+- **Distrust contagion** — every burned holder gets `issuerDistrust[holder][other-issuer-they-hold] += 0.35` for *every other* issuer in their portfolio. One default doesn't just discredit that issuer; it makes the holder suspicious of everyone else who has issued them credit. This is the substrate a bank run rides on — no second default has to happen.
 
 ### 9. Reproduce
 
@@ -169,17 +189,42 @@ trustworthiness =
 
 Old or over-issued issuers are not trusted; young rich issuers with little debt are.
 
-**Discount.** The Pareto check uses `qty × trustworthiness` rather than face value. A risky IOU fails the seller's welfare test naturally — there's no separate fairness rule.
+**Discount.** The Pareto check uses `qty × trustworthiness × (1 − issuerDistrust)` rather than face value. A risky IOU fails the seller's welfare test naturally — there's no separate fairness rule.
 
-**Default.** When an issuer dies, all their outstanding tokens become worthless. Every holder's balance for that issuer is wiped; the default volume goes into the historical ledger (which observers can read about).
+**Default.** When an issuer dies, all their outstanding tokens become worthless. Every holder's balance for that issuer is wiped; the default volume goes into the historical ledger. Burned holders then pass distrust onto every other issuer they hold, so a first default seeds the substrate for a wider run.
 
-**Emergent money.** When an issuer's tokens are held by three or more distinct other agents, they count as *circulating*. The Metrics page tracks `circulatingIssuers` for the run; this is the threshold past which "private bank" stops being a metaphor.
+**Emergent money.** When an issuer's tokens are held by three or more distinct other agents, they count as *circulating*. The Money floating window tracks `tokenSupply` and `circulatingIssuers` in real time; this is the threshold past which "private bank" stops being a metaphor.
+
+**Bank run.** After each snapshot the engine measures population-normalised distrust in the largest issuer. When it crosses `BANK_RUN_THRESHOLD = 0.35` and at least `BANK_RUN_COOLDOWN = 60` turns have passed since the last run, `executeBankRun` fires:
+
+- Every holder of that issuer's tokens redeems what they can — the issuer covers up to 70% of its own sugar reserves.
+- Anything unredeemable burns.
+- Every holder gets `issuerDistrust[holder][issuer] += 0.8` (they *saw* it happen this time).
+- The issuer's outstanding liability collapses to zero.
+
+The bank-run event routes to Polanyi, Farmer, and Marx — the fictitious commodity failing, the herd cascade, the credit collapse.
+
+## The trust ledger
+
+Two graphs live on top of the trade-tie map:
+
+- **`distrust[witness][offender]`** — coercion-based wariness that spreads through cultural imitation.
+- **`issuerDistrust[witness][issuer]`** — token-based wariness that spreads through cross-issuer contagion.
+
+Both decay each turn on the same beat as ties. Both are erased when the witness dies.
+
+## Emergent leadership
+
+At the end of every tick, `refreshInfluencer` computes the inbound tie-weight sum for every agent. The agent with the largest sum is the current `topInfluencerId`; the sum is `topInfluencerCentrality`. This is a *signal*, not a role — nobody enforces anything, nobody has authority, but a node has become an anchor of trust in the population's graph.
+
+The `leadership_emerges` event fires when centrality first crosses `LEADERSHIP_LEVEL = 24` (with hysteresis re-arming at `LEADERSHIP_REARM = 14`). It routes to Granovetter (centrality reading), Flack (slow variable finding its host), and Durkheim (the effervescence around it).
 
 ## The endogenous crisis layer
 
-- **Land degradation** scales with harvest pressure. Visible on Metrics as `landDegradation` (0 = pristine, 1 = exhausted).
+- **Land degradation** scales with harvest pressure. Visible on Metrics as `landDegradation` (0 = pristine, 1 = exhausted). Also visible to *agents* through the fertility factor in `scoreCell` — worn ground scores low, so populations drift off it before the ceiling collapses.
 - **Blight** rate scales with `degradation²`. Mild damage is harmless; severe damage makes famine likely.
 - **Plague** rate scales with overcrowding past a density threshold.
+- **Bank run** — when population-wide distrust in the largest issuer crosses a threshold, holders liquidate. See the token-economy section above.
 - **No safety net.** There is no extinction guard forcing extinct motivations back into the gene pool. Monocultures can win and stay won.
 
 ## Calibration knobs
@@ -194,7 +239,10 @@ The most useful constants, all in `lib/engine.ts`:
 | `RECOVERY_RATE = 0.0008` | fallow land recovery rate |
 | `TOKEN_PRIOR_LIABILITY = 4` | new-issuer credit floor |
 | `TIE_DECAY = 0.97` | trade relationship decay |
+| `DISTRUST_DECAY = 0.98` | reputation memory decay |
 | `WITNESS_PROSOCIALITY_THRESHOLD = 0.65` | who shames coercion |
+| `BANK_RUN_THRESHOLD = 0.35` | population mistrust needed to trigger a run |
+| `LEADERSHIP_LEVEL = 24` | inbound tie weight for `leadership_emerges` to fire |
 | `mutationRate` (config, default `0.04`) | per-birth resample rate; exposed as setup slider |
 
 Run the bench script to see how a constant change moves dynamics across village, town, and city without firing up the dev server:
