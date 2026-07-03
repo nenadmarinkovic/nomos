@@ -59,6 +59,12 @@ export interface Agent {
   shamedUntilTurn: number;
   /** Recent good trade partners — copied by cultural imitation. */
   favouredPartners: number[];
+  /** Cells this agent has recently harvested well. Bounded queue, biases
+   *  `scoreCell` toward known-productive ground. */
+  goodCells: number[];
+  /** EMA of "was the last harvest strong" — the reference against which
+   *  new harvests are judged as noteworthy. */
+  meanHarvest: number;
 }
 
 /** Seed for each named motivation. New agents draw a jittered vector
@@ -469,6 +475,7 @@ export class Engine {
     this.decayReputations();
     // Culture after trade so wealth reads are post-trade.
     this.culturalPhase();
+    this.triadicClosure();
 
     // Freeze the living set before consume/reproduce so newborns can't act yet.
     const living: number[] = [];
@@ -739,6 +746,8 @@ export class Engine {
       lastHoldings: parent.initialSugar + parent.initialSpice,
       shamedUntilTurn: 0,
       favouredPartners: parent.favouredPartners.slice(-3),
+      goodCells: [],
+      meanHarvest: 0,
     };
     this.agents.push(child);
     this.occupants[idx] = child.id;
@@ -865,51 +874,123 @@ export class Engine {
     max.set(out);
   }
 
-  /** Blight risk grows with degradation; plague risk with density.
-   *  Both gated on the society's own state, not a stochastic dice roll. */
+  /** Blight fires when a local patch of land has been worn past the
+   *  threshold; plague fires when a dense contact cluster crosses it,
+   *  and transmits along the favoured-partner graph. Both come from
+   *  what the society has done to itself, not a global dice roll. */
   private rollShocks(): void {
-    // Quiet grace period so the society can establish.
+    const BLIGHT_COOLDOWN = 150;
+    const PLAGUE_COOLDOWN = 220;
     if (this.turn < 100) return;
     if (this.turn < this.blightUntilTurn) return;
-    if (this.turn - this.lastPlagueTurn < 60) return;
-
-    let currentLandTotal = 0;
-    for (let i = 0; i < this.maxCells.length; i++) {
-      currentLandTotal += this.maxCells[i] + this.maxSpice[i];
+    if (this.turn - this.lastBlightTurn < BLIGHT_COOLDOWN) {
+      // Still within the blight-refractory period. Plague can still fire.
+    } else if (this.detectLocalBlight()) {
+      this.blightUntilTurn = this.turn + 25;
+      this.lastBlightTurn = this.turn;
+      return;
     }
-    const landRatio =
-      this.pristineLandTotal > 0
-        ? currentLandTotal / this.pristineLandTotal
-        : 1;
-    const degradation = Math.max(0, 1 - landRatio);
-    const BLIGHT_BASE = 0.0005;
-    // Squared: mild degradation harmless, severe degradation fatal.
-    const blightRate = BLIGHT_BASE + 0.02 * Math.pow(degradation, 2);
+    if (this.turn - this.lastPlagueTurn < PLAGUE_COOLDOWN) return;
+    this.detectAndCascadePlague();
+  }
 
+  /** Scan the grid for the worst 5×5 neighbourhood degradation. If any
+   *  patch has lost more than the threshold of its pristine capacity,
+   *  the blight fires — desertification travelling outward. */
+  private detectLocalBlight(): boolean {
+    const LOCAL_BLIGHT_THRESHOLD = 0.38;
+    const R = 2;
+    const w = this.width;
+    const h = this.height;
+    let worst = 0;
+    for (let y = R; y < h - R; y += 3) {
+      for (let x = R; x < w - R; x += 3) {
+        let pristine = 0;
+        let current = 0;
+        for (let dy = -R; dy <= R; dy++) {
+          for (let dx = -R; dx <= R; dx++) {
+            const i = (y + dy) * w + (x + dx);
+            pristine += this.originalMaxCells[i] + this.originalMaxSpice[i];
+            current += this.maxCells[i] + this.maxSpice[i];
+          }
+        }
+        if (pristine <= 0) continue;
+        const local = 1 - current / pristine;
+        if (local > worst) worst = local;
+        if (worst >= LOCAL_BLIGHT_THRESHOLD) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Density gate + partner-graph cascade. A dense-cluster seed becomes
+   *  patient zero; infection spreads along favoured-partner ties with
+   *  decreasing probability. High-prosociality agents resist a little. */
+  private detectAndCascadePlague(): void {
+    const PLAGUE_DENSITY = 0.07;
     let alive = 0;
     for (const ag of this.agents) if (ag.alive) alive++;
     const density = alive / (this.width * this.height);
-    const DENSITY_THRESHOLD = 0.25;
-    const overcrowding = Math.max(0, density - DENSITY_THRESHOLD);
-    const PLAGUE_BASE = 0.0002;
-    const plagueRate = PLAGUE_BASE + 0.04 * overcrowding;
+    if (density < PLAGUE_DENSITY) return;
 
-    const r = this.rng();
-    if (r < blightRate) {
-      this.blightUntilTurn = this.turn + 25;
-      this.lastBlightTurn = this.turn;
-    } else if (r < blightRate + plagueRate) {
-      const PLAGUE_SHARE = 0.05;
-      this.lastPlagueDeaths = 0;
-      for (const ag of this.agents) {
-        if (!ag.alive) continue;
-        if (this.rng() < PLAGUE_SHARE) {
-          this.killAgent(ag);
-          this.lastPlagueDeaths++;
+    let seed: Agent | null = null;
+    let seedNeighbourhood = -1;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const j = Math.floor(this.rng() * this.agents.length);
+      const cand = this.agents[j];
+      if (!cand?.alive) continue;
+      let count = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = cand.x + dx;
+          const ny = cand.y + dy;
+          if (nx < 0 || ny < 0 || nx >= this.width || ny >= this.height) continue;
+          const occ = this.occupants[ny * this.width + nx];
+          if (occ !== -1) count++;
         }
       }
-      this.lastPlagueTurn = this.turn;
+      // Prefer clustered seeds but accept a lone one if all candidates were
+      // isolated — otherwise sparse populations never seed a plague at all.
+      if (count > seedNeighbourhood) {
+        seedNeighbourhood = count;
+        seed = cand;
+      }
     }
+    if (!seed) return;
+
+    const SURVIVE_BONUS = 0.4;
+    const infected = new Set<number>();
+    const queue: { id: number; strength: number }[] = [
+      { id: seed.id, strength: 1 },
+    ];
+    let deaths = 0;
+    let step = 0;
+    while (queue.length > 0) {
+      const { id, strength } = queue.shift()!;
+      step++;
+      if (infected.has(id) || strength < 0.15) continue;
+      infected.add(id);
+      const ag = this.agents[id];
+      if (!ag?.alive) continue;
+      const immunity = SURVIVE_BONUS * ag.traits.prosociality;
+      const isSeed = step === 1;
+      // Patient zero always contracts — otherwise a lucky immunity roll
+      // silently defeats the outbreak before it starts.
+      const dies = isSeed || this.rng() < strength * (1 - immunity);
+      if (dies) {
+        this.killAgent(ag);
+        deaths++;
+      }
+      for (const fid of ag.favouredPartners) {
+        if (!infected.has(fid) && this.agents[fid]?.alive) {
+          queue.push({ id: fid, strength: strength * 0.75 });
+        }
+      }
+    }
+
+    if (deaths === 0) return;
+    this.lastPlagueDeaths = deaths;
+    this.lastPlagueTurn = this.turn;
   }
 
   private moveAndHarvest(a: Agent): void {
@@ -929,6 +1010,16 @@ export class Engine {
     const spiceGain = this.spice[idx] * spiceYieldFromTraits(a.traits);
     a.sugar += sugarGain;
     a.spice += spiceGain;
+    // Track "good cells" — anything above the agent's own EMA is worth
+    // returning to. EMA update mixes the new gain at ~15%.
+    const gain = sugarGain + spiceGain;
+    if (gain > a.meanHarvest * 1.25 && gain > 0.5) {
+      if (!a.goodCells.includes(idx)) {
+        a.goodCells.push(idx);
+        if (a.goodCells.length > 4) a.goodCells.shift();
+      }
+    }
+    a.meanHarvest = a.meanHarvest * 0.85 + gain * 0.15;
     this.cells[idx] = 0;
     this.spice[idx] = 0;
     // Each harvest nibbles the cell's carrying capacity.
@@ -1111,6 +1202,8 @@ export class Engine {
       this.originalMaxCells[idx] + this.originalMaxSpice[idx];
     const fertility =
       pristine > 0 ? (this.maxCells[idx] + this.maxSpice[idx]) / pristine : 1;
+    // Self-history: 10% boost for cells the agent remembers as productive.
+    const familiar = a.goodCells.includes(idx) ? 1.1 : 1;
 
     // Fast path: pure-greed agents don't need the neighbour scan.
     const t = a.traits;
@@ -1119,7 +1212,9 @@ export class Engine {
       t.dominance < 0.05 &&
       t.statusSeeking < 0.05
     ) {
-      return resources * (0.6 + 0.5 * t.greed) * (0.4 + 0.6 * fertility);
+      return (
+        resources * (0.6 + 0.5 * t.greed) * (0.4 + 0.6 * fertility) * familiar
+      );
     }
 
     let count = 0;
@@ -1140,13 +1235,15 @@ export class Engine {
       }
     }
     const avgWealth = count > 0 ? totalWealth / count : 0;
-    return scoreCellByTraits(
-      t,
-      resources,
-      count,
-      avgWealth,
-      holdings(a),
-      fertility,
+    return (
+      scoreCellByTraits(
+        t,
+        resources,
+        count,
+        avgWealth,
+        holdings(a),
+        fertility,
+      ) * familiar
     );
   }
 
@@ -1555,6 +1652,68 @@ export class Engine {
     }
   }
 
+  /** Friend-of-friend closure: when A has strong ties to B and C, sometimes
+   *  a weak seed tie opens between B and C. This is where triangles close
+   *  and multi-agent coalitions can form out of a dyadic graph. */
+  private triadicClosure(): void {
+    const CLOSURE_TIE_THRESHOLD = 2;
+    const CLOSURE_PROB = 0.02;
+    const SEED_WEIGHT = TIE_INCREMENT * 0.5;
+
+    // Build each agent's list of strong partners (both tie directions).
+    const strong = new Map<number, number[]>();
+    const push = (id: number, other: number) => {
+      let list = strong.get(id);
+      if (!list) {
+        list = [];
+        strong.set(id, list);
+      }
+      list.push(other);
+    };
+    for (const [lo, row] of this.tiesMap) {
+      for (const [hi, w] of row) {
+        if (w < CLOSURE_TIE_THRESHOLD) continue;
+        push(lo, hi);
+        push(hi, lo);
+      }
+    }
+
+    let alive = 0;
+    for (const ag of this.agents) if (ag.alive) alive++;
+    let budget = Math.max(1, Math.floor(alive * 0.02));
+
+    for (const [anchor, partners] of strong) {
+      if (budget <= 0) break;
+      if (partners.length < 2) continue;
+      // Try one random pair per anchor per tick — enough for closure to
+      // percolate over ~50 turns without blowing the tie graph up.
+      const i = Math.floor(this.rng() * partners.length);
+      let j = Math.floor(this.rng() * (partners.length - 1));
+      if (j >= i) j++;
+      const b = partners[i];
+      const c = partners[j];
+      if (b === c) continue;
+      if (this.getTie(b, c) > 0) continue;
+      if (this.rng() >= CLOSURE_PROB) continue;
+      const bAgent = this.agents[b];
+      const cAgent = this.agents[c];
+      if (!bAgent?.alive || !cAgent?.alive) continue;
+      // Only close if neither party distrusts the other.
+      if (this.getDistrust(b, c) > 0.2) continue;
+      if (this.getDistrust(c, b) > 0.2) continue;
+      const lo = b < c ? b : c;
+      const hi = b < c ? c : b;
+      let row = this.tiesMap.get(lo);
+      if (!row) {
+        row = new Map();
+        this.tiesMap.set(lo, row);
+      }
+      row.set(hi, SEED_WEIGHT);
+      budget--;
+      void anchor;
+    }
+  }
+
   private killAgent(a: Agent): void {
     if (this.inheritance) {
       this.bequeathToTies(a);
@@ -1590,7 +1749,7 @@ export class Engine {
       const otherIssuers = this.tokenHoldings.get(holderId);
       if (!otherIssuers) continue;
       for (const iss of otherIssuers.keys()) {
-        this.bumpIssuerDistrust(holderId, iss, 0.35);
+        this.bumpIssuerDistrust(holderId, iss, 0.15);
       }
     }
   }
@@ -1706,8 +1865,8 @@ export class Engine {
       tokens.topIssuerId,
       alive,
     );
-    const BANK_RUN_THRESHOLD = 0.35;
-    const BANK_RUN_COOLDOWN = 60;
+    const BANK_RUN_THRESHOLD = 0.55;
+    const BANK_RUN_COOLDOWN = 200;
     let bankRunActive = false;
     if (
       tokens.topIssuerId >= 0 &&
@@ -1744,7 +1903,7 @@ export class Engine {
       blightActive: this.turn < this.blightUntilTurn,
       blightStartedTurn: this.lastBlightTurn,
       plagueDeathsThisTurn:
-        this.turn === this.lastPlagueTurn ? this.lastPlagueDeaths : 0,
+        this.turn - 1 === this.lastPlagueTurn ? this.lastPlagueDeaths : 0,
       landDegradation: this.computeLandDegradation(),
       ...tokens,
       topInfluencerId: this.lastInfluencerId,
@@ -1859,19 +2018,23 @@ export class Engine {
     this.lastInfluencerCentrality = topW;
   }
 
+  /** Holder-normalised: what share of the top issuer's holders distrust
+   *  the issuer, weighted by how strong that distrust is. This is the
+   *  meaningful "bank run" indicator — the general population's opinion
+   *  is irrelevant, only actual holders can start a run. */
   private computeTopIssuerDistrust(topIssuerId: number, alive: number): number {
     if (topIssuerId < 0 || alive <= 0) return 0;
+    let holders = 0;
     let sum = 0;
-    let n = 0;
-    for (const row of this.issuerDistrust.values()) {
-      const w = row.get(topIssuerId);
-      if (w !== undefined) {
-        sum += w;
-        n++;
-      }
+    for (const [holderId, row] of this.tokenHoldings) {
+      if (!row.has(topIssuerId)) continue;
+      if (!this.agents[holderId]?.alive) continue;
+      holders++;
+      const w = this.issuerDistrust.get(holderId)?.get(topIssuerId) ?? 0;
+      sum += w;
     }
-    if (n === 0) return 0;
-    return sum / alive;
+    if (holders === 0) return 0;
+    return sum / holders;
   }
 
   randomFloat(): number {
@@ -2134,6 +2297,8 @@ function spawnAgents(
       lastHoldings: sugar + spice,
       shamedUntilTurn: 0,
       favouredPartners: [],
+      goodCells: [],
+      meanHarvest: 0,
     });
   }
 

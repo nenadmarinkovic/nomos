@@ -55,6 +55,10 @@ const priceConfig: ChartConfig = {
 const moneyConfig: ChartConfig = {
   tokenSupply: { label: "Tokens", color: "#8B5CF6" },
 };
+const trustConfig: ChartConfig = {
+  topInfluencerCentrality: { label: "Anchor", color: "#2A9D5C" },
+  topIssuerMistrust: { label: "Mistrust", color: "#E63946" },
+};
 
 export function FloatingWindows() {
   const started = useSimulationStore((s) => s.started);
@@ -114,6 +118,7 @@ export function FloatingWindows() {
         <PriceWindow />
         <StreamWindow />
         <MoneyWindow />
+        <TrustWindow />
         <NarratorWindow />
       </div>
     </DndContext>
@@ -577,6 +582,79 @@ function MoneyWindow() {
       </ChartContainer>
       <p className="mt-2 font-sans text-[11px] text-muted-foreground">
         IOUs outstanding · issuers whose tokens ≥3 holders
+      </p>
+    </FloatingWindow>
+  );
+}
+
+function TrustWindow() {
+  const history = useSimulationStore((s) => s.history);
+  const snapshot = useSimulationStore((s) => s.snapshot);
+
+  const data = useMemo(
+    () =>
+      history.map((p) => ({
+        turn: p.turn,
+        topInfluencerCentrality: p.topInfluencerCentrality,
+        // Rescale mistrust into the same visual band as centrality so both
+        // series read against a shared Y-domain (mistrust is 0..1, centrality
+        // is typically 0..~40 in practice).
+        topIssuerMistrust: p.topIssuerMistrust * 40,
+      })),
+    [history],
+  );
+
+  const anchorLabel =
+    snapshot.topInfluencerId >= 0
+      ? `#${snapshot.topInfluencerId} · ${snapshot.topInfluencerCentrality.toFixed(1)}`
+      : "no anchor";
+  const mistrustPct = Math.round(snapshot.topIssuerMistrust * 100);
+  const meta = snapshot.bankRunActive
+    ? `${anchorLabel} · run!`
+    : `${anchorLabel} · ${mistrustPct}% mistrust`;
+
+  return (
+    <FloatingWindow windowKey="trust" title="Trust" meta={meta}>
+      <ChartContainer config={trustConfig} className="aspect-auto h-24 w-full">
+        <LineChart
+          data={data}
+          margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+        >
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="turn" hide />
+          <YAxis hide />
+          <ChartTooltip
+            cursor={false}
+            content={
+              <ChartTooltipContent
+                indicator="line"
+                labelFormatter={(_v, payload) => {
+                  const p = payload?.[0]?.payload as { turn?: number } | undefined;
+                  return `Turn ${p?.turn ?? 0}`;
+                }}
+              />
+            }
+          />
+          <Line
+            type="monotone"
+            dataKey="topInfluencerCentrality"
+            stroke="var(--color-topInfluencerCentrality)"
+            strokeWidth={1.5}
+            dot={false}
+            isAnimationActive={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="topIssuerMistrust"
+            stroke="var(--color-topIssuerMistrust)"
+            strokeWidth={1.5}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ChartContainer>
+      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+        Leadership anchor · mistrust in the top issuer
       </p>
     </FloatingWindow>
   );

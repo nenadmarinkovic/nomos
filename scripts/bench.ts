@@ -47,6 +47,9 @@ function run({ scale, turns, seed, sampleEvery }: RunOptions): void {
     "isol%",
     "tokens",
     "issuers",
+    "trust!",
+    "anchor",
+    "mistr%",
     "land",
     "price",
     "vol",
@@ -72,6 +75,14 @@ function run({ scale, turns, seed, sampleEvery }: RunOptions): void {
   let tVolAccum = 0;
   let sampleCount = 0;
   let lastSampleTurn = 0;
+  let bankRunCount = 0;
+  let leadershipCount = 0;
+  let blightCount = 0;
+  let plagueCount = 0;
+  let lastBankRunTurn = -9999;
+  let lastBlightTurnSeen = -9999;
+  let lastPlagueTurnSeen = -9999;
+  let leadershipArmed = true;
 
   for (let t = 0; t <= turns; t++) {
     if (t > 0) {
@@ -81,6 +92,24 @@ function run({ scale, turns, seed, sampleEvery }: RunOptions): void {
       shameAccum += s.shamingCount;
       volAccum += s.tradeVolume;
       tVolAccum += s.tokenTradeVolume;
+      if (s.bankRunActive && s.bankRunStartedTurn !== lastBankRunTurn) {
+        bankRunCount++;
+        lastBankRunTurn = s.bankRunStartedTurn;
+      }
+      if (s.blightStartedTurn !== lastBlightTurnSeen && s.blightStartedTurn > 0) {
+        blightCount++;
+        lastBlightTurnSeen = s.blightStartedTurn;
+      }
+      if (s.plagueDeathsThisTurn > 0 && s.turn !== lastPlagueTurnSeen) {
+        plagueCount++;
+        lastPlagueTurnSeen = s.turn;
+      }
+      const c = s.topInfluencerCentrality;
+      if (c < 45) leadershipArmed = true;
+      if (leadershipArmed && c >= 80) {
+        leadershipCount++;
+        leadershipArmed = false;
+      }
     }
     if (t % sampleEvery === 0) {
       const s = engine.getSnapshot();
@@ -95,6 +124,9 @@ function run({ scale, turns, seed, sampleEvery }: RunOptions): void {
         fmt(s.isolateShare * 100, 0),
         fmt(s.tokenSupply, 0),
         fmt(s.circulatingIssuers),
+        fmt(bankRunCount),
+        fmt(s.topInfluencerCentrality, 1),
+        fmt(s.topIssuerMistrust * 100, 0),
         fmt(s.landDegradation, 3),
         fmt(s.tradePrice, 2),
         fmt(volAccum / window, 1),
@@ -121,7 +153,10 @@ function run({ scale, turns, seed, sampleEvery }: RunOptions): void {
     `\nfinal: alive=${final.alive}, gini=${final.gini.toFixed(3)}, ` +
       `tokens=${Math.round(final.tokenSupply)}, circ-issuers=${final.circulatingIssuers}, ` +
       `degradation=${final.landDegradation.toFixed(3)}, ` +
-      `mono-share=${monoShare.toFixed(2)}, samples=${sampleCount}`,
+      `mono-share=${monoShare.toFixed(2)}, ` +
+      `bank-runs=${bankRunCount}, leadership-emergences=${leadershipCount}, ` +
+      `blights=${blightCount}, plagues=${plagueCount}, ` +
+      `samples=${sampleCount}`,
   );
 }
 

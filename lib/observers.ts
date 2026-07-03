@@ -58,6 +58,7 @@ export function buildSystemPrompt(observer: ObserverKey): string {
     "- Translate the underlying numbers into a human reading; do not restate them mechanically.",
     "- Do not mention that this is a simulation, a model, agents, or an AI; speak as the theorist watching a society.",
     "- Do not treat categories like 'material' or 'symbolic' as fixed types the people were born into — they are readings of how people are behaving *now*.",
+    "- Name the mechanism you think produced this. Say which disposition rose, which relationship snapped, which practice spread, which trust dissolved. A reading without a mechanism is decoration.",
     "- No preamble, no headings, no quotation marks around your answer.",
   ].join("\n");
 }

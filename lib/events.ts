@@ -184,9 +184,11 @@ const MOTIVATION_DOMINANCE = 0.4;
 const ISOLATE_SURGE = 0.15;
 const ISOLATE_LEVEL = 0.4;
 
-/** Leadership signal: absolute tie-weight (engine TIE_CAP = 8). */
-const LEADERSHIP_LEVEL = 24;
-const LEADERSHIP_REARM = 14;
+/** Leadership signal: absolute tie-weight (engine TIE_CAP = 8). Bench
+ *  shows the anchor sits between 60 and 130 in normal runs, so 80 makes
+ *  the event register a genuinely dominant node, not a routine graph. */
+const LEADERSHIP_LEVEL = 80;
+const LEADERSHIP_REARM = 45;
 
 /** Return a significant event this turn, or null. */
 export function detectEvent(

@@ -49,6 +49,8 @@ export interface HistoryPoint {
   tradePrice: number;
   tokenSupply: number;
   circulatingIssuers: number;
+  topInfluencerCentrality: number;
+  topIssuerMistrust: number;
   motivationCounts: {
     material: number;
     symbolic: number;
@@ -68,6 +70,7 @@ export type ViewKey =
   | "stream"
   | "narrator"
   | "money"
+  | "trust"
   | "network";
 
 export type WindowAnchor = "tl" | "tr" | "bl" | "br";
@@ -92,6 +95,7 @@ export const WIN_HEIGHTS: Record<ViewKey, number> = {
   stream: 202,
   narrator: 182,
   money: 182,
+  trust: 182,
   network: 380,
 };
 
@@ -103,7 +107,8 @@ export const DEFAULT_WINDOW_POSITIONS: Record<ViewKey, WindowPosition> = {
   wealth: { anchor: "tl", offsetX: 10, offsetY: 10 },
   stream: { anchor: "tl", offsetX: 10, offsetY: 202 },
   money: { anchor: "tl", offsetX: 10, offsetY: 394 },
-  network: { anchor: "tl", offsetX: 10, offsetY: 596 },
+  trust: { anchor: "tl", offsetX: 10, offsetY: 596 },
+  network: { anchor: "tl", offsetX: 10, offsetY: 798 },
 };
 
 export function resolveWindowPosition(
@@ -198,6 +203,7 @@ export const useSimulationStore = create<SimulationState>()(
         stream: false,
         narrator: true,
         money: false,
+        trust: false,
         network: false,
       },
       windowPositions: DEFAULT_WINDOW_POSITIONS,
@@ -263,6 +269,7 @@ export const useSimulationStore = create<SimulationState>()(
             "stream",
             "narrator",
             "money",
+            "trust",
             "network",
           ];
           const visible = order.filter((k) => s.views[k]);
@@ -304,6 +311,8 @@ export const useSimulationStore = create<SimulationState>()(
             tradePrice: snapshot.tradePrice,
             tokenSupply: snapshot.tokenSupply,
             circulatingIssuers: snapshot.circulatingIssuers,
+            topInfluencerCentrality: snapshot.topInfluencerCentrality,
+            topIssuerMistrust: snapshot.topIssuerMistrust,
             motivationCounts: snapshot.motivationCounts,
           });
           return { snapshot, turn: snapshot.turn, history: next };
@@ -351,7 +360,7 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 20,
+      version: 21,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         config: s.config,
@@ -368,6 +377,7 @@ export const useSimulationStore = create<SimulationState>()(
           stream: false,
           narrator: true,
           money: false,
+          trust: false,
           network: false,
         },
         windowPositions: DEFAULT_WINDOW_POSITIONS,
