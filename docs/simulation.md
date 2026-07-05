@@ -219,6 +219,8 @@ At the end of every tick, `refreshInfluencer` computes the inbound tie-weight su
 
 The `leadership_emerges` event fires when centrality first crosses `LEADERSHIP_LEVEL = 24` (with hysteresis re-arming at `LEADERSHIP_REARM = 14`). It routes to Granovetter (centrality reading), Flack (slow variable finding its host), and Durkheim (the effervescence around it).
 
+The Trust floating window plots `topInfluencerCentrality` and `topIssuerMistrust` on a shared axis, so the anchor's rise and the population's confidence in the largest issuer read against each other — and switches its label to `run!` while a bank run is active.
+
 ## The endogenous crisis layer
 
 - **Land degradation** scales with harvest pressure. Visible on Metrics as `landDegradation` (0 = pristine, 1 = exhausted). Also visible to *agents* through the fertility factor in `scoreCell` — worn ground scores low, so populations drift off it before the ceiling collapses.
