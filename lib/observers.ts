@@ -12,7 +12,6 @@ export interface WorldSummary {
   scale: string;
   landscape: string;
   equality: string;
-  reproduction: boolean;
 }
 
 /** Extra macro context passed alongside a single event so observers
@@ -71,7 +70,7 @@ export function buildUserPrompt(
   const lines: string[] = [];
 
   lines.push(
-    `Setting: a ${world.scale}-scale society on a ${world.landscape} landscape, started from ${world.equality} conditions, with ${world.reproduction ? "inheritance between generations" : "no inheritance — each life resets"}.`,
+    `Setting: a ${world.scale}-scale society on a ${world.landscape} landscape, started from ${world.equality} conditions.`,
   );
 
   if (context) {

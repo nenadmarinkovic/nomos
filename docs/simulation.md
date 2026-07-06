@@ -6,6 +6,10 @@ A reference for what the engine actually does — the data structures, the tick 
 
 The world is a square grid of cells. Each cell holds a stock of two goods (`sugar`, `spice`), each with its own ceiling (`maxCells`, `maxSpice`). Cells regrow toward their ceiling each tick, modulated by a seasonal cycle. Each cell may hold at most one agent.
 
+At construction the ceilings are set from the configured landscape, but stocks start at only 5% of capacity. The engine then runs 120 pre-agent ticks of regrowth and substrate diffusion so the world *greens in* from those seed nuclei before anyone is spawned — the resource field agents inherit is one that has already had time to spread, not one that was stipulated fully-charged.
+
+The tick loop halts as soon as `alive === 0`. On extinction the UI opens a dialog with the final turn, starting population, peak population, and Gini so the run's arc reads legibly instead of trailing off into empty ticks.
+
 Three scale presets:
 
 | scale | grid | agents | density |
@@ -148,13 +152,18 @@ Pay metabolism, increment age. Negative holdings or age past `maxAge` kills the 
 
 ### 9. Reproduce
 
-Birth probability per agent is `BASE_RATE × ageFactor × wealthFactor × populationFactor`:
+Every society reproduces — there is no toggle. Birth probability per agent is `BASE_RATE × ageFactor × wealthFactor × populationFactor`:
 
 - **ageFactor** — triangular bell over normalised age, peak at mid-life, zero at extremes.
 - **wealthFactor** — saturating; 0 when broke, around 1 at modest holdings, capped at 2.
 - **populationFactor** — soft logistic brake, `max(0, 1 − alive / cap)`.
 
-Children inherit parents' traits with small drift. Per-birth mutations resample from the configured motivation mix; the default rate is 4% and is exposed as a slider on the setup screen. At 0% a monoculture locks in permanently; raising it (e.g. to 10–15%) keeps minority motivations on life support after one dominates.
+Children inherit all four Bourdieusian forms of capital from the parent:
+
+- **Economic** — endowment is `max(parent.initialSugar, parent.sugar × 0.25)` (same for spice), floored at the baseline so a newborn always has runway to find its first harvest. The parent's current holdings shrink by half the transfer — raising a child is a real cost, not a free gift. Wealthy families raise wealthy children; poor families fall back to baseline.
+- **Cultural (habitus)** — traits are drifted from the parent's with small noise. Per-birth mutations resample from the configured motivation mix; the default rate is 4% and is exposed as a slider on the setup screen. At 0% a monoculture locks in permanently; raising it (e.g. to 10–15%) keeps minority motivations on life support after one dominates.
+- **Social** — the child inherits the last three of the parent's `favouredPartners` — a partial trade-tie network handed over.
+- **Symbolic / embodied** — `vision`, `sugarMetab`, `spiceMetab`, `maxAge`, and `sophistication` are copied straight from the parent. Cognitive style descends.
 
 ### 10. Refresh motivation labels
 

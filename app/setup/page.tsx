@@ -50,7 +50,6 @@ import {
   OBSERVER_INFO,
   ObserverKey,
   REGROWTH_BUCKETS,
-  REPRODUCTION_HINT,
   SCALE_INFO,
   Scale,
   SETTLEMENT_INFO,
@@ -71,7 +70,6 @@ type StepKey =
   | "equality"
   | "landscape"
   | "settlement"
-  | "reproduction"
   | "metabolism"
   | "regrowth"
   | "substrate"
@@ -125,13 +123,6 @@ const STEPS: readonly StepDef[] = [
       "The initial pattern of where people are is one of the quietest but most consequential choices. With a scattered start, distinctive clusters have to form through behaviour — that's the real test of whether neighbourhoods and tribes are emergent. With a clustered start, you skip ahead: 'people-near-each-other-look-alike' is already given. A single settlement forces migration into the story. A segregated start asks Schelling's question in reverse: once sorted, does a society stay sorted, or does mixing reassert itself?",
   },
   {
-    key: "reproduction",
-    question: "Does wealth pass between generations?",
-    framing: REPRODUCTION_HINT,
-    theoryHook:
-      "Inheritance is how structure becomes durable. When wealth and traits pass down, a head start (or a disadvantage) compounds across generations — the same families stay near the top, the same families stay near the bottom, and the question 'why doesn't anyone move?' becomes legible. When each life resets, every birth is a clean slate: useful as a thought experiment, but unrealistic for any actual society. Bourdieu's whole project was about the quiet machinery of the first option.",
-  },
-  {
     key: "metabolism",
     question: "How fast do they burn through resources?",
     framing:
@@ -167,7 +158,7 @@ const STEPS: readonly StepDef[] = [
     key: "lifespan",
     question: "How long do they live?",
     framing:
-      "Even without reproduction, agents have finite lives. Lifespan decides how quickly the population turns over.",
+      "Every agent has a finite life. Lifespan decides how quickly the population turns over.",
     theoryHook:
       "Short lives mean a society that resets quickly: wealth dissolves with each death, hierarchies don't have time to entrench, and demographic pressure is constant. Long lives let structure accumulate — old agents carry old advantages forward, and the present is shaped by decisions made long ago. The classic insight: societies with very long-lived agents tend to look stable but rigid, while short-lived ones look chaotic but mobile.",
   },
@@ -351,39 +342,6 @@ for (let oi = 0; oi < order.length; oi++) {
   tryPlace(order[oi],
            q.x0 + rng() * (q.x1 - q.x0),
            q.y0 + rng() * (q.y1 - q.y0));
-}`,
-    },
-  ],
-  reproduction: [
-    {
-      plain:
-        "If inheritance is on, each living agent gets a per-turn chance to bear a child — highest at mid-life, boosted by wealth, damped by crowding. Off, the population only shrinks.",
-      mode: "real",
-      file: "lib/engine.ts",
-      lines: "652-682",
-      snippet: `private reproductionPhase(livingIds: number[]): void {
-  if (!this.reproduction) return;
-
-  const populationFactor =
-    Math.max(0, 1 - livingIds.length / this.populationCap);
-  if (populationFactor <= 0) return;
-
-  const BASE_RATE = 0.04;
-  for (const id of livingIds) {
-    const a = this.agents[id];
-    if (!a.alive) continue;
-
-    // Triangular bell: peak fertility at mid-life, zero at the extremes.
-    const ageNorm = a.age / a.maxAge;
-    const ageFactor = Math.max(0, 1 - Math.abs(ageNorm - 0.5) * 2.5);
-    if (ageFactor <= 0) continue;
-
-    // Capped so one hoarder can't dominate births.
-    const wealthFactor = Math.min(2, (a.sugar + a.spice) / 20);
-
-    const p = BASE_RATE * ageFactor * wealthFactor * populationFactor;
-    if (this.rng() < p) this.bear(a);
-  }
 }`,
     },
   ],
@@ -972,25 +930,6 @@ function StepBody({
     );
   }
 
-  if (step === "reproduction") {
-    return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <BigChoiceCard
-          active={draft.world.reproduction}
-          onClick={() => patchWorld({ reproduction: true })}
-          label="Yes — children inherit"
-          hint="Wealth, traits, and disadvantage pass down. Class persists across generations."
-        />
-        <BigChoiceCard
-          active={!draft.world.reproduction}
-          onClick={() => patchWorld({ reproduction: false })}
-          label="No — each life resets"
-          hint="Every agent starts from zero. Inheritance plays no role; mobility is total."
-        />
-      </div>
-    );
-  }
-
   if (step === "metabolism") {
     const active = bucketIndex(
       METABOLISM_BUCKETS,
@@ -1466,13 +1405,6 @@ function SummaryReview({
           label="Initial settlement"
           value={SETTLEMENT_INFO[draft.world.initialSettlement].label}
           onEdit={() => jumpToStep("settlement")}
-        />
-        <SummaryRow
-          label="Inheritance"
-          value={
-            draft.world.reproduction ? "Children inherit" : "Each life resets"
-          }
-          onEdit={() => jumpToStep("reproduction")}
         />
       </SummarySection>
 

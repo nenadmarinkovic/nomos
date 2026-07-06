@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { ExtinctionDialog } from "@/components/extinction-dialog";
 import { MiniSimWindow } from "@/components/mini-sim-window";
 import { ObserverNarrator } from "@/components/observer-narrator";
 import { Sidebar, sectionFromPath } from "@/components/sidebar";
@@ -100,6 +101,7 @@ export function AppShell({
 
       <SimulationEngine />
       <ObserverNarrator />
+      <ExtinctionDialog />
     </div>
   );
 }

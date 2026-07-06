@@ -374,7 +374,6 @@ export class Engine {
 
   private rng: () => number;
   private regrowthRate: number;
-  private reproduction: boolean;
   private culturalTransmission: boolean;
   private inheritance: boolean;
   private conflict: boolean;
@@ -389,7 +388,6 @@ export class Engine {
   constructor(config: SimulationConfig) {
     this.rng = mulberry32(config.seed || 1);
     this.regrowthRate = config.world.physics.regrowthRate;
-    this.reproduction = config.world.reproduction;
     // Legacy runs predate these toggles — default them on.
     this.culturalTransmission = config.world.culturalTransmission ?? true;
     this.inheritance = config.world.inheritance ?? true;
@@ -417,8 +415,6 @@ export class Engine {
       config.world.landscape,
       this.rng,
     );
-    this.cells.set(this.maxCells);
-    this.spice.set(this.maxSpice);
     this.originalMaxCells = this.maxCells.slice();
     this.originalMaxSpice = this.maxSpice.slice();
     this.diffScratch = new Float32Array(total);
@@ -426,6 +422,31 @@ export class Engine {
     for (let i = 0; i < total; i++) {
       this.pristineLandTotal += this.originalMaxCells[i] + this.originalMaxSpice[i];
     }
+
+    // Seed resources instead of filling to capacity. Only the peaks start
+    // populated; the rest of the map is empty and gets fed by regrowth and
+    // substrate diffusion during warm-up.
+    const INITIAL_STOCK_FRACTION = 0.05;
+    for (let i = 0; i < total; i++) {
+      this.cells[i] = this.maxCells[i] * INITIAL_STOCK_FRACTION;
+      this.spice[i] = this.maxSpice[i] * INITIAL_STOCK_FRACTION;
+    }
+
+    // Let the world green in before agents arrive. Two full seasonal cycles
+    // of regrowth + substrate diffusion, with occupants[] still all -1, so
+    // capacity is unspoiled and diffusion spreads stock outward from the
+    // seed nuclei.
+    const WARMUP_TICKS = 120;
+    const priorDiffusion = this.substrateDiffusion;
+    this.substrateDiffusion = true;
+    for (let t = 0; t < WARMUP_TICKS; t++) {
+      this.turn = t;
+      this.regrow(this.cells, this.maxCells, true);
+      this.regrow(this.spice, this.maxSpice, false);
+      this.diffuseSubstrate();
+    }
+    this.turn = 0;
+    this.substrateDiffusion = priorDiffusion;
 
     const requested = AGENT_COUNT[config.world.scale];
     this.populationCap = Math.max(requested + 1, Math.floor(total * 0.5));
@@ -678,8 +699,6 @@ export class Engine {
 
   /** Birth chance per agent: wealth × mid-life bell × soft population brake. */
   private reproductionPhase(livingIds: number[]): void {
-    if (!this.reproduction) return;
-
     const populationFactor = Math.max(
       0,
       1 - livingIds.length / this.populationCap,
@@ -723,6 +742,22 @@ export class Engine {
       : sampleTraits(this.mutationMotivation(), this.rng);
     const childMotivation = motivationFromTraits(childTraits);
 
+    // Economic capital transfer: the parent spends a share of *current*
+    // holdings on the child, floored at the baseline so a newborn always has
+    // enough runway to find its first harvest. Wealthy families raise wealthy
+    // children; poor families raise poor ones.
+    const BEQUEST_SHARE = 0.25;
+    const sugarGift = Math.max(
+      parent.initialSugar,
+      parent.sugar * BEQUEST_SHARE,
+    );
+    const spiceGift = Math.max(
+      parent.initialSpice,
+      parent.spice * BEQUEST_SHARE,
+    );
+    parent.sugar = Math.max(0.01, parent.sugar - sugarGift * 0.5);
+    parent.spice = Math.max(0.01, parent.spice - spiceGift * 0.5);
+
     const child: Agent = {
       id: this.agents.length,
       alive: true,
@@ -730,10 +765,10 @@ export class Engine {
       y: cy,
       prevX: cx,
       prevY: cy,
-      sugar: parent.initialSugar,
-      spice: parent.initialSpice,
-      initialSugar: parent.initialSugar,
-      initialSpice: parent.initialSpice,
+      sugar: sugarGift,
+      spice: spiceGift,
+      initialSugar: sugarGift,
+      initialSpice: spiceGift,
       age: 0,
       vision: parent.vision,
       sugarMetab: parent.sugarMetab,
@@ -743,7 +778,7 @@ export class Engine {
       traits: childTraits,
       sophistication: parent.sophistication,
       boldness: 0.5,
-      lastHoldings: parent.initialSugar + parent.initialSpice,
+      lastHoldings: sugarGift + spiceGift,
       shamedUntilTurn: 0,
       favouredPartners: parent.favouredPartners.slice(-3),
       goodCells: [],
@@ -2239,7 +2274,10 @@ function spawnAgents(
     "minimal",
   );
 
-  const baseline = 15;
+  // Wealth baseline: at metabolism 1/tick, this gives newborn agents roughly
+  // 12–18 turns of runway before they must find food. Below that they starve
+  // before their first successful harvest.
+  const baseline = 25;
   const eq = config.world.equality;
   const wealths: number[] = [];
   for (let i = 0; i < count; i++) {

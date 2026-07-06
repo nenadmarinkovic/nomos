@@ -84,6 +84,12 @@ export class SimWorkerCore {
       if (!this.running || !this.engine) return;
       this.engine.tick();
       this.postFrame();
+      // Halt when the population is extinct — no more state can change.
+      if (this.engine.getSnapshot().alive === 0) {
+        this.running = false;
+        this.stopLoop();
+        return;
+      }
       this.loop();
     }, interval);
   }

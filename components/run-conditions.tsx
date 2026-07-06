@@ -40,7 +40,6 @@ function RunConditionsCard({ config }: { config: SimulationConfig }) {
   ];
 
   const rules: string[] = [];
-  rules.push(world.reproduction ? "reproduction" : "no reproduction");
   rules.push(world.inheritance ?? true ? "inheritance" : "no inheritance");
   rules.push(
     world.culturalTransmission ?? true

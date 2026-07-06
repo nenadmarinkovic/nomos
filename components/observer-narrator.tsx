@@ -169,7 +169,6 @@ function worldSummary(config: SimulationConfig): WorldSummary {
     scale: SCALE_INFO[config.world.scale].label.toLowerCase(),
     landscape: LANDSCAPE_INFO[config.world.landscape].label.toLowerCase(),
     equality: equalityBucket(config.world.equality).label.toLowerCase(),
-    reproduction: config.world.reproduction,
   };
 }
 

@@ -55,7 +55,6 @@ export interface WorldConfig {
   equality: Equality;
   landscape: Landscape;
   initialSettlement: InitialSettlement;
-  reproduction: boolean;
   /** Cultural transmission — agents occasionally adopt a wealthy neighbour's
    *  motivation. Lets ways of being spread horizontally, not only descend
    *  vertically through birth. */
@@ -271,9 +270,6 @@ export const TOPOLOGY_INFO: Record<
     hint: "Persistent ties. Friends of friends carry influence.",
   },
 };
-
-export const REPRODUCTION_HINT =
-  "Every society reproduces. The question is whether children inherit what their parents accumulated, or each life begins from scratch.";
 
 interface PhysicsBucket {
   value: number;
@@ -522,7 +518,6 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     equality: 0.05,
     landscape: "two_peaks",
     initialSettlement: "scattered",
-    reproduction: true,
     culturalTransmission: true,
     inheritance: true,
     conflict: true,
