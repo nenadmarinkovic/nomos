@@ -15,6 +15,7 @@ import {
   Sprite,
   Texture,
 } from "pixi.js";
+import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AgentInspectorOverlay } from "@/components/agent-inspector";
@@ -45,6 +46,15 @@ const MOTIVATION_COLOR_HEX: Record<string, number> = {
 const MOTIVATION_KEYS = ["material", "symbolic", "normative", "power"] as const;
 type MotivationKey = (typeof MOTIVATION_KEYS)[number];
 
+const TRAIL_TTL_MS = 480;
+const MAX_TRAILS = 3000;
+
+interface TrailSprite {
+  sprite: Sprite;
+  bornAt: number;
+  baseScale: number;
+}
+
 /** Pixi WebGL field renderer. Agents are motivation-coloured sprites
  *  (batched by Pixi); resources are an off-screen Canvas2D blitted to
  *  one GPU sprite; selection is a Graphics layer with a pulsing ring. */
@@ -54,6 +64,9 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const appRef = useRef<Application | null>(null);
   const stageRef = useRef<Container | null>(null);
   const agentLayerRef = useRef<Container | null>(null);
+  const trailLayerRef = useRef<Container | null>(null);
+  const trailsRef = useRef<TrailSprite[]>([]);
+  const lastTrailTurnRef = useRef<number>(-1);
   const spritesRef = useRef<Map<number, Sprite>>(new Map());
   const texturesRef = useRef<Record<MotivationKey, Texture> | null>(null);
   /** Selection: vision lines + a two-pass ring with pulsing alpha. */
@@ -74,6 +87,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+  const hoveredIdRef = useRef<number | null>(null);
   const [inspectorPos, setInspectorPos] = useState({ x: 12, y: 12 });
   const inspectorSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -83,6 +97,14 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const runId = useSimulationStore((s) => s.runId);
   const turn = useSimulationStore((s) => s.turn);
   const setCanvasSize = useSimulationStore((s) => s.setCanvasSize);
+
+  // Theme mirrored into a ref so the Pixi render loop (not a React
+  // component) can read it every frame without extra rerenders.
+  const { resolvedTheme } = useTheme();
+  const themeRef = useRef<"light" | "dark">("light");
+  useEffect(() => {
+    themeRef.current = resolvedTheme === "dark" ? "dark" : "light";
+  }, [resolvedTheme]);
 
   // Clear selection on new run.
   useEffect(() => {
@@ -97,23 +119,40 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     }));
   }
 
-  function handleHostClick(e: React.MouseEvent<HTMLDivElement>) {
+  function agentIdAtPointer(e: React.MouseEvent<HTMLDivElement>): number | null {
     const host = hostRef.current;
     const world = activeWorldRef.current;
-    if (!host || !world) return;
+    if (!host || !world) return null;
     const r = host.getBoundingClientRect();
-    const px = e.clientX - r.left;
-    const py = e.clientY - r.top;
-    const cellW = r.width / world.width;
-    const cellH = r.height / world.height;
-    const gx = Math.floor(px / cellW);
-    const gy = Math.floor(py / cellH);
-    if (gx < 0 || gy < 0 || gx >= world.width || gy >= world.height) {
-      setSelectedId(null);
-      return;
-    }
+    const gx = Math.floor(((e.clientX - r.left) / r.width) * world.width);
+    const gy = Math.floor(((e.clientY - r.top) / r.height) * world.height);
+    if (gx < 0 || gy < 0 || gx >= world.width || gy >= world.height) return null;
     const id = world.occupants[gy * world.width + gx];
-    setSelectedId(id === -1 ? null : id);
+    return id === -1 ? null : id;
+  }
+
+  function handleHostMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const id = agentIdAtPointer(e);
+    if (hoveredIdRef.current !== id) {
+      hoveredIdRef.current = id;
+      const host = hostRef.current;
+      if (host) host.style.cursor = id !== null ? "pointer" : "crosshair";
+      // RAF only runs while the sim runs; repaint manually otherwise so
+      // the hover ring appears/disappears immediately.
+      if (!running) paint(1);
+    }
+  }
+
+  function handleHostMouseLeave() {
+    if (hoveredIdRef.current === null) return;
+    hoveredIdRef.current = null;
+    const host = hostRef.current;
+    if (host) host.style.cursor = "";
+    if (!running) paint(1);
+  }
+
+  function handleHostClick(e: React.MouseEvent<HTMLDivElement>) {
+    setSelectedId(agentIdAtPointer(e));
   }
 
   const paint = useCallback((progress = 1) => {
@@ -131,7 +170,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     const shapeSize = Math.min(cellW, cellH);
     // 6px floor so agents stay legible at city scale (~9px cells).
     const agentSize = Math.max(shapeSize * 0.78, 6);
-    const ease = easeInOutCubic(progress);
+    const ease = easeOutBack(progress);
 
     // Resource layer — repaint only when the world's turn changes.
     // Off-screen canvas is sized at framebuffer resolution (CSS × dpr)
@@ -201,6 +240,56 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
 
     const liveIds = new Set<number>();
     const sprites = spritesRef.current;
+    const now = performance.now();
+    const baseScale = agentSize / 64;
+    const trailLayer = trailLayerRef.current;
+
+    // On every world-turn advance, spawn a trail ghost at each moved
+    // agent's *previous* cell. Bounded by MAX_TRAILS so a big field
+    // can't leak sprites.
+    if (trailLayer && lastTrailTurnRef.current !== world.turn) {
+      const trails = trailsRef.current;
+      for (const a of world.agents) {
+        if (!a.alive) continue;
+        const dx = a.x - a.prevX;
+        const dy = a.y - a.prevY;
+        if (dx === 0 && dy === 0) continue;
+        if (trails.length >= MAX_TRAILS) break;
+        const motivationKey = (
+          a.motivation in textures ? a.motivation : "material"
+        ) as MotivationKey;
+        const ghost = new Sprite(textures[motivationKey]);
+        ghost.anchor.set(0.5);
+        ghost.x = a.prevX * cellW + cellW / 2;
+        ghost.y = a.prevY * cellH + cellH / 2;
+        const gScale = baseScale * 0.85;
+        ghost.scale.set(gScale);
+        ghost.alpha = 0.38;
+        trailLayer.addChild(ghost);
+        trails.push({ sprite: ghost, bornAt: now, baseScale: gScale });
+      }
+      lastTrailTurnRef.current = world.turn;
+    }
+
+    // Fade + retire trails.
+    if (trailLayer) {
+      const trails = trailsRef.current;
+      for (let i = trails.length - 1; i >= 0; i--) {
+        const t = trails[i];
+        const age = (now - t.bornAt) / TRAIL_TTL_MS;
+        if (age >= 1) {
+          trailLayer.removeChild(t.sprite);
+          t.sprite.destroy();
+          trails.splice(i, 1);
+        } else {
+          const fade = 1 - age;
+          t.sprite.alpha = 0.38 * fade;
+          t.sprite.scale.set(t.baseScale * (0.85 + 0.15 * fade));
+        }
+      }
+    }
+
+    const breatheT = now / 1000;
 
     for (const a of world.agents) {
       if (!a.alive) continue;
@@ -217,12 +306,25 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       } else if (s.texture !== textures[motivationKey]) {
         s.texture = textures[motivationKey];
       }
-      const ix = a.prevX + (a.x - a.prevX) * ease;
-      const iy = a.prevY + (a.y - a.prevY) * ease;
+      const dx = a.x - a.prevX;
+      const dy = a.y - a.prevY;
+      const ix = a.prevX + dx * ease;
+      const iy = a.prevY + dy * ease;
       s.x = ix * cellW + cellW / 2;
       s.y = iy * cellH + cellH / 2;
-      const scale = agentSize / 64;
-      s.scale.set(scale);
+      // Per-agent breathing: phase-offset by id so the field isn't
+      // synchronised. 4% amplitude keeps it subtle.
+      const breathe = 1 + 0.04 * Math.sin(breatheT * 1.6 + a.id * 0.7);
+      s.scale.set(baseScale * breathe);
+      // Lean into motion — 15% of the heading angle, decays as the
+      // sprite settles into its destination cell. Idle sprites relax
+      // any residual tilt back toward upright.
+      if (dx !== 0 || dy !== 0) {
+        const angle = Math.atan2(dy, dx);
+        s.rotation = angle * 0.15 * (1 - ease);
+      } else {
+        s.rotation *= 0.9;
+      }
       // Wealth-based brightness. Sqrt mapping handles the long-tail wealth
       // distribution so most agents don't collapse to a single dim band.
       const wealth = a.sugar + a.spice;
@@ -237,11 +339,34 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       sprites.delete(id);
     }
 
-    // Selection overlay — pulsing two-pass ring + vision lines.
+    // Selection + hover overlay. Ink colour flips with the theme so
+    // rings stay legible on either background. One ring for hover, one
+    // ring plus vision lines for selection.
     const selection = selectionLayerRef.current;
     if (selection) {
       selection.clear();
+      const isDark = themeRef.current === "dark";
+      const ink = isDark ? 0xffffff : 0x141414;
+      const r = Math.max(shapeSize * 0.95, 9);
+      const tSec = now / 1000;
+
+      // Hover — quiet ring, no pulse, hidden if it coincides with
+      // the selection to keep things clean.
+      const hoverId = hoveredIdRef.current;
       const selId = selectedIdRef.current;
+      if (hoverId !== null && hoverId !== selId) {
+        const h = world.agents[hoverId];
+        if (h && h.alive) {
+          const hx = h.prevX + (h.x - h.prevX) * ease;
+          const hy = h.prevY + (h.y - h.prevY) * ease;
+          const hcx = hx * cellW + cellW / 2;
+          const hcy = hy * cellH + cellH / 2;
+          selection
+            .circle(hcx, hcy, r + 2)
+            .stroke({ color: ink, width: 1.2, alpha: 0.55 });
+        }
+      }
+
       if (selId !== null) {
         const a = world.agents[selId];
         if (a && a.alive) {
@@ -250,8 +375,10 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
           const cx = ax * cellW + cellW / 2;
           const cy = ay * cellH + cellH / 2;
 
-          // Vision lines drawn first so the ring sits on top at the centre.
-          const lineWidth = Math.max(0.8, shapeSize * 0.06);
+          // Vision lines: alpha falls with Chebyshev distance so nearby
+          // neighbours read as "strong tie", distant ones as "in view".
+          const lineWidth = Math.max(0.6, shapeSize * 0.045);
+          const visionSpan = Math.max(1, a.vision);
           for (let dy = -a.vision; dy <= a.vision; dy++) {
             const ny = a.y + dy;
             if (ny < 0 || ny >= world.height) continue;
@@ -267,23 +394,23 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
               const niy = n.prevY + (n.y - n.prevY) * ease;
               const nxp = nix * cellW + cellW / 2;
               const nyp = niy * cellH + cellH / 2;
+              const cheb = Math.max(Math.abs(dx), Math.abs(dy));
+              const falloff = 1 - (cheb - 1) / visionSpan;
+              const alpha = 0.15 + 0.42 * Math.max(0, falloff);
               selection
                 .moveTo(cx, cy)
                 .lineTo(nxp, nyp)
-                .stroke({ color: 0x141414, width: lineWidth, alpha: 0.45 });
+                .stroke({ color: ink, width: lineWidth, alpha });
             }
           }
 
-          // Steady outer halo + slow-pulsing inner ring.
-          const r = Math.max(shapeSize * 0.9, 8);
-          const t = performance.now() / 1000;
-          const pulse = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          selection
-            .circle(cx, cy, r + 3)
-            .stroke({ color: 0xffffff, width: 3, alpha: 0.6 });
+          // Single crisp ring with a very soft breathing pulse — the
+          // hover ring shares this weight so the two states feel like
+          // a family, not two different things.
+          const pulse = 0.5 + 0.5 * Math.sin(tSec * 2.2);
           selection
             .circle(cx, cy, r)
-            .stroke({ color: 0x141414, width: 1.6, alpha: pulse });
+            .stroke({ color: ink, width: 1.7, alpha: 0.85 + 0.15 * pulse });
         }
       }
     }
@@ -359,6 +486,10 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         });
         const resourceSprite = new Sprite(resourceTexture);
         stage.addChild(resourceSprite);
+        // Trails sit under agents so a live sprite always occludes its
+        // own ghost.
+        const trails = new Container();
+        stage.addChild(trails);
         const agents = new Container();
         stage.addChild(agents);
         // Selection above agents so the ring isn't occluded.
@@ -366,6 +497,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         stage.addChild(selectionLayer);
         app.stage.addChild(stage);
         stageRef.current = stage;
+        trailLayerRef.current = trails;
         agentLayerRef.current = agents;
         selectionLayerRef.current = selectionLayer;
         texturesRef.current = buildMotivationTextures(app);
@@ -398,6 +530,9 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       }
       stageRef.current = null;
       agentLayerRef.current = null;
+      trailLayerRef.current = null;
+      trailsRef.current = [];
+      lastTrailTurnRef.current = -1;
       selectionLayerRef.current = null;
       texturesRef.current = null;
       resourceSpriteRef.current = null;
@@ -421,13 +556,16 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     paint(1);
   }, [size, paint]);
 
-  // Paused repaint on tick or selection change so the ring stays live.
+  // Paused repaint on tick, selection, or theme change so the ring
+  // stays live and flips ink colour immediately when the user toggles
+  // dark/light.
   useEffect(() => {
     void turn;
     void selectedId;
+    void resolvedTheme;
     if (running) return;
     paint(1);
-  }, [turn, running, selectedId, paint]);
+  }, [turn, running, selectedId, resolvedTheme, paint]);
 
   // Per-RAF interpolated repaint while running.
   useEffect(() => {
@@ -455,6 +593,13 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     if (!layer) return;
     layer.removeChildren();
     spritesRef.current.clear();
+    const trailLayer = trailLayerRef.current;
+    if (trailLayer) {
+      for (const t of trailsRef.current) t.sprite.destroy();
+      trailLayer.removeChildren();
+      trailsRef.current = [];
+    }
+    lastTrailTurnRef.current = -1;
   }, [started]);
 
   return (
@@ -463,10 +608,12 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         <div
           ref={hostRef}
           onClick={handleHostClick}
+          onMouseMove={handleHostMouseMove}
+          onMouseLeave={handleHostMouseLeave}
           style={{ width: size.width, height: size.height }}
           className={cn(
             "absolute inset-0 transition-opacity duration-300",
-            started ? "cursor-pointer opacity-100" : "opacity-0",
+            started ? "opacity-100" : "opacity-0",
           )}
         />
         {started && selectedId !== null && (
@@ -594,8 +741,12 @@ function drawShape(g: Graphics, motivation: MotivationKey, color: number) {
     .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
 }
 
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+// Mild overshoot (~7%). Agents pass their destination cell, then settle
+// — reads as weight instead of the mechanical glide of a linear/cubic ease.
+function easeOutBack(t: number): number {
+  const c1 = 1.2;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
 
 function Step({

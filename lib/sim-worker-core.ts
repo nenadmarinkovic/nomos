@@ -17,7 +17,7 @@ export interface FrameMessage {
   frame: WorldFrame;
 }
 
-const BASE_TICK_MS = 200;
+const BASE_TICK_MS = 450;
 
 type TimerId = ReturnType<typeof setTimeout>;
 type Schedule = (cb: () => void, ms: number) => TimerId;

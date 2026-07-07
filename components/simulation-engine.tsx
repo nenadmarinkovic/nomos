@@ -11,7 +11,7 @@ import type { FrameMessage, WorkerInbound } from "@/lib/sim-worker-core";
 import { useSimulationStore } from "@/lib/store";
 import { deserializeWorld } from "@/lib/world";
 
-const BASE_TICK_MS = 200;
+const BASE_TICK_MS = 450;
 
 /**
  * Owns the long-lived simulation worker. Mounted once at the AppShell root so

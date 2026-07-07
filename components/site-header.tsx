@@ -33,10 +33,10 @@ import { useSimulationStore } from "@/lib/store";
 import { version as APP_VERSION } from "@/package.json";
 
 const SPEEDS: { label: string; value: number }[] = [
+  { label: "0.5×", value: 0.5 },
   { label: "1×", value: 1 },
+  { label: "1.5×", value: 1.5 },
   { label: "2×", value: 2 },
-  { label: "4×", value: 4 },
-  { label: "Max", value: 8 },
 ];
 
 interface SiteHeaderProps {
