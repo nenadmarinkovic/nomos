@@ -22,7 +22,9 @@ import { AgentInspectorOverlay } from "@/components/agent-inspector";
 import {
   drawResourceField,
   SPICE_RGB,
+  SPICE_RGB_MONO,
   SUGAR_RGB,
+  SUGAR_RGB_MONO,
 } from "@/lib/render-resources";
 import { cn } from "@/lib/utils";
 import {
@@ -41,6 +43,24 @@ const MOTIVATION_COLOR_HEX: Record<string, number> = {
   symbolic: 0x2e5c9e,
   normative: 0xffd23f,
   power: 0x2a9d5c,
+};
+
+// Black & white mode. Tones are theme-aware so agents stay high-contrast
+// against the page background — near-black on the light theme, near-white on
+// the dark theme. Four distinct steps (ordered by the colours' original
+// luminance) keep the motivations tellable apart; the shape carries the rest
+// of the identity (square/circle/triangle/diamond).
+const MOTIVATION_COLOR_MONO_LIGHT: Record<string, number> = {
+  normative: 0x4a4a4a,
+  material: 0x2e2e2e,
+  power: 0x1a1a1a,
+  symbolic: 0x000000,
+};
+const MOTIVATION_COLOR_MONO_DARK: Record<string, number> = {
+  normative: 0xffffff,
+  material: 0xe0e0e0,
+  power: 0xc2c2c2,
+  symbolic: 0xa4a4a4,
 };
 
 const MOTIVATION_KEYS = ["material", "symbolic", "normative", "power"] as const;
@@ -97,6 +117,11 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const runId = useSimulationStore((s) => s.runId);
   const turn = useSimulationStore((s) => s.turn);
   const setCanvasSize = useSimulationStore((s) => s.setCanvasSize);
+
+  // Black & white mode mirrored into a ref so the Pixi render loop can read it
+  // each frame; a separate effect rebuilds the agent textures on toggle.
+  const monochrome = useSimulationStore((s) => s.monochrome);
+  const monoRef = useRef(monochrome);
 
   // Theme mirrored into a ref so the Pixi render loop (not a React
   // component) can read it every frame without extra rerenders.
@@ -204,11 +229,12 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
           const cellWPx = bufW / world.width;
           const cellHPx = bufH / world.height;
           const dotSize = Math.max(Math.min(cellWPx, cellHPx) * 0.18, 2 * dpr);
+          const mono = monoRef.current;
           drawResourceField(
             rctx,
             world.cells,
             world.maxCells,
-            SUGAR_RGB,
+            mono ? SUGAR_RGB_MONO : SUGAR_RGB,
             -1,
             cellWPx,
             cellHPx,
@@ -220,7 +246,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
             rctx,
             world.spice,
             world.maxSpice,
-            SPICE_RGB,
+            mono ? SPICE_RGB_MONO : SPICE_RGB,
             1,
             cellWPx,
             cellHPx,
@@ -416,6 +442,44 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     }
   }, []);
 
+  // Rebuild the agent textures for the current mode + theme. Swaps the
+  // texture map, drops trail ghosts still pointing at the old textures, forces
+  // a resource repaint, then destroys the old textures once the next paint has
+  // reassigned every live sprite.
+  const rebuildAgentTextures = useCallback(() => {
+    const app = appRef.current;
+    const old = texturesRef.current;
+    // Not initialised yet — init() builds textures with the current flags.
+    if (!app || !old) return;
+    const next = buildMotivationTextures(
+      app,
+      monoRef.current,
+      themeRef.current === "dark",
+    );
+    texturesRef.current = next;
+    const trailLayer = trailLayerRef.current;
+    for (const t of trailsRef.current) {
+      trailLayer?.removeChild(t.sprite);
+      t.sprite.destroy();
+    }
+    trailsRef.current = [];
+    lastResourceTurnRef.current = -1;
+    paint(1);
+    for (const k of MOTIVATION_KEYS) old[k].destroy(true);
+  }, [paint]);
+
+  // Black & white toggle → rebuild with the new palette.
+  useEffect(() => {
+    monoRef.current = monochrome;
+    rebuildAgentTextures();
+  }, [monochrome, rebuildAgentTextures]);
+
+  // Theme flip while in B&W → re-tint. Mono tones are theme-aware for
+  // contrast; the colour palette is theme-independent, so skip it there.
+  useEffect(() => {
+    if (monoRef.current) rebuildAgentTextures();
+  }, [resolvedTheme, rebuildAgentTextures]);
+
   // ResizeObserver pushes the container's dimensions into both React
   // state (drives the host's inline width/height) and the ref (read by
   // async init callbacks).
@@ -500,7 +564,11 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         trailLayerRef.current = trails;
         agentLayerRef.current = agents;
         selectionLayerRef.current = selectionLayer;
-        texturesRef.current = buildMotivationTextures(app);
+        texturesRef.current = buildMotivationTextures(
+          app,
+          monoRef.current,
+          themeRef.current === "dark",
+        );
         resourceCanvasRef.current = resourceCanvas;
         resourceTextureRef.current = resourceTexture;
         resourceSpriteRef.current = resourceSprite;
@@ -698,10 +766,17 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
  *  scale it to the current cell at render time. */
 function buildMotivationTextures(
   app: Application,
+  mono: boolean,
+  isDark: boolean,
 ): Record<MotivationKey, Texture> {
+  const palette = mono
+    ? isDark
+      ? MOTIVATION_COLOR_MONO_DARK
+      : MOTIVATION_COLOR_MONO_LIGHT
+    : MOTIVATION_COLOR_HEX;
   const out = {} as Record<MotivationKey, Texture>;
   for (const k of MOTIVATION_KEYS) {
-    const color = MOTIVATION_COLOR_HEX[k];
+    const color = palette[k];
     const g = new Graphics();
     drawShape(g, k, color);
     const texture = app.renderer.generateTexture(g);

@@ -9,6 +9,17 @@ const MOTIVATION_COLOR: Record<string, string> = {
   power: "#2A9D5C",
 };
 
+// Black & white mode: shapes use the foreground colour (theme-aware, so they
+// stay high-contrast in both themes) stepped by opacity to keep the four
+// motivations distinguishable. Ordering matches the mono palette in
+// simulation-canvas.tsx.
+const MOTIVATION_MONO_OPACITY: Record<string, number> = {
+  normative: 1,
+  material: 0.82,
+  power: 0.64,
+  symbolic: 0.48,
+};
+
 const MOTIVATION_LABEL: Record<string, string> = {
   material: "Material",
   symbolic: "Symbolic",
@@ -18,6 +29,7 @@ const MOTIVATION_LABEL: Record<string, string> = {
 
 export function CanvasLegend() {
   const started = useSimulationStore((s) => s.started);
+  const monochrome = useSimulationStore((s) => s.monochrome);
   const motivation = useSimulationStore((s) => s.config.agents.motivation);
 
   if (!started) return null;
@@ -25,6 +37,8 @@ export function CanvasLegend() {
   const keys = Object.keys(motivation).filter(
     (k) => (motivation as Record<string, number | undefined>)[k] !== undefined,
   );
+  const sugarRgb = monochrome ? "158, 158, 158" : "120, 200, 130";
+  const spiceRgb = monochrome ? "96, 96, 96" : "214, 158, 90";
 
   return (
     <div className="space-y-2.5 px-3 py-3">
@@ -35,7 +49,7 @@ export function CanvasLegend() {
       <div className="flex flex-col gap-1.5">
         {keys.map((k) => (
           <div key={k} className="flex items-center gap-2">
-            <LegendShape motivation={k} />
+            <LegendShape motivation={k} mono={monochrome} />
             <span className="font-sans text-xs text-foreground/85">
               {MOTIVATION_LABEL[k] ?? k}
             </span>
@@ -66,7 +80,7 @@ export function CanvasLegend() {
         <span
           aria-hidden
           className="block h-2.5 w-2.5"
-          style={{ background: "rgba(120, 200, 130, 0.85)" }}
+          style={{ background: `rgba(${sugarRgb}, 0.85)` }}
         />
       </div>
 
@@ -77,62 +91,60 @@ export function CanvasLegend() {
         <span
           aria-hidden
           className="block h-2.5 w-2.5"
-          style={{ background: "rgba(214, 158, 90, 0.85)" }}
+          style={{ background: `rgba(${spiceRgb}, 0.85)` }}
         />
       </div>
     </div>
   );
 }
 
-function LegendShape({ motivation }: { motivation: string }) {
-  const color = MOTIVATION_COLOR[motivation] ?? "#E63946";
-  const stroke = "rgba(20,20,20,0.7)";
+function LegendShape({
+  motivation,
+  mono,
+}: {
+  motivation: string;
+  mono: boolean;
+}) {
+  const color = mono
+    ? "currentColor"
+    : (MOTIVATION_COLOR[motivation] ?? MOTIVATION_COLOR.material);
+  const stroke = mono ? "currentColor" : "rgba(20,20,20,0.7)";
   const sw = 0.9;
+  const opacity = mono ? (MOTIVATION_MONO_OPACITY[motivation] ?? 0.8) : 1;
 
-  if (motivation === "symbolic") {
-    return (
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-        <circle cx="7" cy="7" r="5.5" fill={color} stroke={stroke} strokeWidth={sw} />
-      </svg>
-    );
-  }
-  if (motivation === "normative") {
-    return (
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-        <polygon
-          points="7,1.5 12.5,12 1.5,12"
-          fill={color}
-          stroke={stroke}
-          strokeWidth={sw}
-          strokeLinejoin="miter"
-        />
-      </svg>
-    );
-  }
-  if (motivation === "power") {
-    return (
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-        <polygon
-          points="7,1.5 12.5,7 7,12.5 1.5,7"
-          fill={color}
-          stroke={stroke}
-          strokeWidth={sw}
-          strokeLinejoin="miter"
-        />
-      </svg>
-    );
-  }
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-      <rect
-        x="1.5"
-        y="1.5"
-        width="11"
-        height="11"
+  const shape =
+    motivation === "symbolic" ? (
+      <circle cx="7" cy="7" r="5.5" fill={color} stroke={stroke} strokeWidth={sw} />
+    ) : motivation === "normative" ? (
+      <polygon
+        points="7,1.5 12.5,12 1.5,12"
         fill={color}
         stroke={stroke}
         strokeWidth={sw}
+        strokeLinejoin="miter"
       />
+    ) : motivation === "power" ? (
+      <polygon
+        points="7,1.5 12.5,7 7,12.5 1.5,7"
+        fill={color}
+        stroke={stroke}
+        strokeWidth={sw}
+        strokeLinejoin="miter"
+      />
+    ) : (
+      <rect x="1.5" y="1.5" width="11" height="11" fill={color} stroke={stroke} strokeWidth={sw} />
+    );
+
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      aria-hidden
+      className={mono ? "text-foreground" : undefined}
+      style={{ opacity }}
+    >
+      {shape}
     </svg>
   );
 }

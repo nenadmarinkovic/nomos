@@ -98,8 +98,10 @@ export function SiteHeader({
     <header className="flex h-14 shrink-0 items-stretch border-b border-foreground/10 bg-background">
       <div
         className={cn(
-          "hidden shrink-0 items-center border-foreground/10 px-4 transition-[width] duration-200 md:flex md:border-r",
-          sidebarCollapsed ? "md:w-[60px] md:justify-center" : "md:w-56",
+          "hidden shrink-0 items-center border-foreground/10 transition-[width] duration-200 md:flex md:border-r",
+          sidebarCollapsed
+            ? "px-1.5 md:w-[60px] md:justify-center"
+            : "px-4 md:w-56",
         )}
       >
         <Link href="/" aria-label="Nomos" className="flex items-center gap-2.5">
@@ -109,7 +111,10 @@ export function SiteHeader({
             width={38}
             height={35}
             priority
-            className="h-12 w-auto dark:invert"
+            className={cn(
+              "w-auto dark:invert",
+              sidebarCollapsed ? "h-[38px]" : "h-12",
+            )}
           />
           {!sidebarCollapsed && (
             <span className="flex flex-col leading-tight">

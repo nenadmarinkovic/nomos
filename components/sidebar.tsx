@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CanvasLegend } from "@/components/canvas-legend";
 import { CanvasViewToggle } from "@/components/canvas-view-toggle";
+import { MonochromeToggle } from "@/components/monochrome-toggle";
 import { SidebarFooter } from "@/components/sidebar-footer";
 import { ViewsToggle } from "@/components/views-toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -86,6 +87,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <div className="flex shrink-0 flex-col empty:hidden">
           <div className="border-t border-foreground/10 empty:hidden">
             <CanvasViewToggle />
+          </div>
+          <div className="border-t border-foreground/10 empty:hidden">
+            <MonochromeToggle />
           </div>
           <div className="border-t border-foreground/10 empty:hidden">
             <ViewsToggle />

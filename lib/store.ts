@@ -161,6 +161,7 @@ interface SimulationState {
   speed: number;
   canvasView: "field" | "network";
   canvasSize: { width: number; height: number };
+  monochrome: boolean;
   views: Record<ViewKey, boolean>;
   windowPositions: Record<ViewKey, WindowPosition>;
   chronicle: ChronicleEntry[];
@@ -171,6 +172,7 @@ interface SimulationState {
   stopRun: () => void;
   setSpeed: (speed: number) => void;
   setCanvasView: (view: "field" | "network") => void;
+  toggleMonochrome: () => void;
   updateSnapshot: (snapshot: EngineSnapshot) => void;
   setCanvasSize: (s: { width: number; height: number }) => void;
   toggleView: (key: ViewKey) => void;
@@ -195,6 +197,7 @@ export const useSimulationStore = create<SimulationState>()(
       speed: 1,
       canvasView: "field",
       canvasSize: { width: 0, height: 0 },
+      monochrome: false,
       views: {
         gini: true,
         alive: false,
@@ -244,6 +247,7 @@ export const useSimulationStore = create<SimulationState>()(
         }),
       setSpeed: (speed) => set({ speed }),
       setCanvasView: (canvasView) => set({ canvasView }),
+      toggleMonochrome: () => set((s) => ({ monochrome: !s.monochrome })),
       setCanvasSize: (canvasSize) => set({ canvasSize }),
       toggleView: (key) =>
         set((s) => ({ views: { ...s.views, [key]: !s.views[key] } })),
@@ -360,15 +364,17 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 21,
+      version: 22,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         config: s.config,
+        monochrome: s.monochrome,
         views: s.views,
         windowPositions: s.windowPositions,
       }),
       migrate: () => ({
         config: DEFAULT_CONFIG,
+        monochrome: false,
         views: {
           gini: true,
           alive: false,

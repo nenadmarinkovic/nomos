@@ -41,3 +41,11 @@ export const SUGAR_RGB: readonly [number, number, number] = [120, 200, 130];
 
 /** Standard spice tint — warm amber. */
 export const SPICE_RGB: readonly [number, number, number] = [214, 158, 90];
+
+/** Black & white mode — sugar reads as a lighter gray… */
+export const SUGAR_RGB_MONO: readonly [number, number, number] = [
+  158, 158, 158,
+];
+
+/** …and spice as a darker gray, so the two stay distinguishable. */
+export const SPICE_RGB_MONO: readonly [number, number, number] = [96, 96, 96];
