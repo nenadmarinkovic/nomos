@@ -50,17 +50,17 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1.5 text-center">
-        <h1 className="text-3xl leading-tight tracking-tight">
+    <div className="space-y-7">
+      <header className="space-y-2 text-center">
+        <h1 className="text-2xl font-semibold leading-tight tracking-tight">
           Create an account
         </h1>
-        <p className="text-[14px] leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           Keep your runs across devices and revisit the Chronicle.
         </p>
       </header>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <Field
           label="Name (optional)"
           type="text"
@@ -89,7 +89,7 @@ export default function SignUpPage() {
         {error && (
           <p
             role="alert"
-            className="rounded-md border border-destructive/30 bg-destructive/[0.05] px-3 py-2 text-xs leading-snug text-destructive"
+            className="rounded-md border border-destructive/30 bg-destructive/[0.05] px-3 py-2 text-sm leading-snug text-destructive"
           >
             {error}
           </p>
@@ -98,7 +98,7 @@ export default function SignUpPage() {
         <Button
           type="submit"
           disabled={pending}
-          className="h-10 w-full px-3 text-[14px]"
+          className="mt-1 h-11 w-full text-sm"
         >
           {pending ? "Creating account…" : "Create account"}
         </Button>
@@ -136,7 +136,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-xs font-medium text-foreground/85">
+      <span className="mb-1.5 block text-sm font-medium text-foreground/85">
         {label}
       </span>
       <input
@@ -146,7 +146,7 @@ function Field({
         autoComplete={autoComplete}
         required={required}
         minLength={minLength}
-        className="mt-1 block h-10 w-full rounded-md border border-foreground/15 bg-card/50 px-3 text-[14px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40 focus:bg-card"
+        className="block h-11 w-full rounded-md border border-foreground/15 bg-card/50 px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40 focus:bg-card"
       />
     </label>
   );
