@@ -117,10 +117,10 @@ function Header({ badge }: { badge?: React.ReactNode }) {
         </p>
         {badge}
       </div>
-      <h1 className="font-serif text-3xl leading-tight tracking-tight text-foreground">
+      <h1 className="text-3xl leading-tight tracking-tight text-foreground">
         Who is alive, and how are they doing?
       </h1>
-      <p className="font-serif text-[15px] leading-relaxed text-foreground/70">
+      <p className="text-[15px] leading-relaxed text-foreground/70">
         A snapshot of the population: the mix of drives, the spread of ages,
         wealth against age, and a ranked list of the hoarders and the
         strugglers. The simulation keeps running in the corner — hit Refresh
@@ -147,7 +147,7 @@ function Legend({
               className="size-2.5 shrink-0 rounded-full"
               style={{ background: m.color }}
             />
-            <span className="font-sans text-xs text-foreground/85">
+            <span className="text-xs text-foreground/85">
               {m.label}
             </span>
             <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
@@ -190,7 +190,7 @@ function RankTable({ rows }: { rows: RankedRow[] }) {
                     className="size-2 rounded-full"
                     style={{ background: MOTIVATION_COLOR[r.m] ?? "#888" }}
                   />
-                  <span className="font-sans text-xs text-foreground/85">
+                  <span className="text-xs text-foreground/85">
                     {MOTIVATION_INFO[r.m as AgentMotivation]?.label ?? r.m}
                   </span>
                 </span>
@@ -218,10 +218,10 @@ function RankTable({ rows }: { rows: RankedRow[] }) {
 function SectionTitle({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="mb-3 space-y-1">
-      <h2 className="font-serif text-xl leading-tight text-foreground">
+      <h2 className="text-xl leading-tight text-foreground">
         {title}
       </h2>
-      <p className="font-sans text-xs text-muted-foreground">{hint}</p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }
@@ -229,10 +229,10 @@ function SectionTitle({ title, hint }: { title: string; hint: string }) {
 function EmptyState() {
   return (
     <div className="mt-10 rounded-lg border border-dashed border-foreground/10 px-6 py-10 text-center">
-      <p className="font-serif text-lg italic text-foreground/80">
+      <p className="text-lg italic text-foreground/80">
         No sample yet.
       </p>
-      <p className="mt-2 font-sans text-sm text-muted-foreground">
+      <p className="mt-2 text-sm text-muted-foreground">
         Press Refresh once a few ticks have passed, or let the run warm up.
       </p>
     </div>

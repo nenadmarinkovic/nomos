@@ -26,7 +26,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             priority
             className="h-9 w-auto dark:invert"
           />
-          <span className="flex flex-col font-sans text-xs font-medium leading-[1.2] text-foreground">
+          <span className="flex flex-col text-xs font-medium leading-[1.2] text-foreground">
             <span>Nomos, a generative</span>
             <span>society simulation.</span>
           </span>
@@ -37,7 +37,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="w-full max-w-sm">{children}</div>
       </main>
 
-      <footer className="flex flex-col items-center gap-1 px-6 pb-8 text-center font-sans text-xs text-muted-foreground">
+      <footer className="flex flex-col items-center gap-1 px-6 pb-8 text-center text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <span>© {year} Nomos</span>
           <span aria-hidden className="text-muted-foreground/40">

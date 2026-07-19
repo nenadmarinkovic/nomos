@@ -195,7 +195,7 @@ function TokenEconomySection({
       />
       {noTokens ? (
         <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-6">
-          <p className="font-serif text-[14px] italic leading-relaxed text-foreground/70">
+          <p className="text-[14px] italic leading-relaxed text-foreground/70">
             No tokens are in circulation. Either no buyer has yet been short
             enough on sugar to ask for credit, or no seller has trusted the
             offered IOU enough to accept it. Watch this section once trade
@@ -247,10 +247,10 @@ function Header({ badge }: { badge?: React.ReactNode }) {
         </p>
         {badge}
       </div>
-      <h1 className="font-serif text-3xl leading-tight tracking-tight text-foreground">
+      <h1 className="text-3xl leading-tight tracking-tight text-foreground">
         What the numbers say.
       </h1>
-      <p className="font-serif text-[15px] leading-relaxed text-foreground/70">
+      <p className="text-[15px] leading-relaxed text-foreground/70">
         Time series of the headline measures, plus the shape underneath — who
         holds what, how old they are, how the market is moving. Snapshotted on
         arrival; press Refresh to take a fresh sample.
@@ -277,7 +277,7 @@ function Summary({
         {value}
       </div>
       {hint && (
-        <div className="mt-0.5 font-sans text-xs text-muted-foreground">
+        <div className="mt-0.5 text-xs text-muted-foreground">
           {hint}
         </div>
       )}
@@ -288,10 +288,10 @@ function Summary({
 function SectionTitle({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="space-y-1">
-      <h2 className="font-serif text-xl leading-tight text-foreground">
+      <h2 className="text-xl leading-tight text-foreground">
         {title}
       </h2>
-      <p className="font-sans text-xs text-muted-foreground">{hint}</p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }

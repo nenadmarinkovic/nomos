@@ -221,6 +221,8 @@ export const useSimulationStore = create<SimulationState>()(
           snapshot: EMPTY_SNAPSHOT,
           history: [],
           chronicle: [],
+          // New runs start in colour; B&W is an opt-in per run.
+          monochrome: false,
         })),
       replayRun: (config) =>
         set((s) => ({

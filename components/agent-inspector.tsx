@@ -79,7 +79,7 @@ export function AgentInspectorOverlay({
       ref={setNodeRef}
       style={{ transform: `translate3d(${x}px, ${y}px, 0)` }}
       className={cn(
-        "pointer-events-auto absolute left-0 top-0 w-64 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground backdrop-blur-md",
+        "pointer-events-auto absolute left-0 top-0 w-64 rounded-md border border-foreground/15 bg-card/95 text-foreground backdrop-blur-md",
       )}
     >
       <div
@@ -105,7 +105,7 @@ export function AgentInspectorOverlay({
       </div>
       <div className="px-3 py-3">
         {!snap.alive ? (
-          <p className="font-serif text-sm italic text-foreground/70">
+          <p className="text-sm italic text-foreground/70">
             Deceased.
           </p>
         ) : (

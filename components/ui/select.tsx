@@ -23,7 +23,7 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-foreground/15 bg-field px-3 py-2 font-sans text-sm text-foreground transition-[color,box-shadow,border-color] outline-none",
+        "flex h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-foreground/15 bg-field px-3 py-2 text-sm text-foreground transition-[color,box-shadow,border-color] outline-none",
         "placeholder:text-zinc-500 dark:placeholder:text-zinc-500",
         "focus-visible:border-foreground/40 focus-visible:ring-2 focus-visible:ring-foreground/10",
         "disabled:cursor-not-allowed disabled:opacity-50",
@@ -91,7 +91,7 @@ function SelectContent({
         data-slot="select-content"
         position={position}
         className={cn(
-          "relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[8rem] overflow-hidden rounded-md border border-foreground/10 bg-card font-sans text-sm text-foreground",
+          "relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[8rem] overflow-hidden rounded-md border border-foreground/10 bg-card text-sm text-foreground",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
           "data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1",
           position === "popper" &&
@@ -124,7 +124,7 @@ function SelectLabel({
     <SelectPrimitive.Label
       data-slot="select-label"
       className={cn(
-        "px-2 py-1.5 font-sans text-xs font-medium uppercase tracking-wider text-zinc-500",
+        "px-2 py-1.5 text-xs font-medium uppercase tracking-wider text-zinc-500",
         className,
       )}
       {...props}
@@ -144,7 +144,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-start gap-2 rounded-sm py-2 pl-2 pr-8 font-sans text-sm outline-none",
+        "relative flex w-full cursor-pointer select-none items-start gap-2 rounded-sm py-2 pl-2 pr-8 text-sm outline-none",
         "focus:bg-foreground/[0.06] focus:text-foreground",
         "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,

@@ -79,7 +79,7 @@ export function ViewsToggle() {
               >
                 <Label
                   htmlFor={id}
-                  className="cursor-pointer font-sans text-xs text-foreground/85"
+                  className="cursor-pointer text-xs text-foreground/85"
                 >
                   {v.label}
                 </Label>
@@ -113,7 +113,7 @@ export function ViewsToggle() {
                     weight="bold"
                     className="text-muted-foreground"
                   />
-                  <span className="font-sans text-xs">{label}</span>
+                  <span className="text-xs">{label}</span>
                 </MenubarItem>
               ))}
             </MenubarContent>

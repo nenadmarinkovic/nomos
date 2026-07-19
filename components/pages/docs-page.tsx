@@ -176,7 +176,7 @@ export function DocsPage({
           lead={entry.blurb}
         />
         {body ? (
-          <article ref={articleRef} className="prose prose-neutral mt-10 max-w-none dark:prose-invert prose-headings:font-serif prose-headings:tracking-tight prose-h1:text-[34px] prose-h1:font-normal prose-h1:leading-tight prose-h2:text-[24px] prose-h2:font-normal prose-h2:mt-12 prose-h3:text-[19px] prose-h3:font-medium prose-h3:mt-8 prose-h2:scroll-mt-20 prose-h3:scroll-mt-20 prose-p:font-serif prose-p:text-[18px] prose-p:leading-relaxed prose-p:text-foreground/85 prose-li:font-serif prose-li:text-[18px] prose-li:leading-relaxed prose-li:text-foreground/85 prose-strong:text-foreground prose-strong:font-semibold prose-em:text-foreground prose-em:italic prose-a:text-brand prose-a:no-underline hover:prose-a:underline prose-code:font-mono prose-code:text-[14px] prose-code:bg-foreground/[0.06] prose-code:px-1 prose-code:py-px prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-card/50 prose-pre:border prose-pre:border-foreground/10 prose-pre:text-sm prose-table:text-[14px] prose-th:font-mono prose-th:uppercase prose-th:tracking-wide prose-th:text-xs prose-th:text-muted-foreground prose-th:font-medium prose-blockquote:border-l-foreground/20 prose-blockquote:font-serif prose-blockquote:italic">
+          <article ref={articleRef} className="prose prose-neutral mt-10 max-w-none dark:prose-invert prose-headings:tracking-tight prose-h1:text-[34px] prose-h1:font-normal prose-h1:leading-tight prose-h2:text-[24px] prose-h2:font-normal prose-h2:mt-12 prose-h3:text-[19px] prose-h3:font-medium prose-h3:mt-8 prose-h2:scroll-mt-20 prose-h3:scroll-mt-20 prose-p:text-[18px] prose-p:leading-relaxed prose-p:text-foreground/85 prose-li:text-[18px] prose-li:leading-relaxed prose-li:text-foreground/85 prose-strong:text-foreground prose-strong:font-semibold prose-em:text-foreground prose-em:italic prose-a:text-brand prose-a:no-underline hover:prose-a:underline prose-code:font-mono prose-code:text-[14px] prose-code:bg-foreground/[0.06] prose-code:px-1 prose-code:py-px prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-card/50 prose-pre:border prose-pre:border-foreground/10 prose-pre:text-sm prose-table:text-[14px] prose-th:font-mono prose-th:uppercase prose-th:tracking-wide prose-th:text-xs prose-th:text-muted-foreground prose-th:font-medium prose-blockquote:border-l-foreground/20 prose-blockquote:italic">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeSlug]}
@@ -186,7 +186,7 @@ export function DocsPage({
             </ReactMarkdown>
           </article>
         ) : (
-          <p className="mt-8 font-serif italic text-muted-foreground">
+          <p className="mt-8 italic text-muted-foreground">
             That doc page is not in the index.
           </p>
         )}
@@ -299,7 +299,7 @@ function DocsToc({
                 href={`#${h.slug}`}
                 onClick={onJump(h.slug)}
                 className={cn(
-                  "-ml-px block border-l border-transparent py-0.5 font-sans text-[12.5px] leading-snug transition-colors",
+                  "-ml-px block border-l border-transparent py-0.5 text-[12.5px] leading-snug transition-colors",
                   h.level === 3 ? "pl-6" : "pl-3",
                   isActive
                     ? "border-l-brand text-brand"
@@ -332,10 +332,10 @@ function Header({
       <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
         {eyebrow}
       </p>
-      <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+      <h1 className="mt-3 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
         {title}
       </h1>
-      <p className="mt-5 font-serif text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
+      <p className="mt-5 text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
         {lead}
       </p>
     </header>
@@ -354,11 +354,11 @@ function DocsSeeAlso({ activeSlug }: { activeSlug: string }) {
           <li key={entry.slug}>
             <Link
               href={`/docs/${entry.slug}`}
-              className="font-sans text-[14px] text-foreground/80 hover:text-foreground hover:underline"
+              className="text-[14px] text-foreground/80 hover:text-foreground hover:underline"
             >
               {entry.title}
             </Link>
-            <span className="ml-2 font-serif text-sm italic text-muted-foreground">
+            <span className="ml-2 text-sm italic text-muted-foreground">
               {entry.blurb}
             </span>
           </li>
@@ -375,11 +375,11 @@ function DocsLanding() {
         <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
           Documentation
         </p>
-        <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+        <h1 className="mt-3 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
           What <span className="italic text-brand">Nomos</span> is, how it
           runs, and how to extend it.
         </h1>
-        <p className="mt-5 font-serif text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
+        <p className="mt-5 text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
           A grid of agents follows local rules; macro phenomena — markets,
           classes, conflict, money — emerge or fail to emerge from those
           rules. A panel of AI theorists watches the same field and narrates
@@ -395,10 +395,10 @@ function DocsLanding() {
               href={`/docs/${entry.slug}`}
               className="block rounded-md border border-foreground/10 bg-card/40 px-4 py-3 transition-colors hover:border-foreground/20 hover:bg-card/60"
             >
-              <div className="font-serif text-lg leading-tight text-foreground">
+              <div className="text-lg leading-tight text-foreground">
                 {entry.title}
               </div>
-              <p className="mt-1 font-sans text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {entry.blurb}
               </p>
             </Link>
@@ -406,7 +406,7 @@ function DocsLanding() {
         ))}
       </ul>
 
-      <p className="mt-12 text-right font-sans text-xs text-muted-foreground">
+      <p className="mt-12 text-right text-xs text-muted-foreground">
         Open source project by{" "}
         <a
           href="https://github.com/nenadmarinkovic/nomos"

@@ -118,7 +118,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
                 className="flex cursor-pointer items-center gap-2"
               >
                 <SignInIcon size={16} weight="regular" />
-                <span className="font-sans text-sm">Sign in</span>
+                <span className="text-sm">Sign in</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -127,7 +127,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
                 className="flex cursor-pointer items-center gap-2 text-muted-foreground"
               >
                 <UserIcon size={16} weight="regular" />
-                <span className="font-sans text-sm">Create account</span>
+                <span className="text-sm">Create account</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -204,7 +204,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
               <UserIcon size={15} weight="regular" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-sans text-sm font-medium text-foreground">
+              <p className="truncate text-sm font-medium text-foreground">
                 {display}
               </p>
               <p className="truncate font-mono text-sm text-muted-foreground">
@@ -217,7 +217,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={handleSignOut}>
             <SignOutIcon size={16} weight="regular" />
-            <span className="font-sans text-sm">Sign out</span>
+            <span className="text-sm">Sign out</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -237,7 +237,7 @@ function ThemeRow() {
 
   return (
     <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-      <span className="font-sans text-sm text-muted-foreground">Theme</span>
+      <span className="text-sm text-muted-foreground">Theme</span>
       <div className="flex items-center gap-0.5 rounded-md border border-foreground/10 bg-background/40 p-0.5">
         {THEME_OPTIONS.map(({ value, Icon, label }) => {
           const active = mounted && theme === value;

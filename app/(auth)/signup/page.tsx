@@ -52,10 +52,10 @@ export default function SignUpPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-1.5 text-center">
-        <h1 className="font-serif text-3xl leading-tight tracking-tight">
+        <h1 className="text-3xl leading-tight tracking-tight">
           Create an account
         </h1>
-        <p className="font-serif text-[14px] leading-relaxed text-muted-foreground">
+        <p className="text-[14px] leading-relaxed text-muted-foreground">
           Keep your runs across devices and revisit the Chronicle.
         </p>
       </header>
@@ -89,7 +89,7 @@ export default function SignUpPage() {
         {error && (
           <p
             role="alert"
-            className="rounded-md border border-destructive/30 bg-destructive/[0.05] px-3 py-2 font-sans text-xs leading-snug text-destructive"
+            className="rounded-md border border-destructive/30 bg-destructive/[0.05] px-3 py-2 text-xs leading-snug text-destructive"
           >
             {error}
           </p>
@@ -104,7 +104,7 @@ export default function SignUpPage() {
         </Button>
       </form>
 
-      <p className="text-center font-sans text-sm text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground">
         Already have one?{" "}
         <Link
           href={`/signin${next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`}
@@ -136,7 +136,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block font-sans text-xs font-medium text-foreground/85">
+      <span className="block text-xs font-medium text-foreground/85">
         {label}
       </span>
       <input
@@ -146,7 +146,7 @@ function Field({
         autoComplete={autoComplete}
         required={required}
         minLength={minLength}
-        className="mt-1 block h-10 w-full rounded-md border border-foreground/15 bg-card/50 px-3 font-sans text-[14px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40 focus:bg-card"
+        className="mt-1 block h-10 w-full rounded-md border border-foreground/15 bg-card/50 px-3 text-[14px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40 focus:bg-card"
       />
     </label>
   );

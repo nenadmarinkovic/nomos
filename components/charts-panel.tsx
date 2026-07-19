@@ -212,7 +212,7 @@ function ChartBlock({
         </span>
       </div>
       {children}
-      <span className="font-sans text-xs text-muted-foreground">{hint}</span>
+      <span className="text-xs text-muted-foreground">{hint}</span>
     </div>
   );
 }

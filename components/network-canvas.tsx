@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { XIcon } from "@phosphor-icons/react";
@@ -9,6 +10,7 @@ import { activeWorldRef } from "@/lib/active-world";
 import { useSimulationStore } from "@/lib/store";
 import type { RenderAgent } from "@/lib/world";
 
+// react-force-graph exposes untyped node/graph accessors.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface GraphNode {
@@ -46,6 +48,32 @@ const MOTIVATION_COLOR: Record<string, string> = {
   power: "#2A9D5C",
 };
 
+const MOTIVATION_COLOR_MONO_LIGHT: Record<string, string> = {
+  normative: "#4A4A4A",
+  material: "#2E2E2E",
+  power: "#1A1A1A",
+  symbolic: "#000000",
+};
+const MOTIVATION_COLOR_MONO_DARK: Record<string, string> = {
+  normative: "#FFFFFF",
+  material: "#E0E0E0",
+  power: "#C2C2C2",
+  symbolic: "#A4A4A4",
+};
+
+function motivationColor(
+  motivation: string,
+  mono: boolean,
+  isDark: boolean,
+): string {
+  const palette = mono
+    ? isDark
+      ? MOTIVATION_COLOR_MONO_DARK
+      : MOTIVATION_COLOR_MONO_LIGHT
+    : MOTIVATION_COLOR;
+  return palette[motivation] ?? palette.material;
+}
+
 const MOTIVATION_LABEL: Record<string, string> = {
   material: "Material",
   symbolic: "Symbolic",
@@ -54,15 +82,11 @@ const MOTIVATION_LABEL: Record<string, string> = {
 };
 
 const REBUILD_EVERY_N_TURNS = 20;
-/** Cap each agent to its K strongest ties — cuts the hairball. */
 const TOP_K_PER_AGENT = 3;
-/** Past this, keep only the most-embedded nodes. */
 const MAX_RENDERED_NODES = 1200;
 
-/** Module-scoped so remounts don't refit the camera on every Field↔Network switch. */
 let hasFitCamera = false;
 
-// Three.js backend, no SSR.
 const ForceGraph3D = dynamic(
   async () => (await import("react-force-graph-3d")).default,
   { ssr: false },
@@ -70,9 +94,7 @@ const ForceGraph3D = dynamic(
 
 const NODE_RADIUS = 6;
 
-/** Shared GPU resources: one geometry per motivation, one material per
- *  (motivation, selection). Per-node construction was the dominant cost
- *  and leaked VRAM at town scale. */
+// Shared GPU resources — per-node construction leaked VRAM at town scale.
 const MOTIVATION_GEOMETRY: Record<string, THREE.BufferGeometry> = {
   symbolic: new THREE.SphereGeometry(NODE_RADIUS, 16, 16),
   normative: new THREE.ConeGeometry(NODE_RADIUS, NODE_RADIUS * 1.8, 4),
@@ -88,11 +110,15 @@ const nodeMaterialCache = new Map<string, THREE.MeshLambertMaterial>();
 function getNodeMaterial(
   motivation: string,
   isSelected: boolean,
+  mono: boolean,
+  isDark: boolean,
 ): THREE.MeshLambertMaterial {
-  const key = `${motivation}:${isSelected ? "s" : "n"}`;
+  const key = `${motivation}:${isSelected ? "s" : "n"}:${mono ? "m" : "c"}:${
+    isDark ? "d" : "l"
+  }`;
   const cached = nodeMaterialCache.get(key);
   if (cached) return cached;
-  const color = MOTIVATION_COLOR[motivation] ?? "#E63946";
+  const color = motivationColor(motivation, mono, isDark);
   const mat = new THREE.MeshLambertMaterial({
     color,
     emissive: isSelected ? color : 0x000000,
@@ -102,15 +128,16 @@ function getNodeMaterial(
   return mat;
 }
 
-/** 3D force graph: node = alive agent, edge = top-3 trade partners. */
 export function NetworkCanvas() {
   const turn = useSimulationStore((s) => s.turn);
+  const monochrome = useSimulationStore((s) => s.monochrome);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const lastBuiltTurn = useRef<number>(-9999);
   const prevNodeIdsRef = useRef<Set<number>>(new Set());
   const prevLinkKeysRef = useRef<Set<string>>(new Set());
-  // Reuse node objects across rebuilds so react-force-graph warm-starts.
   const nodeCacheRef = useRef<Map<number, GraphNode>>(new Map());
 
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -142,17 +169,12 @@ export function NetworkCanvas() {
     return () => ro.disconnect();
   }, []);
 
-  // Slow-cadence rebuild so the layout settles and the diff can name
-  // added/removed nodes and ties instead of jittering.
   useEffect(() => {
-    // Turn reset = new run → clear diff bookkeeping so the first frame
-    // is a baseline, not a mass-death event.
     if (turn === 0 && lastBuiltTurn.current > 0) {
       prevNodeIdsRef.current = new Set();
       prevLinkKeysRef.current = new Set();
       nodeCacheRef.current = new Map();
       lastBuiltTurn.current = -9999;
-      // New run — reset the auto-fit so the fresh layout reframes.
       hasFitCamera = false;
       setEvents([]);
     }
@@ -179,7 +201,6 @@ export function NetworkCanvas() {
       alive: aliveAgents.length,
     });
 
-    // Diff into the "recent changes" ticker.
     const prevIds = prevNodeIdsRef.current;
     const prevKeys = prevLinkKeysRef.current;
     const currentIds = new Set<number>();
@@ -263,7 +284,7 @@ export function NetworkCanvas() {
             nodeRelSize={4}
             nodeVal={() => 1}
             nodeColor={(n: any) =>
-              MOTIVATION_COLOR[n.motivation as string] ?? "#E63946"
+              motivationColor(n.motivation as string, monochrome, isDark)
             }
             nodeOpacity={0.95}
             nodeLabel={(n: any) => {
@@ -302,7 +323,12 @@ export function NetworkCanvas() {
               const motivation = n.motivation as string;
               const geom =
                 MOTIVATION_GEOMETRY[motivation] ?? MOTIVATION_GEOMETRY.material;
-              const mat = getNodeMaterial(motivation, n.id === selectedId);
+              const mat = getNodeMaterial(
+                motivation,
+                n.id === selectedId,
+                monochrome,
+                isDark,
+              );
               return new THREE.Mesh(geom, mat);
             }}
           />
@@ -339,7 +365,7 @@ export function NetworkCanvas() {
       {selectedId === null && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-10 w-[28rem] max-w-[calc(100vw-2rem)] rounded-md border border-foreground/10 bg-card/90 px-3 py-2 backdrop-blur-sm">
           {events.length === 0 ? (
-            <p className="font-serif text-xs italic leading-snug text-foreground/80">
+            <p className="text-xs italic leading-snug text-foreground/80">
               Each shape is one agent; lines show each agent&apos;s three
               strongest trade partners. Drag to orbit, scroll to zoom, click an
               agent to inspect.
@@ -391,6 +417,9 @@ function AgentInspector({
   turn: number;
   onClose: () => void;
 }) {
+  const monochrome = useSimulationStore((s) => s.monochrome);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const { agent, partners, embeddedness } = useMemo(() => {
     const world = activeWorldRef.current;
     if (!world)
@@ -425,7 +454,7 @@ function AgentInspector({
 
   if (!agent || !agent.alive) {
     return (
-      <div className="absolute bottom-4 right-4 z-10 w-72 rounded-md border border-foreground/15 bg-card/95 p-3 font-sans text-xs text-foreground backdrop-blur-md">
+      <div className="absolute bottom-4 right-4 z-10 w-72 rounded-md border border-foreground/15 bg-card/95 p-3 text-xs text-foreground backdrop-blur-md">
         <div className="flex items-center justify-between">
           <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Agent #{agentId}
@@ -439,7 +468,7 @@ function AgentInspector({
             <XIcon size={12} weight="bold" />
           </button>
         </div>
-        <p className="mt-2 font-serif italic text-muted-foreground">
+        <p className="mt-2 italic text-muted-foreground">
           Gone — this agent has died.
         </p>
       </div>
@@ -449,14 +478,14 @@ function AgentInspector({
   const wealth = agent.sugar + agent.spice;
 
   return (
-    <div className="absolute bottom-4 right-4 z-10 w-80 rounded-md border border-foreground/15 bg-card/95 font-sans text-xs text-foreground backdrop-blur-md">
+    <div className="absolute bottom-4 right-4 z-10 w-80 rounded-md border border-foreground/15 bg-card/95 text-xs text-foreground backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-foreground/10 px-3 py-2">
         <div className="flex items-center gap-2">
           <span
             aria-hidden
             className="block size-3 rounded-[2px]"
             style={{
-              background: MOTIVATION_COLOR[agent.motivation] ?? "#E63946",
+              background: motivationColor(agent.motivation, monochrome, isDark),
             }}
           />
           <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -496,7 +525,7 @@ function AgentInspector({
           Top trade partners
         </span>
         {partners.length === 0 ? (
-          <p className="mt-1.5 font-serif text-xs italic text-muted-foreground">
+          <p className="mt-1.5 text-xs italic text-muted-foreground">
             No partners yet — this agent hasn&apos;t traded.
           </p>
         ) : (
@@ -510,7 +539,7 @@ function AgentInspector({
                   aria-hidden
                   className="block size-2 rounded-[1px]"
                   style={{
-                    background: MOTIVATION_COLOR[p.motivation] ?? "#E63946",
+                    background: motivationColor(p.motivation, monochrome, isDark),
                   }}
                 />
                 <span className="text-foreground">#{p.id}</span>

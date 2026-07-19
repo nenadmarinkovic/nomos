@@ -91,7 +91,7 @@ function DocsTopNav({ activeSlug }: { activeSlug: string }) {
             }}
             href={`/docs/${entry.slug}`}
             className={cn(
-              "relative z-[1] rounded-md px-3 py-1.5 font-sans text-sm transition-colors duration-200",
+              "relative z-[1] rounded-md px-3 py-1.5 text-sm transition-colors duration-200",
               activeSlug === entry.slug
                 ? "text-foreground"
                 : "text-foreground/65 hover:text-foreground",

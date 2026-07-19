@@ -118,7 +118,7 @@ export function SiteHeader({
           />
           {!sidebarCollapsed && (
             <span className="flex flex-col leading-tight">
-              <span className="font-sans text-sm font-semibold tracking-tight text-foreground">
+              <span className="text-sm font-semibold tracking-tight text-foreground">
                 Nomos
               </span>
               <span className="font-mono text-xs tabular-nums text-muted-foreground">
@@ -170,7 +170,7 @@ export function SiteHeader({
 
           <nav
             aria-label="breadcrumb"
-            className="flex min-w-0 items-center gap-2 font-sans text-sm"
+            className="flex min-w-0 items-center gap-2 text-sm"
           >
             <span className="text-muted-foreground">{breadcrumb.group}</span>
             <CaretRightIcon

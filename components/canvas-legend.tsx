@@ -50,7 +50,7 @@ export function CanvasLegend() {
         {keys.map((k) => (
           <div key={k} className="flex items-center gap-2">
             <LegendShape motivation={k} mono={monochrome} />
-            <span className="font-sans text-xs text-foreground/85">
+            <span className="text-xs text-foreground/85">
               {MOTIVATION_LABEL[k] ?? k}
             </span>
           </div>

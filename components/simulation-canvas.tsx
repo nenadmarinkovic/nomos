@@ -702,12 +702,12 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
               <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
                 A generative society simulation
               </p>
-              <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+              <h1 className="mt-3 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
                 Build a society from{" "}
                 <em className="text-brand">simple rules</em> and watch what it
                 becomes.
               </h1>
-              <p className="mt-5 font-serif text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
+              <p className="mt-5 text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
                 Nomos doesn&rsquo;t program societies — it grows them. You set
                 a few starting conditions; agents follow simple rules; whatever
                 happens next is what the conditions produced. Inequality,
@@ -839,11 +839,11 @@ function Step({
         {n}
       </span>
       <div>
-        <div className="font-serif text-lg leading-tight text-foreground">
+        <div className="text-lg leading-tight text-foreground">
           {title}
         </div>
         <p
-          className="mt-1.5 font-sans text-sm leading-relaxed text-foreground/75 sm:text-sm"
+          className="mt-1.5 text-sm leading-relaxed text-foreground/75 sm:text-sm"
           dangerouslySetInnerHTML={{ __html: body }}
         />
       </div>

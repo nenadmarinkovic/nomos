@@ -156,7 +156,7 @@ function FloatingWindow({
       ref={setNodeRef}
       style={{ transform: `translate3d(${x}px, ${y}px, 0)` }}
       className={cn(
-        "pointer-events-auto absolute left-0 top-0 w-72 rounded-md border border-foreground/15 bg-card/95 font-sans text-foreground backdrop-blur-md",
+        "pointer-events-auto absolute left-0 top-0 w-72 rounded-md border border-foreground/15 bg-card/95 text-foreground backdrop-blur-md",
         isDragging && "cursor-grabbing",
       )}
     >
@@ -237,7 +237,7 @@ function GiniWindow() {
           />
         </AreaChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground">
         Wealth concentration
       </p>
     </FloatingWindow>
@@ -287,7 +287,7 @@ function AliveWindow() {
           />
         </LineChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground">
         Population over time
       </p>
     </FloatingWindow>
@@ -340,7 +340,7 @@ function WealthWindow() {
           />
         </BarChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground">
         Distribution by tier
       </p>
     </FloatingWindow>
@@ -399,7 +399,7 @@ function PriceWindow() {
           />
         </LineChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground">
         Sugar per spice, found by trade
       </p>
     </FloatingWindow>
@@ -512,7 +512,7 @@ function StreamWindow() {
                 className="block size-2 rounded-[1px]"
                 style={{ background: MOTIVATION_COLORS[key] }}
               />
-              <span className="font-sans text-xs text-foreground/85">
+              <span className="text-xs text-foreground/85">
                 {MOTIVATION_LABELS[key]}
               </span>
               <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
@@ -580,7 +580,7 @@ function MoneyWindow() {
           />
         </AreaChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground">
         IOUs outstanding · issuers whose tokens ≥3 holders
       </p>
     </FloatingWindow>
@@ -653,7 +653,7 @@ function TrustWindow() {
           />
         </LineChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground">
         Leadership anchor · mistrust in the top issuer
       </p>
     </FloatingWindow>
@@ -674,21 +674,21 @@ function NarratorWindow() {
     >
       <div className="min-h-[121px]">
         {!latest ? (
-          <p className="font-sans text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm leading-relaxed text-muted-foreground">
             {pending
               ? "Observers are watching…"
               : "Run the simulation. Observers will narrate as the society unfolds."}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
-            <p className="font-sans text-[14px] leading-relaxed text-foreground">
+            <p className="text-[14px] leading-relaxed text-foreground">
               {latest.text}
             </p>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="font-sans text-xs font-medium text-foreground/85">
+              <span className="text-xs font-medium text-foreground/85">
                 {OBSERVER_INFO[latest.observer].name}
               </span>
-              <span className="font-sans text-xs tabular-nums text-muted-foreground">
+              <span className="text-xs tabular-nums text-muted-foreground">
                 Turn {latest.turn}
               </span>
             </div>

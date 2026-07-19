@@ -164,7 +164,7 @@ export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
 
   return (
     <div className="space-y-2">
-      <p className="font-sans text-xs leading-snug text-muted-foreground">
+      <p className="text-xs leading-snug text-muted-foreground">
         Every alive agent within four cells of another forms a tie. Force-laid:
         clusters mean tight neighbourhoods; loners drift to the edge.
       </p>

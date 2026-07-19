@@ -197,7 +197,7 @@ export function RunLibrary() {
                 }}
                 placeholder="Name this run"
                 disabled={!started || saving}
-                className="h-8 w-full rounded-md border border-foreground/10 bg-card px-2.5 font-sans text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-foreground/25 disabled:opacity-50"
+                className="h-8 w-full rounded-md border border-foreground/10 bg-card px-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-foreground/25 disabled:opacity-50"
               />
             </div>
             <Button

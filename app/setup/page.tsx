@@ -731,7 +731,7 @@ export default function SetupPage() {
             priority
             className="h-9 w-auto dark:invert"
           />
-          <span className="hidden font-sans text-xs uppercase tracking-[0.22em] text-muted-foreground sm:inline">
+          <span className="hidden text-xs uppercase tracking-[0.22em] text-muted-foreground sm:inline">
             Guided setup
           </span>
         </Link>
@@ -768,10 +768,10 @@ export default function SetupPage() {
 
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-3xl px-4 pb-16 pt-10 sm:px-6 sm:pt-14">
-          <h1 className="font-serif text-[34px] font-normal leading-[1.1] tracking-[-0.015em] text-foreground sm:text-[44px]">
+          <h1 className="text-[34px] font-normal leading-[1.1] tracking-[-0.015em] text-foreground sm:text-[44px]">
             {step.question}
           </h1>
-          <p className="mt-5 max-w-2xl font-serif text-[17px] leading-relaxed text-foreground/70 sm:text-lg">
+          <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-foreground/70 sm:text-lg">
             {step.framing}
           </p>
 
@@ -787,7 +787,7 @@ export default function SetupPage() {
             />
           </div>
 
-          <p className="mt-12 max-w-2xl font-serif text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
+          <p className="mt-12 max-w-2xl text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
             {step.theoryHook}
           </p>
 
@@ -1074,14 +1074,14 @@ function StepBody({
         />
         <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-3">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="font-sans text-sm font-medium text-foreground">
+            <span className="text-sm font-medium text-foreground">
               Mutation rate
             </span>
             <span className="font-mono text-xs tabular-nums text-muted-foreground">
               {Math.round(rate * 100)}%
             </span>
           </div>
-          <p className="mt-1 font-sans text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             Per-birth chance the child&apos;s traits are resampled from the
             centroid mix above instead of drifting off the parent&apos;s.
             Higher = diversity rebleeds in after a single region of trait
@@ -1259,7 +1259,7 @@ function WeightedPickGrid<K extends string>({
                   key={o.key}
                   className="grid grid-cols-[7rem_1fr_2.5rem] items-center gap-3"
                 >
-                  <span className="truncate font-sans text-sm font-medium text-foreground">
+                  <span className="truncate text-sm font-medium text-foreground">
                     {o.label}
                   </span>
                   <Slider
@@ -1345,7 +1345,7 @@ function ObserverPicker({
                   {active && <CheckIcon size={11} weight="bold" />}
                 </span>
               </div>
-              <p className="font-serif text-sm italic leading-snug text-foreground/70">
+              <p className="text-sm italic leading-snug text-foreground/70">
                 {info.lens}
               </p>
             </button>
@@ -1471,7 +1471,7 @@ function SummaryReview({
           onClick={() => jumpToStep("observers")}
           className="group flex w-full cursor-pointer items-start justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.02]"
         >
-          <span className="shrink-0 pt-1 font-sans text-sm text-muted-foreground">
+          <span className="shrink-0 pt-1 text-sm text-muted-foreground">
             {draft.observers.length === 0
               ? "None"
               : `${draft.observers.length} selected`}
@@ -1481,7 +1481,7 @@ function SummaryReview({
               {draft.observers.map((k) => (
                 <span
                   key={k}
-                  className="rounded-full border border-foreground/10 bg-card px-2.5 py-0.5 font-sans text-xs font-medium text-foreground/85"
+                  className="rounded-full border border-foreground/10 bg-card px-2.5 py-0.5 text-xs font-medium text-foreground/85"
                 >
                   {OBSERVER_INFO[k].name}
                 </span>
@@ -1574,7 +1574,7 @@ function CodeAnchorBlock({ anchor }: { anchor: CodeAnchor }) {
       >
         {MODE_LABEL[anchor.mode]}
       </span>
-      <p className="font-serif text-[15px] leading-relaxed text-foreground/80">
+      <p className="text-[15px] leading-relaxed text-foreground/80">
         {anchor.plain}
       </p>
       <div className="overflow-hidden rounded-md border border-foreground/10 bg-card/40">
@@ -1632,11 +1632,11 @@ function SummaryRow({
       onClick={onEdit}
       className="group flex w-full cursor-pointer items-center justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.02]"
     >
-      <span className="font-sans text-sm text-muted-foreground">
+      <span className="text-sm text-muted-foreground">
         {label}
       </span>
       <span className="flex items-center gap-2.5">
-        <span className="font-sans text-[14px] font-medium text-foreground">
+        <span className="text-[14px] font-medium text-foreground">
           {value}
         </span>
         <CaretRightIcon

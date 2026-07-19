@@ -52,7 +52,7 @@ export function CanvasViewToggle() {
                   weight="bold"
                   className="text-muted-foreground"
                 />
-                <span className="font-sans text-xs">{label}</span>
+                <span className="text-xs">{label}</span>
               </MenubarItem>
             ))}
           </MenubarContent>

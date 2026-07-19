@@ -116,7 +116,7 @@ export function NarratorPage() {
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Voices
           </p>
-          <p className="mt-1 font-sans text-xs leading-snug text-muted-foreground">
+          <p className="mt-1 text-xs leading-snug text-muted-foreground">
             Click a theorist to filter to their readings.
           </p>
         </div>
@@ -155,10 +155,10 @@ function Header() {
       <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
         Narrator · Voices
       </p>
-      <h1 className="font-serif text-3xl leading-tight tracking-tight text-foreground">
+      <h1 className="text-3xl leading-tight tracking-tight text-foreground">
         How the theorists read what just happened.
       </h1>
-      <p className="font-serif text-[15px] leading-relaxed text-foreground/70">
+      <p className="text-[15px] leading-relaxed text-foreground/70">
         Each observer narrates significant moments through their own
         vocabulary. Same event, different vocabularies — that&rsquo;s the
         intellectual move.
@@ -192,13 +192,13 @@ function FilterRow({
       )}
     >
       <div className="flex w-full items-baseline justify-between gap-2">
-        <span className="font-sans text-sm font-medium">{label}</span>
+        <span className="text-sm font-medium">{label}</span>
         <span className="font-mono text-xs tabular-nums text-muted-foreground">
           {count}
         </span>
       </div>
       {hint && (
-        <span className="font-serif text-xs italic leading-snug text-muted-foreground">
+        <span className="text-xs italic leading-snug text-muted-foreground">
           {hint}
         </span>
       )}
@@ -210,10 +210,10 @@ function EventSection({ group }: { group: EventGroup }) {
   return (
     <section className="space-y-6">
       <header className="flex items-baseline justify-between gap-3">
-        <h2 className="font-serif text-2xl leading-tight tracking-tight text-foreground">
+        <h2 className="text-2xl leading-tight tracking-tight text-foreground">
           {group.title}
         </h2>
-        <span className="shrink-0 font-sans text-xs tabular-nums text-muted-foreground">
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
           Turn {group.turn}
         </span>
       </header>
@@ -232,16 +232,16 @@ function NarrationCard({ entry }: { entry: ChronicleEntry }) {
     <article className="space-y-2">
       {entry.status === "pending" && <PendingLines />}
       {entry.status === "done" && entry.text && (
-        <p className="font-serif text-[16px] leading-relaxed text-foreground">
+        <p className="text-[16px] leading-relaxed text-foreground">
           {entry.text}
         </p>
       )}
       {entry.status === "error" && (
-        <p className="font-sans text-sm leading-snug text-muted-foreground">
+        <p className="text-sm leading-snug text-muted-foreground">
           {entry.error ?? "The observer could not be reached."}
         </p>
       )}
-      <p className="font-sans text-xs text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         — {info?.name ?? entry.observer}
       </p>
     </article>
@@ -267,8 +267,8 @@ function PendingLines() {
 function EmptyState({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="mt-12 space-y-2 text-center">
-      <p className="font-serif text-xl text-foreground/85">{title}</p>
-      <p className="font-sans text-sm leading-relaxed text-muted-foreground">
+      <p className="text-xl text-foreground/85">{title}</p>
+      <p className="text-sm leading-relaxed text-muted-foreground">
         {hint}
       </p>
     </div>
