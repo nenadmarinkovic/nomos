@@ -631,7 +631,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         {!started && (
           <div className="pointer-events-auto absolute inset-0 overflow-y-auto bg-background">
             <div className="mx-auto flex max-w-2xl flex-col px-6 pb-16 pt-16">
-              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
                 A generative society simulation
               </p>
               <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
@@ -685,7 +685,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
                   : "bg-muted-foreground/40",
             )}
           />
-          <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
             {running ? "running" : started ? "paused" : "idle"}
           </span>
         </div>
@@ -760,7 +760,7 @@ function Step({
 }) {
   return (
     <li className="grid grid-cols-[2.5rem_1fr] gap-4">
-      <span className="pt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+      <span className="pt-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         {n}
       </span>
       <div>
@@ -768,7 +768,7 @@ function Step({
           {title}
         </div>
         <p
-          className="mt-1.5 font-sans text-[13px] leading-relaxed text-foreground/75 sm:text-sm"
+          className="mt-1.5 font-sans text-sm leading-relaxed text-foreground/75 sm:text-sm"
           dangerouslySetInnerHTML={{ __html: body }}
         />
       </div>

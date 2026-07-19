@@ -113,10 +113,10 @@ export function SiteHeader({
           />
           {!sidebarCollapsed && (
             <span className="flex flex-col leading-tight">
-              <span className="font-sans text-[13px] font-semibold tracking-tight text-foreground">
+              <span className="font-sans text-sm font-semibold tracking-tight text-foreground">
                 Nomos
               </span>
-              <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+              <span className="font-mono text-xs tabular-nums text-muted-foreground">
                 Version: {APP_VERSION}
               </span>
             </span>
@@ -165,7 +165,7 @@ export function SiteHeader({
 
           <nav
             aria-label="breadcrumb"
-            className="flex min-w-0 items-center gap-2 font-sans text-xs"
+            className="flex min-w-0 items-center gap-2 font-sans text-sm"
           >
             <span className="text-muted-foreground">{breadcrumb.group}</span>
             <CaretRightIcon
@@ -194,7 +194,7 @@ export function SiteHeader({
                     aria-checked={active}
                     onClick={() => setSpeed(s.value)}
                     className={cn(
-                      "cursor-pointer rounded-[4px] px-2 py-1 font-mono text-[11px] tabular-nums transition-colors",
+                      "cursor-pointer rounded-[4px] px-2 py-1 font-mono text-xs tabular-nums transition-colors",
                       active
                         ? "bg-foreground text-background"
                         : "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",

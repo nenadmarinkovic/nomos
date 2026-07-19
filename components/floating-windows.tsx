@@ -169,11 +169,11 @@ function FloatingWindow({
         )}
       >
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             {title}
           </span>
           {meta && (
-            <span className="font-mono text-[12px] tabular-nums text-foreground">
+            <span className="font-mono text-xs tabular-nums text-foreground">
               {meta}
             </span>
           )}
@@ -237,7 +237,7 @@ function GiniWindow() {
           />
         </AreaChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+      <p className="mt-2 font-sans text-xs text-muted-foreground">
         Wealth concentration
       </p>
     </FloatingWindow>
@@ -287,7 +287,7 @@ function AliveWindow() {
           />
         </LineChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+      <p className="mt-2 font-sans text-xs text-muted-foreground">
         Population over time
       </p>
     </FloatingWindow>
@@ -340,7 +340,7 @@ function WealthWindow() {
           />
         </BarChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+      <p className="mt-2 font-sans text-xs text-muted-foreground">
         Distribution by tier
       </p>
     </FloatingWindow>
@@ -399,7 +399,7 @@ function PriceWindow() {
           />
         </LineChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+      <p className="mt-2 font-sans text-xs text-muted-foreground">
         Sugar per spice, found by trade
       </p>
     </FloatingWindow>
@@ -496,7 +496,7 @@ function StreamWindow() {
             ))}
           </svg>
         ) : (
-          <div className="flex h-full items-center justify-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="flex h-full items-center justify-center font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             gathering…
           </div>
         )}
@@ -512,10 +512,10 @@ function StreamWindow() {
                 className="block size-2 rounded-[1px]"
                 style={{ background: MOTIVATION_COLORS[key] }}
               />
-              <span className="font-sans text-[11px] text-foreground/85">
+              <span className="font-sans text-xs text-foreground/85">
                 {MOTIVATION_LABELS[key]}
               </span>
-              <span className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground">
+              <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
                 {pct}%
               </span>
             </div>
@@ -580,7 +580,7 @@ function MoneyWindow() {
           />
         </AreaChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+      <p className="mt-2 font-sans text-xs text-muted-foreground">
         IOUs outstanding · issuers whose tokens ≥3 holders
       </p>
     </FloatingWindow>
@@ -653,7 +653,7 @@ function TrustWindow() {
           />
         </LineChart>
       </ChartContainer>
-      <p className="mt-2 font-sans text-[11px] text-muted-foreground">
+      <p className="mt-2 font-sans text-xs text-muted-foreground">
         Leadership anchor · mistrust in the top issuer
       </p>
     </FloatingWindow>
@@ -674,7 +674,7 @@ function NarratorWindow() {
     >
       <div className="min-h-[121px]">
         {!latest ? (
-          <p className="font-sans text-[13px] leading-relaxed text-muted-foreground">
+          <p className="font-sans text-sm leading-relaxed text-muted-foreground">
             {pending
               ? "Observers are watching…"
               : "Run the simulation. Observers will narrate as the society unfolds."}
@@ -685,10 +685,10 @@ function NarratorWindow() {
               {latest.text}
             </p>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="font-sans text-[12px] font-medium text-foreground/85">
+              <span className="font-sans text-xs font-medium text-foreground/85">
                 {OBSERVER_INFO[latest.observer].name}
               </span>
-              <span className="font-sans text-[11px] tabular-nums text-muted-foreground">
+              <span className="font-sans text-xs tabular-nums text-muted-foreground">
                 Turn {latest.turn}
               </span>
             </div>

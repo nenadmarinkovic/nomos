@@ -26,7 +26,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             priority
             className="h-9 w-auto dark:invert"
           />
-          <span className="flex flex-col font-sans text-[10px] font-medium leading-[1.2] text-foreground">
+          <span className="flex flex-col font-sans text-xs font-medium leading-[1.2] text-foreground">
             <span>Nomos, a generative</span>
             <span>society simulation.</span>
           </span>
@@ -37,7 +37,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="w-full max-w-sm">{children}</div>
       </main>
 
-      <footer className="flex flex-col items-center gap-1 px-6 pb-8 text-center font-sans text-[12px] text-muted-foreground">
+      <footer className="flex flex-col items-center gap-1 px-6 pb-8 text-center font-sans text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <span>© {year} Nomos</span>
           <span aria-hidden className="text-muted-foreground/40">
@@ -45,7 +45,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </span>
           <span>All rights reserved</span>
         </div>
-        <div className="text-[11px] text-muted-foreground/70">
+        <div className="text-xs text-muted-foreground/70">
           An open-source project.{" "}
           <a
             href="https://github.com/nenadmarinkovic/nomos"

@@ -21,10 +21,10 @@ export function SnapshotBadge({
       onClick={onRefresh}
       className="group flex cursor-pointer items-center gap-2 rounded-md border border-foreground/10 bg-card/60 px-2.5 py-1.5 transition-colors hover:bg-foreground/[0.03]"
     >
-      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+      <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         As of
       </span>
-      <span className="font-mono text-[12px] tabular-nums text-foreground">
+      <span className="font-mono text-xs tabular-nums text-foreground">
         T{turn.toString().padStart(5, "0")}
       </span>
       <span
@@ -41,7 +41,7 @@ export function SnapshotBadge({
         weight="bold"
         className="text-muted-foreground transition-colors group-hover:text-foreground"
       />
-      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground transition-colors group-hover:text-foreground">
+      <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors group-hover:text-foreground">
         Refresh
       </span>
     </button>

@@ -164,12 +164,12 @@ export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
 
   return (
     <div className="space-y-2">
-      <p className="font-sans text-[11px] leading-snug text-muted-foreground">
+      <p className="font-sans text-xs leading-snug text-muted-foreground">
         Every alive agent within four cells of another forms a tie. Force-laid:
         clusters mean tight neighbourhoods; loners drift to the edge.
       </p>
 
-      <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+      <div className="flex items-center justify-between font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
         <span>
           <span className="text-foreground">{stats.nodes}</span> agents
         </span>
@@ -187,7 +187,7 @@ export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
 
         {hover && (
           <div
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-sm border border-foreground/15 bg-card px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-sm border border-foreground/15 bg-card px-2 py-1 font-mono text-xs uppercase tracking-[0.12em] text-foreground"
             style={{
               left: hover.cx,
               top: hover.cy - 8,

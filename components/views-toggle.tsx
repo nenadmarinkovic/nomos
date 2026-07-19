@@ -58,13 +58,13 @@ export function ViewsToggle() {
     <div className="space-y-2 px-3 py-2.5">
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Windows
           </span>
           <button
             type="button"
             onClick={() => setAllViews(!anyVisible)}
-            className="cursor-pointer font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+            className="cursor-pointer font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
           >
             {anyVisible ? "Hide all" : "Show all"}
           </button>
@@ -79,7 +79,7 @@ export function ViewsToggle() {
               >
                 <Label
                   htmlFor={id}
-                  className="cursor-pointer font-sans text-[12px] text-foreground/85"
+                  className="cursor-pointer font-sans text-xs text-foreground/85"
                 >
                   {v.label}
                 </Label>
@@ -96,7 +96,7 @@ export function ViewsToggle() {
       </div>
 
       <div className="flex items-center justify-between gap-2 border-t border-foreground/10 pt-2">
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
           Align
         </span>
         <Menubar>
@@ -113,7 +113,7 @@ export function ViewsToggle() {
                     weight="bold"
                     className="text-muted-foreground"
                   />
-                  <span className="font-sans text-[12px]">{label}</span>
+                  <span className="font-sans text-xs">{label}</span>
                 </MenubarItem>
               ))}
             </MenubarContent>

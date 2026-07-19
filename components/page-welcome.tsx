@@ -31,7 +31,7 @@ export function PageWelcome({
   return (
     <ScrollArea className="flex-1">
       <div className="mx-auto flex max-w-2xl flex-col px-6 pb-16 pt-16">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
           {eyebrow}
         </p>
         <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
@@ -44,7 +44,7 @@ export function PageWelcome({
         <ol className="mt-10 space-y-5">
           {steps.map((s) => (
             <li key={s.n} className="grid grid-cols-[2.5rem_1fr] gap-4">
-              <span className="pt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              <span className="pt-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 {s.n}
               </span>
               <div>
@@ -52,7 +52,7 @@ export function PageWelcome({
                   {s.title}
                 </div>
                 <p
-                  className="mt-1.5 font-sans text-[13px] leading-relaxed text-foreground/75 sm:text-sm"
+                  className="mt-1.5 font-sans text-sm leading-relaxed text-foreground/75 sm:text-sm"
                   dangerouslySetInnerHTML={{ __html: s.body }}
                 />
               </div>

@@ -112,7 +112,7 @@ function Header({ badge }: { badge?: React.ReactNode }) {
   return (
     <header className="space-y-3">
       <div className="flex items-start justify-between gap-4">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
           Agents · Population atlas
         </p>
         {badge}
@@ -147,10 +147,10 @@ function Legend({
               className="size-2.5 shrink-0 rounded-full"
               style={{ background: m.color }}
             />
-            <span className="font-sans text-[12px] text-foreground/85">
+            <span className="font-sans text-xs text-foreground/85">
               {m.label}
             </span>
-            <span className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground">
+            <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
               {pct.toFixed(0)}%
             </span>
           </li>
@@ -165,7 +165,7 @@ function RankTable({ rows }: { rows: RankedRow[] }) {
     <div className="overflow-hidden rounded-md border border-foreground/10">
       <table className="w-full text-sm">
         <thead className="bg-foreground/[0.02]">
-          <tr className="border-b border-foreground/10 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          <tr className="border-b border-foreground/10 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
             <th className="px-3 py-2 text-left font-normal">#</th>
             <th className="px-3 py-2 text-left font-normal">Motivation</th>
             <th className="px-3 py-2 text-right font-normal">Wealth</th>
@@ -180,7 +180,7 @@ function RankTable({ rows }: { rows: RankedRow[] }) {
               key={r.id}
               className="border-b border-foreground/5 last:border-b-0 transition-colors hover:bg-foreground/[0.02]"
             >
-              <td className="px-3 py-1.5 font-mono text-[11px] text-muted-foreground">
+              <td className="px-3 py-1.5 font-mono text-xs text-muted-foreground">
                 #{r.id}
               </td>
               <td className="px-3 py-1.5">
@@ -190,21 +190,21 @@ function RankTable({ rows }: { rows: RankedRow[] }) {
                     className="size-2 rounded-full"
                     style={{ background: MOTIVATION_COLOR[r.m] ?? "#888" }}
                   />
-                  <span className="font-sans text-[12px] text-foreground/85">
+                  <span className="font-sans text-xs text-foreground/85">
                     {MOTIVATION_INFO[r.m as AgentMotivation]?.label ?? r.m}
                   </span>
                 </span>
               </td>
-              <td className="px-3 py-1.5 text-right font-mono text-[12px] tabular-nums text-foreground">
+              <td className="px-3 py-1.5 text-right font-mono text-xs tabular-nums text-foreground">
                 {r.wealth.toFixed(1)}
               </td>
-              <td className="px-3 py-1.5 text-right font-mono text-[12px] tabular-nums text-muted-foreground">
+              <td className="px-3 py-1.5 text-right font-mono text-xs tabular-nums text-muted-foreground">
                 {r.age}/{r.maxAge}
               </td>
-              <td className="px-3 py-1.5 text-right font-mono text-[12px] tabular-nums text-muted-foreground">
+              <td className="px-3 py-1.5 text-right font-mono text-xs tabular-nums text-muted-foreground">
                 {r.vision}
               </td>
-              <td className="px-3 py-1.5 text-right font-mono text-[11px] tabular-nums text-muted-foreground/70">
+              <td className="px-3 py-1.5 text-right font-mono text-xs tabular-nums text-muted-foreground/70">
                 {r.x},{r.y}
               </td>
             </tr>
@@ -221,7 +221,7 @@ function SectionTitle({ title, hint }: { title: string; hint: string }) {
       <h2 className="font-serif text-xl leading-tight text-foreground">
         {title}
       </h2>
-      <p className="font-sans text-[12px] text-muted-foreground">{hint}</p>
+      <p className="font-sans text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }
@@ -232,7 +232,7 @@ function EmptyState() {
       <p className="font-serif text-lg italic text-foreground/80">
         No sample yet.
       </p>
-      <p className="mt-2 font-sans text-[13px] text-muted-foreground">
+      <p className="mt-2 font-sans text-sm text-muted-foreground">
         Press Refresh once a few ticks have passed, or let the run warm up.
       </p>
     </div>

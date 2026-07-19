@@ -113,10 +113,10 @@ export function NarratorPage() {
 
       <aside className="hidden w-64 shrink-0 flex-col border-l border-foreground/10 bg-card/40 lg:flex">
         <div className="border-b border-foreground/10 px-4 py-3">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Voices
           </p>
-          <p className="mt-1 font-sans text-[11px] leading-snug text-muted-foreground">
+          <p className="mt-1 font-sans text-xs leading-snug text-muted-foreground">
             Click a theorist to filter to their readings.
           </p>
         </div>
@@ -152,7 +152,7 @@ export function NarratorPage() {
 function Header() {
   return (
     <header className="space-y-2">
-      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+      <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
         Narrator · Voices
       </p>
       <h1 className="font-serif text-3xl leading-tight tracking-tight text-foreground">
@@ -192,13 +192,13 @@ function FilterRow({
       )}
     >
       <div className="flex w-full items-baseline justify-between gap-2">
-        <span className="font-sans text-[13px] font-medium">{label}</span>
-        <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+        <span className="font-sans text-sm font-medium">{label}</span>
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">
           {count}
         </span>
       </div>
       {hint && (
-        <span className="font-serif text-[11px] italic leading-snug text-muted-foreground">
+        <span className="font-serif text-xs italic leading-snug text-muted-foreground">
           {hint}
         </span>
       )}
@@ -213,7 +213,7 @@ function EventSection({ group }: { group: EventGroup }) {
         <h2 className="font-serif text-2xl leading-tight tracking-tight text-foreground">
           {group.title}
         </h2>
-        <span className="shrink-0 font-sans text-[12px] tabular-nums text-muted-foreground">
+        <span className="shrink-0 font-sans text-xs tabular-nums text-muted-foreground">
           Turn {group.turn}
         </span>
       </header>
@@ -237,11 +237,11 @@ function NarrationCard({ entry }: { entry: ChronicleEntry }) {
         </p>
       )}
       {entry.status === "error" && (
-        <p className="font-sans text-[13px] leading-snug text-muted-foreground">
+        <p className="font-sans text-sm leading-snug text-muted-foreground">
           {entry.error ?? "The observer could not be reached."}
         </p>
       )}
-      <p className="font-sans text-[12px] text-muted-foreground">
+      <p className="font-sans text-xs text-muted-foreground">
         — {info?.name ?? entry.observer}
       </p>
     </article>
@@ -268,7 +268,7 @@ function EmptyState({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="mt-12 space-y-2 text-center">
       <p className="font-serif text-xl text-foreground/85">{title}</p>
-      <p className="font-sans text-[13px] leading-relaxed text-muted-foreground">
+      <p className="font-sans text-sm leading-relaxed text-muted-foreground">
         {hint}
       </p>
     </div>

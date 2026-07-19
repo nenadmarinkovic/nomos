@@ -28,7 +28,7 @@ export function CanvasLegend() {
 
   return (
     <div className="space-y-2.5 px-3 py-3">
-      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+      <div className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         Key
       </div>
 
@@ -36,7 +36,7 @@ export function CanvasLegend() {
         {keys.map((k) => (
           <div key={k} className="flex items-center gap-2">
             <LegendShape motivation={k} />
-            <span className="font-sans text-[12px] text-foreground/85">
+            <span className="font-sans text-xs text-foreground/85">
               {MOTIVATION_LABEL[k] ?? k}
             </span>
           </div>
@@ -44,7 +44,7 @@ export function CanvasLegend() {
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-foreground/10 pt-2">
-        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
           Wealth
         </span>
         <span className="flex items-center gap-px">
@@ -60,7 +60,7 @@ export function CanvasLegend() {
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
           Sugar
         </span>
         <span
@@ -71,7 +71,7 @@ export function CanvasLegend() {
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
           Spice
         </span>
         <span

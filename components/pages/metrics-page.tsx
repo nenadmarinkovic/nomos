@@ -242,7 +242,7 @@ function Header({ badge }: { badge?: React.ReactNode }) {
   return (
     <header className="space-y-3">
       <div className="flex items-start justify-between gap-4">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
           Metrics · Signals
         </p>
         {badge}
@@ -270,14 +270,14 @@ function Summary({
 }) {
   return (
     <div className="rounded-md border border-foreground/10 bg-card/40 px-3 py-3">
-      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+      <div className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </div>
       <div className="mt-1 font-mono text-[18px] tabular-nums text-foreground">
         {value}
       </div>
       {hint && (
-        <div className="mt-0.5 font-sans text-[11px] text-muted-foreground">
+        <div className="mt-0.5 font-sans text-xs text-muted-foreground">
           {hint}
         </div>
       )}
@@ -291,7 +291,7 @@ function SectionTitle({ title, hint }: { title: string; hint: string }) {
       <h2 className="font-serif text-xl leading-tight text-foreground">
         {title}
       </h2>
-      <p className="font-sans text-[12px] text-muted-foreground">{hint}</p>
+      <p className="font-sans text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }

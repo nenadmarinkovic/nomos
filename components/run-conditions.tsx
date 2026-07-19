@@ -60,14 +60,14 @@ function RunConditionsCard({ config }: { config: SimulationConfig }) {
   return (
     <section className="rounded-md border border-foreground/10 bg-card/40 px-4 py-3">
       <div className="flex items-center justify-between gap-2 pb-2">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
           Initial conditions
         </p>
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground/70">
           {agents.kind.replace(/_/g, " ")}
         </p>
       </div>
-      <dl className="grid grid-cols-[6.5rem_1fr] gap-y-1 font-mono text-[11px] leading-relaxed">
+      <dl className="grid grid-cols-[6.5rem_1fr] gap-y-1 font-mono text-xs leading-relaxed">
         <Row label="World" value={worldParts.join(" · ")} />
         <Row label="Rules" value={rules.join(" · ")} />
         <Row label="Mix" value={motivationMix} />

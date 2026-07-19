@@ -309,7 +309,7 @@ export function NetworkCanvas() {
         ) : null}
       </div>
 
-      <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-col gap-1 rounded-md border border-foreground/10 bg-card/90 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground backdrop-blur-sm">
+      <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-col gap-1 rounded-md border border-foreground/10 bg-card/90 px-3 py-2 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <span>
             T:<span className="tabular-nums text-foreground">{turn}</span>
@@ -339,17 +339,17 @@ export function NetworkCanvas() {
       {selectedId === null && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-10 w-[28rem] max-w-[calc(100vw-2rem)] rounded-md border border-foreground/10 bg-card/90 px-3 py-2 backdrop-blur-sm">
           {events.length === 0 ? (
-            <p className="font-serif text-[12px] italic leading-snug text-foreground/80">
+            <p className="font-serif text-xs italic leading-snug text-foreground/80">
               Each shape is one agent; lines show each agent&apos;s three
               strongest trade partners. Drag to orbit, scroll to zoom, click an
               agent to inspect.
             </p>
           ) : (
             <>
-              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Recent changes
               </div>
-              <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px] tabular-nums">
+              <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs tabular-nums">
                 {events.map((e, i) => (
                   <li
                     key={`${e.turn}:${e.kind}:${e.text}:${i}`}
@@ -425,9 +425,9 @@ function AgentInspector({
 
   if (!agent || !agent.alive) {
     return (
-      <div className="absolute bottom-4 right-4 z-10 w-72 rounded-md border border-foreground/15 bg-card/95 p-3 font-sans text-[12px] text-foreground backdrop-blur-md">
+      <div className="absolute bottom-4 right-4 z-10 w-72 rounded-md border border-foreground/15 bg-card/95 p-3 font-sans text-xs text-foreground backdrop-blur-md">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Agent #{agentId}
           </span>
           <button
@@ -449,7 +449,7 @@ function AgentInspector({
   const wealth = agent.sugar + agent.spice;
 
   return (
-    <div className="absolute bottom-4 right-4 z-10 w-80 rounded-md border border-foreground/15 bg-card/95 font-sans text-[12px] text-foreground backdrop-blur-md">
+    <div className="absolute bottom-4 right-4 z-10 w-80 rounded-md border border-foreground/15 bg-card/95 font-sans text-xs text-foreground backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-foreground/10 px-3 py-2">
         <div className="flex items-center gap-2">
           <span
@@ -459,10 +459,10 @@ function AgentInspector({
               background: MOTIVATION_COLOR[agent.motivation] ?? "#E63946",
             }}
           />
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Agent #{agent.id}
           </span>
-          <span className="font-mono text-[11px] text-foreground">
+          <span className="font-mono text-xs text-foreground">
             {MOTIVATION_LABEL[agent.motivation] ?? agent.motivation}
           </span>
         </div>
@@ -492,11 +492,11 @@ function AgentInspector({
       </div>
 
       <div className="border-t border-foreground/10 px-3 py-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
           Top trade partners
         </span>
         {partners.length === 0 ? (
-          <p className="mt-1.5 font-serif text-[12px] italic text-muted-foreground">
+          <p className="mt-1.5 font-serif text-xs italic text-muted-foreground">
             No partners yet — this agent hasn&apos;t traded.
           </p>
         ) : (
@@ -504,7 +504,7 @@ function AgentInspector({
             {partners.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center gap-2 font-mono text-[11px]"
+                className="flex items-center gap-2 font-mono text-xs"
               >
                 <span
                   aria-hidden
@@ -529,10 +529,10 @@ function AgentInspector({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+      <span className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
         {label}
       </span>
-      <span className="font-mono text-[12px] tabular-nums text-foreground">
+      <span className="font-mono text-xs tabular-nums text-foreground">
         {value}
       </span>
     </div>

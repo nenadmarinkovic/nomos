@@ -154,7 +154,7 @@ function SelectItem({
       <div className="flex min-w-0 flex-col gap-0.5">
         <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
         {description && (
-          <span className="text-[11px] leading-snug text-muted-foreground">
+          <span className="text-xs leading-snug text-muted-foreground">
             {description}
           </span>
         )}

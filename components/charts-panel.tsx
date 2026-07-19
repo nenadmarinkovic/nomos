@@ -204,15 +204,15 @@ function ChartBlock({
   return (
     <div className="space-y-2 px-4 py-3">
       <div className="flex items-baseline justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </span>
-        <span className="font-mono text-[13px] tabular-nums text-foreground">
+        <span className="font-mono text-sm tabular-nums text-foreground">
           {value}
         </span>
       </div>
       {children}
-      <span className="font-sans text-[11px] text-muted-foreground">{hint}</span>
+      <span className="font-sans text-xs text-muted-foreground">{hint}</span>
     </div>
   );
 }

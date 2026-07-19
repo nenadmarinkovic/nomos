@@ -111,7 +111,7 @@ export function DocsPage({
         <div className="not-prose my-6 overflow-hidden rounded-md border border-foreground/10 bg-card/40">
           {lang ? (
             <div className="flex items-center justify-between border-b border-foreground/10 px-3 py-1.5">
-              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              <span className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
                 {lang}
               </span>
             </div>
@@ -137,7 +137,7 @@ export function DocsPage({
             // No language — render verbatim so ASCII diagrams and the
             // like keep their alignment. Strict monospace, no kerning.
             <pre
-              className="overflow-x-auto px-3 py-3 font-mono text-[13px] leading-[1.45] text-foreground/85"
+              className="overflow-x-auto px-3 py-3 font-mono text-sm leading-[1.45] text-foreground/85"
               style={{ fontVariantLigatures: "none" }}
             >
               <code>{code}</code>
@@ -176,7 +176,7 @@ export function DocsPage({
           lead={entry.blurb}
         />
         {body ? (
-          <article ref={articleRef} className="prose prose-neutral mt-10 max-w-none dark:prose-invert prose-headings:font-serif prose-headings:tracking-tight prose-h1:text-[34px] prose-h1:font-normal prose-h1:leading-tight prose-h2:text-[24px] prose-h2:font-normal prose-h2:mt-12 prose-h3:text-[19px] prose-h3:font-medium prose-h3:mt-8 prose-h2:scroll-mt-20 prose-h3:scroll-mt-20 prose-p:font-serif prose-p:text-[18px] prose-p:leading-relaxed prose-p:text-foreground/85 prose-li:font-serif prose-li:text-[18px] prose-li:leading-relaxed prose-li:text-foreground/85 prose-strong:text-foreground prose-strong:font-semibold prose-em:text-foreground prose-em:italic prose-a:text-brand prose-a:no-underline hover:prose-a:underline prose-code:font-mono prose-code:text-[14px] prose-code:bg-foreground/[0.06] prose-code:px-1 prose-code:py-px prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-card/50 prose-pre:border prose-pre:border-foreground/10 prose-pre:text-[13px] prose-table:text-[14px] prose-th:font-mono prose-th:uppercase prose-th:tracking-wide prose-th:text-[10px] prose-th:text-muted-foreground prose-th:font-medium prose-blockquote:border-l-foreground/20 prose-blockquote:font-serif prose-blockquote:italic">
+          <article ref={articleRef} className="prose prose-neutral mt-10 max-w-none dark:prose-invert prose-headings:font-serif prose-headings:tracking-tight prose-h1:text-[34px] prose-h1:font-normal prose-h1:leading-tight prose-h2:text-[24px] prose-h2:font-normal prose-h2:mt-12 prose-h3:text-[19px] prose-h3:font-medium prose-h3:mt-8 prose-h2:scroll-mt-20 prose-h3:scroll-mt-20 prose-p:font-serif prose-p:text-[18px] prose-p:leading-relaxed prose-p:text-foreground/85 prose-li:font-serif prose-li:text-[18px] prose-li:leading-relaxed prose-li:text-foreground/85 prose-strong:text-foreground prose-strong:font-semibold prose-em:text-foreground prose-em:italic prose-a:text-brand prose-a:no-underline hover:prose-a:underline prose-code:font-mono prose-code:text-[14px] prose-code:bg-foreground/[0.06] prose-code:px-1 prose-code:py-px prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-card/50 prose-pre:border prose-pre:border-foreground/10 prose-pre:text-sm prose-table:text-[14px] prose-th:font-mono prose-th:uppercase prose-th:tracking-wide prose-th:text-xs prose-th:text-muted-foreground prose-th:font-medium prose-blockquote:border-l-foreground/20 prose-blockquote:font-serif prose-blockquote:italic">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeSlug]}
@@ -287,7 +287,7 @@ function DocsToc({
 
   return (
     <nav className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pt-16">
-      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+      <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         On this page
       </p>
       <ul className="mt-3 space-y-1.5 border-l border-foreground/10">
@@ -329,7 +329,7 @@ function Header({
 }) {
   return (
     <header>
-      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+      <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
         {eyebrow}
       </p>
       <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
@@ -346,7 +346,7 @@ function DocsSeeAlso({ activeSlug }: { activeSlug: string }) {
   const others = DOCS_INDEX.filter((d) => d.slug !== activeSlug);
   return (
     <nav className="mt-16 border-t border-foreground/10 pt-6">
-      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+      <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         See also
       </p>
       <ul className="mt-3 space-y-2">
@@ -358,7 +358,7 @@ function DocsSeeAlso({ activeSlug }: { activeSlug: string }) {
             >
               {entry.title}
             </Link>
-            <span className="ml-2 font-serif text-[13px] italic text-muted-foreground">
+            <span className="ml-2 font-serif text-sm italic text-muted-foreground">
               {entry.blurb}
             </span>
           </li>
@@ -372,7 +372,7 @@ function DocsLanding() {
   return (
     <>
       <header>
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
           Documentation
         </p>
         <h1 className="mt-3 font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
@@ -398,7 +398,7 @@ function DocsLanding() {
               <div className="font-serif text-lg leading-tight text-foreground">
                 {entry.title}
               </div>
-              <p className="mt-1 font-sans text-[13px] text-muted-foreground">
+              <p className="mt-1 font-sans text-sm text-muted-foreground">
                 {entry.blurb}
               </p>
             </Link>
@@ -406,7 +406,7 @@ function DocsLanding() {
         ))}
       </ul>
 
-      <p className="mt-12 text-right font-sans text-[12px] text-muted-foreground">
+      <p className="mt-12 text-right font-sans text-xs text-muted-foreground">
         Open source project by{" "}
         <a
           href="https://github.com/nenadmarinkovic/nomos"

@@ -88,10 +88,10 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
               {!collapsed && (
                 <>
                   <span className="flex min-w-0 flex-1 flex-col text-left leading-tight">
-                    <span className="truncate text-[13px] font-medium text-foreground">
+                    <span className="truncate text-sm font-medium text-foreground">
                       Guest
                     </span>
-                    <span className="truncate font-mono text-[10px] text-muted-foreground">
+                    <span className="truncate font-mono text-xs text-muted-foreground">
                       Not signed in
                     </span>
                   </span>
@@ -118,7 +118,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
                 className="flex cursor-pointer items-center gap-2"
               >
                 <SignInIcon size={14} weight="regular" />
-                <span className="font-sans text-[12px]">Sign in</span>
+                <span className="font-sans text-xs">Sign in</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -127,7 +127,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
                 className="flex cursor-pointer items-center gap-2 text-muted-foreground"
               >
                 <UserIcon size={14} weight="regular" />
-                <span className="font-sans text-[12px]">Create account</span>
+                <span className="font-sans text-xs">Create account</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -173,10 +173,10 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
             {!collapsed && (
               <>
                 <span className="flex min-w-0 flex-1 flex-col text-left leading-tight">
-                  <span className="truncate text-[13px] font-medium text-foreground">
+                  <span className="truncate text-sm font-medium text-foreground">
                     {display}
                   </span>
-                  <span className="truncate font-mono text-[10px] text-muted-foreground">
+                  <span className="truncate font-mono text-xs text-muted-foreground">
                     {user.email}
                   </span>
                 </span>
@@ -204,10 +204,10 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
               <UserIcon size={15} weight="regular" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-sans text-[13px] font-medium text-foreground">
+              <p className="truncate font-sans text-sm font-medium text-foreground">
                 {display}
               </p>
-              <p className="truncate font-mono text-[10px] text-muted-foreground">
+              <p className="truncate font-mono text-xs text-muted-foreground">
                 {user.email}
               </p>
             </div>
@@ -217,7 +217,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={handleSignOut}>
             <SignOutIcon size={14} weight="regular" />
-            <span className="font-sans text-[12px]">Sign out</span>
+            <span className="font-sans text-xs">Sign out</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -237,7 +237,7 @@ function ThemeRow() {
 
   return (
     <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-      <span className="font-sans text-[12px] text-muted-foreground">Theme</span>
+      <span className="font-sans text-xs text-muted-foreground">Theme</span>
       <div className="flex items-center gap-0.5 rounded-md border border-foreground/10 bg-background/40 p-0.5">
         {THEME_OPTIONS.map(({ value, Icon, label }) => {
           const active = mounted && theme === value;

@@ -37,7 +37,7 @@ export function SiteFooter({
         <Stat label="Observers" value={observerCount.toString()} />
       </div>
 
-      <div className="font-mono text-[10px] tabular-nums text-muted-foreground/70">
+      <div className="font-mono text-xs tabular-nums text-muted-foreground/70">
         {canvasSize.width} × {canvasSize.height}
       </div>
     </footer>

@@ -184,7 +184,7 @@ export function RunLibrary() {
             <div className="flex-1 space-y-1.5">
               <label
                 htmlFor="run-name"
-                className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground/70"
+                className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground/70"
               >
                 Save current run
               </label>
@@ -226,7 +226,7 @@ export function RunLibrary() {
           )}
 
           <div className="space-y-1.5">
-            <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
+            <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
               Saved runs
             </div>
 
@@ -250,7 +250,7 @@ export function RunLibrary() {
                       <div className="truncate text-sm text-foreground">
                         {run.name}
                       </div>
-                      <div className="mt-0.5 flex flex-wrap gap-x-2.5 gap-y-0.5 font-mono text-[11px] text-muted-foreground tabular-nums">
+                      <div className="mt-0.5 flex flex-wrap gap-x-2.5 gap-y-0.5 font-mono text-xs text-muted-foreground tabular-nums">
                         <span>{timeAgo(run.createdAt)}</span>
                         <span>turn {run.turn.toLocaleString()}</span>
                         <span>Gini {run.gini.toFixed(2)}</span>

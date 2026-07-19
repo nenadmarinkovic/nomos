@@ -90,7 +90,7 @@ export function AgentInspectorOverlay({
           isDragging ? "cursor-grabbing" : "cursor-grab",
         )}
       >
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
           Agent #{snap.id}
         </span>
         <button
@@ -105,11 +105,11 @@ export function AgentInspectorOverlay({
       </div>
       <div className="px-3 py-3">
         {!snap.alive ? (
-          <p className="font-serif text-[13px] italic text-foreground/70">
+          <p className="font-serif text-sm italic text-foreground/70">
             Deceased.
           </p>
         ) : (
-          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
             <InspectorRow label="Motivation" value={snap.motivation} />
             <InspectorRow
               label="Wealth"
@@ -137,7 +137,7 @@ export function AgentInspectorOverlay({
 function InspectorRow({ label, value }: { label: string; value: string }) {
   return (
     <>
-      <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+      <dt className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </dt>
       <dd className="text-right font-mono tabular-nums text-foreground">

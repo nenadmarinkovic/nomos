@@ -138,7 +138,7 @@ function NavGroup({
             href={href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "group relative flex cursor-pointer items-center rounded-md text-left text-[13px] transition-colors",
+              "group relative flex cursor-pointer items-center rounded-md text-left text-sm transition-colors",
               isActive
                 ? "bg-foreground/[0.06] text-foreground"
                 : "text-foreground/65 hover:bg-foreground/[0.03] hover:text-foreground",

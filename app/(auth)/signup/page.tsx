@@ -89,7 +89,7 @@ export default function SignUpPage() {
         {error && (
           <p
             role="alert"
-            className="rounded-md border border-destructive/30 bg-destructive/[0.05] px-3 py-2 font-sans text-[12px] leading-snug text-destructive"
+            className="rounded-md border border-destructive/30 bg-destructive/[0.05] px-3 py-2 font-sans text-xs leading-snug text-destructive"
           >
             {error}
           </p>
@@ -104,7 +104,7 @@ export default function SignUpPage() {
         </Button>
       </form>
 
-      <p className="text-center font-sans text-[13px] text-muted-foreground">
+      <p className="text-center font-sans text-sm text-muted-foreground">
         Already have one?{" "}
         <Link
           href={`/signin${next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`}
@@ -136,7 +136,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block font-sans text-[12px] font-medium text-foreground/85">
+      <span className="block font-sans text-xs font-medium text-foreground/85">
         {label}
       </span>
       <input

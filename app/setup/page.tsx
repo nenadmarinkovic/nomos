@@ -731,7 +731,7 @@ export default function SetupPage() {
             priority
             className="h-9 w-auto dark:invert"
           />
-          <span className="hidden font-sans text-[11px] uppercase tracking-[0.22em] text-muted-foreground sm:inline">
+          <span className="hidden font-sans text-xs uppercase tracking-[0.22em] text-muted-foreground sm:inline">
             Guided setup
           </span>
         </Link>
@@ -747,7 +747,7 @@ export default function SetupPage() {
 
       <div className="shrink-0 bg-background">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-5 px-4 pb-3 pt-5 sm:px-6">
-          <span className="font-mono text-[11px] uppercase tracking-[0.22em] tabular-nums text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.22em] tabular-nums text-muted-foreground">
             <span className="text-foreground">
               {String(stepIndex + 1).padStart(2, "0")}
             </span>
@@ -1074,14 +1074,14 @@ function StepBody({
         />
         <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-3">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="font-sans text-[13px] font-medium text-foreground">
+            <span className="font-sans text-sm font-medium text-foreground">
               Mutation rate
             </span>
-            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">
               {Math.round(rate * 100)}%
             </span>
           </div>
-          <p className="mt-1 font-sans text-[12px] text-muted-foreground">
+          <p className="mt-1 font-sans text-xs text-muted-foreground">
             Per-birth chance the child&apos;s traits are resampled from the
             centroid mix above instead of drifting off the parent&apos;s.
             Higher = diversity rebleeds in after a single region of trait
@@ -1168,7 +1168,7 @@ function BigChoiceCard({
             {label}
           </div>
           {meta && (
-            <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
               {meta}
             </div>
           )}
@@ -1184,7 +1184,7 @@ function BigChoiceCard({
           {active && <CheckIcon size={11} weight="bold" />}
         </span>
       </div>
-      <p className="text-[13px] leading-snug text-muted-foreground">{hint}</p>
+      <p className="text-sm leading-snug text-muted-foreground">{hint}</p>
     </button>
   );
 }
@@ -1219,10 +1219,10 @@ function WeightedPickGrid<K extends string>({
     <div className="space-y-6">
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
             Pick one or more
           </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
             {selected.length} selected
           </span>
         </div>
@@ -1242,10 +1242,10 @@ function WeightedPickGrid<K extends string>({
       {selected.length >= 2 && (
         <div className="space-y-3 rounded-lg border border-foreground/10 bg-card/40 px-4 py-3.5">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
               Mix
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+            <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground/70">
               Share of population
             </span>
           </div>
@@ -1259,7 +1259,7 @@ function WeightedPickGrid<K extends string>({
                   key={o.key}
                   className="grid grid-cols-[7rem_1fr_2.5rem] items-center gap-3"
                 >
-                  <span className="truncate font-sans text-[13px] font-medium text-foreground">
+                  <span className="truncate font-sans text-sm font-medium text-foreground">
                     {o.label}
                   </span>
                   <Slider
@@ -1272,7 +1272,7 @@ function WeightedPickGrid<K extends string>({
                       if (typeof next === "number") setWeight(o.key, next);
                     }}
                   />
-                  <span className="text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+                  <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
                     {pct}%
                   </span>
                 </div>
@@ -1300,10 +1300,10 @@ function ObserverPicker({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
           Pick one or more
         </span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
           {draft.observers.length} selected
         </span>
       </div>
@@ -1330,7 +1330,7 @@ function ObserverPicker({
                   <div className="text-[15px] font-medium leading-tight text-foreground">
                     {info.name}
                   </div>
-                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <div className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
                     {info.era}
                   </div>
                 </div>
@@ -1345,7 +1345,7 @@ function ObserverPicker({
                   {active && <CheckIcon size={11} weight="bold" />}
                 </span>
               </div>
-              <p className="font-serif text-[13px] italic leading-snug text-foreground/70">
+              <p className="font-serif text-sm italic leading-snug text-foreground/70">
                 {info.lens}
               </p>
             </button>
@@ -1471,7 +1471,7 @@ function SummaryReview({
           onClick={() => jumpToStep("observers")}
           className="group flex w-full cursor-pointer items-start justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.02]"
         >
-          <span className="shrink-0 pt-1 font-sans text-[13px] text-muted-foreground">
+          <span className="shrink-0 pt-1 font-sans text-sm text-muted-foreground">
             {draft.observers.length === 0
               ? "None"
               : `${draft.observers.length} selected`}
@@ -1481,7 +1481,7 @@ function SummaryReview({
               {draft.observers.map((k) => (
                 <span
                   key={k}
-                  className="rounded-full border border-foreground/10 bg-card px-2.5 py-0.5 font-sans text-[12px] font-medium text-foreground/85"
+                  className="rounded-full border border-foreground/10 bg-card px-2.5 py-0.5 font-sans text-xs font-medium text-foreground/85"
                 >
                   {OBSERVER_INFO[k].name}
                 </span>
@@ -1508,7 +1508,7 @@ function SummarySection({
 }) {
   return (
     <section className="space-y-3">
-      <h3 className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+      <h3 className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
         {title}
       </h3>
       <div className="divide-y divide-foreground/10 border-y border-foreground/10">
@@ -1538,7 +1538,7 @@ function CodeAnchors({ anchors }: { anchors: CodeAnchor[] }) {
       className="mt-12 max-w-2xl border-t border-foreground/10 pt-6"
     >
       <AccordionItem value="anchors">
-        <AccordionTrigger className="group font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground">
+        <AccordionTrigger className="group font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground">
           <CaretRightIcon
             size={11}
             weight="bold"
@@ -1566,7 +1566,7 @@ function CodeAnchorBlock({ anchor }: { anchor: CodeAnchor }) {
     <div className="space-y-3">
       <span
         className={cn(
-          "inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground",
+          "inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground",
           anchor.mode === "planned"
             ? "border-dashed border-foreground/25"
             : "border-foreground/15",
@@ -1579,7 +1579,7 @@ function CodeAnchorBlock({ anchor }: { anchor: CodeAnchor }) {
       </p>
       <div className="overflow-hidden rounded-md border border-foreground/10 bg-card/40">
         <div className="flex items-center justify-between border-b border-foreground/10 px-3 py-1.5">
-          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
             typescript
           </span>
         </div>
@@ -1605,7 +1605,7 @@ function CodeAnchorBlock({ anchor }: { anchor: CodeAnchor }) {
           href={blobHref(anchor.file, anchor.lines)}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
         >
           {anchor.file}
           {anchor.lines && <span className="text-muted-foreground/50">·</span>}
@@ -1632,7 +1632,7 @@ function SummaryRow({
       onClick={onEdit}
       className="group flex w-full cursor-pointer items-center justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.02]"
     >
-      <span className="font-sans text-[13px] text-muted-foreground">
+      <span className="font-sans text-sm text-muted-foreground">
         {label}
       </span>
       <span className="flex items-center gap-2.5">

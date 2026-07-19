@@ -160,10 +160,10 @@ function MiniSimBody({
               running ? "animate-pulse bg-emerald-500" : "bg-amber-500",
             )}
           />
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Field
           </span>
-          <span className="font-mono text-[11px] tabular-nums text-foreground">
+          <span className="font-mono text-xs tabular-nums text-foreground">
             T{turn}
           </span>
         </div>
