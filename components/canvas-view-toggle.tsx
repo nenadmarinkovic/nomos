@@ -1,6 +1,6 @@
 "use client";
 
-import { GlobeIcon, GraphIcon } from "@phosphor-icons/react";
+import { CheckIcon, GlobeIcon, GraphIcon } from "@phosphor-icons/react";
 
 import {
   Menubar,
@@ -20,13 +20,15 @@ const VIEWS: { key: CanvasView; label: string; Icon: typeof GlobeIcon }[] = [
 
 /**
  * Sidebar section that swaps between the geographic Field view and the
- * force-graph Network view of the same simulation. Hidden until the user has
- * started a run.
+ * force-graph Network view of the same simulation, and hosts the
+ * monochrome (B&W) toggle. Hidden until the user has started a run.
  */
 export function CanvasViewToggle() {
   const started = useSimulationStore((s) => s.started);
   const view = useSimulationStore((s) => s.canvasView);
   const setView = useSimulationStore((s) => s.setCanvasView);
+  const monochrome = useSimulationStore((s) => s.monochrome);
+  const toggleMonochrome = useSimulationStore((s) => s.toggleMonochrome);
 
   if (!started) return null;
 
@@ -55,6 +57,22 @@ export function CanvasViewToggle() {
                 <span className="text-xs">{label}</span>
               </MenubarItem>
             ))}
+            <div className="my-1 h-px bg-foreground/10" />
+            <MenubarItem
+              onSelect={(e) => {
+                e.preventDefault();
+                toggleMonochrome();
+              }}
+            >
+              <CheckIcon
+                size={12}
+                weight="bold"
+                className={
+                  monochrome ? "text-foreground" : "text-transparent"
+                }
+              />
+              <span className="text-xs">Black &amp; white</span>
+            </MenubarItem>
           </MenubarContent>
         </MenubarMenu>
       </Menubar>

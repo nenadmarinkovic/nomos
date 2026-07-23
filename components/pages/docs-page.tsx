@@ -166,7 +166,8 @@ export function DocsPage({
     );
   }
 
-  // Article pages: content on the left, sticky TOC on the right at xl+.
+  // Article pages: content on the left, sticky TOC on the right at xl+
+  // starting aligned with the page title.
   return (
     <div className="mx-auto flex w-full max-w-5xl gap-12 px-6 pb-16 pt-16">
       <div className="min-w-0 flex-1">
@@ -176,7 +177,7 @@ export function DocsPage({
           lead={entry.blurb}
         />
         {body ? (
-          <article ref={articleRef} className="prose prose-neutral mt-10 max-w-none dark:prose-invert prose-headings:tracking-tight prose-h1:text-[34px] prose-h1:font-normal prose-h1:leading-tight prose-h2:text-[24px] prose-h2:font-normal prose-h2:mt-12 prose-h3:text-[19px] prose-h3:font-medium prose-h3:mt-8 prose-h2:scroll-mt-20 prose-h3:scroll-mt-20 prose-p:text-[18px] prose-p:leading-relaxed prose-p:text-foreground/85 prose-li:text-[18px] prose-li:leading-relaxed prose-li:text-foreground/85 prose-strong:text-foreground prose-strong:font-semibold prose-em:text-foreground prose-em:italic prose-a:text-brand prose-a:no-underline hover:prose-a:underline prose-code:font-mono prose-code:text-[14px] prose-code:bg-foreground/[0.06] prose-code:px-1 prose-code:py-px prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-card/50 prose-pre:border prose-pre:border-foreground/10 prose-pre:text-sm prose-table:text-[14px] prose-th:font-mono prose-th:uppercase prose-th:tracking-wide prose-th:text-xs prose-th:text-muted-foreground prose-th:font-medium prose-blockquote:border-l-foreground/20 prose-blockquote:italic">
+          <article ref={articleRef} className="prose prose-neutral mt-10 max-w-none dark:prose-invert prose-headings:tracking-tight prose-headings:text-foreground prose-h1:text-3xl prose-h1:font-light prose-h2:text-xl prose-h2:font-light prose-h2:mt-10 prose-h3:text-lg prose-h3:font-normal prose-h3:mt-8 prose-h3:text-foreground/90 prose-h2:scroll-mt-20 prose-h3:scroll-mt-20 prose-p:text-base prose-p:text-foreground/75 prose-li:text-base prose-li:text-foreground/75 prose-strong:text-foreground prose-strong:font-semibold prose-em:text-foreground prose-em:italic prose-a:text-brand prose-a:no-underline hover:prose-a:underline prose-code:font-mono prose-code:text-sm prose-code:text-foreground prose-code:bg-foreground/[0.06] prose-code:px-1 prose-code:py-px prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-card/50 prose-pre:border prose-pre:border-foreground/10 prose-pre:text-sm prose-table:text-sm prose-table:text-foreground/80 prose-th:font-mono prose-th:uppercase prose-th:tracking-wide prose-th:text-xs prose-th:text-muted-foreground prose-th:font-medium prose-blockquote:border-l-foreground/20 prose-blockquote:italic prose-blockquote:text-foreground/70">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeSlug]}
@@ -194,7 +195,7 @@ export function DocsPage({
       </div>
 
       {headings.length > 0 ? (
-        <aside className="hidden w-56 shrink-0 xl:block">
+        <aside className="hidden w-56 shrink-0 pt-[30px] xl:block">
           <DocsToc headings={headings} activeId={activeHeadingId} />
         </aside>
       ) : null}
@@ -286,7 +287,7 @@ function DocsToc({
     };
 
   return (
-    <nav className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pt-16">
+    <nav className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
       <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         On this page
       </p>
@@ -332,10 +333,10 @@ function Header({
       <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
         {eyebrow}
       </p>
-      <h1 className="mt-3 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
+      <h1 className="mt-3 text-3xl tracking-tight text-foreground sm:text-4xl">
         {title}
       </h1>
-      <p className="mt-5 text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
+      <p className="mt-4 text-base text-foreground/80 sm:text-lg">
         {lead}
       </p>
     </header>
