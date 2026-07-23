@@ -41,6 +41,15 @@ export default function RootLayout({
       suppressHydrationWarning
       className="antialiased"
     >
+      <head>
+        <link
+          rel="preload"
+          href="/fonts/HankenGrotesk-Variable.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className="h-screen overflow-hidden">
         <Providers>{children}</Providers>
       </body>

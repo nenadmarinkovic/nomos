@@ -10,7 +10,7 @@
   font-family: "Hanken Grotesk";
   font-style: normal;
   font-weight: 100 900;
-  font-display: swap;
+  font-display: optional;
   src: url("/fonts/HankenGrotesk-Variable.woff2") format("woff2");
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
@@ -66,8 +66,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans:
-    "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "SF Pro Display", "Helvetica Neue", Helvetica, sans-serif;
+    "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-serif: var(--font-sans);
   --font-heading: var(--font-sans);
@@ -119,7 +118,7 @@
   --popover: #fbf9f7;
   --popover-foreground: oklch(0.145 0 0);
   --field: #ffffff;
-  --brand: #f25022;
+  --brand: #0040ff;
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
@@ -156,7 +155,7 @@
   --popover: oklch(0.18 0.012 234);
   --popover-foreground: oklch(0.985 0 0);
   --field: oklch(0.23 0.012 234);
-  --brand: #f25022;
+  --brand: #ffff01;
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);

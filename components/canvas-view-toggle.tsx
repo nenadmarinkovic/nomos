@@ -35,7 +35,7 @@ export function CanvasViewToggle() {
 
   return (
     <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-      <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         Canvas
       </span>
       <Menubar>
