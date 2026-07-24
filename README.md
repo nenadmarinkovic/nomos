@@ -2,7 +2,7 @@
 
 A society simulation where agents follow simple rules and AI theorists observe what emerges.
 
-> **Status:** the simulation core, the engine's social mechanics, the trait-based agent model, the token economy, and the observers are working. Open fronts: scale/performance (PixiJS) and accounts. See the [roadmap](#roadmap).
+> **Status:** the simulation core, the engine's social mechanics, the trait-based agent model, the token economy, the observers, the PixiJS/WebGL renderer, and accounts (Better Auth + Postgres) are all working. Remaining fronts are depth and polish — richer economic readings and observer prompts tuned to the newest dynamics. See the [roadmap](#roadmap).
 
 > **Full docs in [`docs/`](docs/README.md)** — what the project is and what it argues, the per-tick simulation walkthrough, the observers and chronicle layer, and a development guide.
 
@@ -109,44 +109,45 @@ Without a `MISTRAL_API_KEY` the simulation still runs; the observers simply stay
 
 ## Stack
 
-**Frontend** — Next.js 16 (App Router, Turbopack) · React 19 · TypeScript 5 · Tailwind v4 · Phosphor Icons · Newsreader / Google Sans Flex.
+**Frontend** — Next.js 16 (App Router, Turbopack) · React 19 · TypeScript 5 · Tailwind v4 · Phosphor Icons · Hanken Grotesk (Newsreader italic for editorial accents).
 
-**Simulation runtime** — Web Worker tick loop posting world frames as transferable buffers · Canvas2D field renderer (PixiJS upgrade pending) · `d3-force` and Three.js (`react-force-graph-3d`) for the layouts · Zustand for state.
+**Simulation runtime** — Web Worker tick loop posting world frames as transferable buffers · PixiJS/WebGL field renderer · `d3-force` and Three.js (`react-force-graph-3d`) for the layouts · Zustand for state.
 
-**Data** — Prisma + SQLite locally; PostgreSQL once accounts land.
+**Data** — Prisma + PostgreSQL (local via `docker compose up -d postgres`).
 
 **Observers** — Mistral API (`mistral-small`). One call per significant event, not per tick. Detection lives in the browser; `app/api/observe` builds the per-theorist prompt and calls Mistral. Readings stream into the **Chronicle** panel.
 
-**Infrastructure** — Hetzner VPS (Falkenstein) running Dokploy · Better Auth (when accounts land).
+**Infrastructure** — Hetzner VPS (Falkenstein) running Dokploy · Better Auth for accounts · GitHub Actions CI (lint · typecheck · test · build).
 
 ## Roadmap
 
 - **v0.1.0 — Simulation core + observers** *(done)*
 - **v0.2 — Persistence** *(done)*. Save / list / replay runs; shareable run URLs.
-- **v0.3 — Scale & perf** *(in progress)*. Worker tick loop ✓; PixiJS WebGL field renderer next.
+- **v0.3 — Scale & perf** *(done)*. Worker tick loop and PixiJS/WebGL field renderer.
 - **v0.3.x — Social structure & inspection** *(done)*. Trade-tie graph, 3D network view, motivation streamgraph, inspector.
 - **v0.5 — Engine social mechanics** *(done)*. Conflict, cultural transmission, inheritance, demographics, seasonal substrate, Living Ground CA option, richer event detection.
 - **v0.6 — Generative society refactor** *(done)*. Continuous trait vector replaces the motivation enum; every behaviour is now a function over traits. Reciprocity memory (trade ties double as trust ledger; coercion crashes a tie; trade partners are immune from predation). Habitus inertia (cultural drift costs wealth proportional to trait-space distance). Safety nets removed (extinction guard, hard population cap, exogenous-only shocks). Endogenous crises (land degradation feeds blight; density feeds plague). Post-hoc motivation clustering. **Phase 6**: private-IOU token economy, with emergent money from third-party transferability; tokens default on issuer death.
 - **v0.6.x — Chronicle quality** *(done)*. Axelrod added so the same predation-and-sanction data reads as the evolution of cooperation, not just class war. New `cooperation_thickens` event surfaces tokens circulating and sustained sanctioning. Per-kind cooldowns and wall-clock pacing so the chronicle stays readable at any sim speed. Initial-conditions card on Narrator and Metrics pages.
-- **v0.4 — Accounts & sharing**. Better Auth, Postgres, public gallery.
-- **Later** — phase-space plot, Sankey of motivation transitions, territory contours, additional agent models.
+- **v0.4 — Accounts** *(done)*. Better Auth + Postgres; anonymous runs claim into your account on sign-in. A public run gallery is still open.
+- **Later** — public gallery, phase-space plot, Sankey of motivation transitions, territory contours, additional agent models.
 
 ## What still needs to be done
 
 In rough priority:
 
-1. **PixiJS WebGL field renderer** — replace the Canvas2D agent layer toward 100k agents at 60fps.
-2. **Token economy UI deepening** — the Metrics summary cards are landed; a richer view (top issuers list, supply over time) would let runs be *read* as monetary history.
-3. **Observer prompts tuned to the new dynamics** — each theorist should know what tokens, trait drift, and land degradation *mean* in their vocabulary (Marx on tokens as new chains, Axelrod on tokens as credit reputation, Polanyi on tokens as commodified trust, etc.).
-4. **Accounts & sharing (v0.4)** — Better Auth + Postgres, public run gallery.
-5. **Phase-space plot, Sankey, territory contours** — long-tail macro-behaviour readings.
+1. **Token economy UI deepening** — the Metrics summary cards are landed; a richer view (top issuers list, supply over time) would let runs be *read* as monetary history.
+2. **Observer prompts tuned to the new dynamics** — each theorist should know what tokens, trait drift, and land degradation *mean* in their vocabulary (Marx on tokens as new chains, Axelrod on tokens as credit reputation, Polanyi on tokens as commodified trust, etc.).
+3. **Public run gallery** — accounts and anonymous-run claiming are done; a browsable public gallery of shared runs is the remaining half of v0.4.
+4. **Phase-space plot, Sankey, territory contours** — long-tail macro-behaviour readings.
+5. **Toward 100k agents** — the renderer is now WebGL; the next scale step is profiling the tick loop and worker transfer at city scale and beyond.
 
 ## Develop
 
 ```bash
-npm install                  # also runs `prisma generate`
-cp .env.example .env         # DATABASE_URL is preset; add MISTRAL_API_KEY for observers
-npm run db:push              # create the local SQLite database (prisma/dev.db)
+npm install                     # also runs `prisma generate`
+cp .env.example .env            # DATABASE_URL matches the compose file; add MISTRAL_API_KEY for observers
+docker compose up -d postgres   # local Postgres on host port 5434
+npm run db:push                 # sync the Prisma schema to it
 npm run dev
 ```
 
@@ -167,6 +168,22 @@ npm run dev        # development server
 npm run build      # production build
 npm run start      # serve production build
 npm run lint       # eslint
-npm run db:push    # sync the Prisma schema to the local SQLite database
+npm run typecheck  # tsc --noEmit
+npm test           # run the test suite once (vitest)
+npm run test:watch # watch mode
+npm run db:push    # sync the Prisma schema to the local Postgres database
 npm run db:migrate # create/apply a migration during schema changes
 ```
+
+## Tests
+
+The engine is a pure function of its seed + config, which makes it cheap to
+pin down. [`tests/engine.test.ts`](tests/engine.test.ts) runs seeded villages
+headlessly and checks three things:
+
+- **Determinism** — the same seed reproduces an identical snapshot trajectory (the replay guarantee), and different seeds diverge.
+- **Invariants** — population, Gini, segregation, motivation counts, and wealth bins stay internally consistent every tick.
+- **Golden snapshots** — recorded frames at turns 50 and 200 catch any unintended change to the simulation maths. Regenerate deliberately with `npm test -- -u` when a mechanic changes on purpose.
+
+CI (`.github/workflows/ci.yml`) runs lint, typecheck, test, and build on every
+push and pull request to `main`.

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { clearAnonId } from "@/lib/anon-id";
@@ -10,6 +10,16 @@ import { signIn } from "@/lib/auth-client";
 import { claimAnonRuns } from "@/lib/runs-api";
 
 export default function SignInPage() {
+  // useSearchParams() forces client-side rendering, so the form must sit
+  // inside a Suspense boundary for the route to prerender.
+  return (
+    <Suspense fallback={<AuthFormFallback />}>
+      <SignInForm />
+    </Suspense>
+  );
+}
+
+function SignInForm() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") ?? "/";
@@ -97,6 +107,24 @@ export default function SignInPage() {
           Create one
         </Link>
       </p>
+    </div>
+  );
+}
+
+// Shown while the Suspense boundary resolves useSearchParams(). Mirrors the
+// form's footprint so the page doesn't jump when the real form mounts.
+function AuthFormFallback() {
+  return (
+    <div className="space-y-7" aria-hidden>
+      <div className="space-y-2 text-center">
+        <div className="mx-auto h-7 w-40 rounded bg-foreground/[0.06]" />
+        <div className="mx-auto h-4 w-64 rounded bg-foreground/[0.04]" />
+      </div>
+      <div className="space-y-4">
+        <div className="h-[68px] rounded-md bg-foreground/[0.04]" />
+        <div className="h-[68px] rounded-md bg-foreground/[0.04]" />
+        <div className="h-11 rounded-md bg-foreground/[0.06]" />
+      </div>
     </div>
   );
 }

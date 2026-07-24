@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Desktop, Moon, Sun } from "@phosphor-icons/react";
 import { useTheme } from "next-themes";
 
@@ -12,13 +12,22 @@ const options = [
   { value: "dark", icon: Moon, label: "Dark" },
 ] as const;
 
+const noopSubscribe = () => () => {};
+
+// Resolves to `false` during SSR and the first client render, then `true`
+// once hydrated — without a setState-in-effect. Guards against a hydration
+// mismatch while `useTheme` settles on the resolved theme.
+function useMounted() {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   if (!mounted) {
     return (

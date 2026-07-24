@@ -6,6 +6,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { XIcon } from "@phosphor-icons/react";
 
+import type {
+  ForceGraphMethods,
+  LinkObject,
+  NodeObject,
+} from "react-force-graph-3d";
+
 import { activeWorldRef } from "@/lib/active-world";
 import { useSimulationStore } from "@/lib/store";
 import type { RenderAgent } from "@/lib/world";
@@ -34,6 +40,14 @@ interface RebuildDelta {
   addedLinks: number;
   removedLinks: number;
 }
+
+// react-force-graph-3d hands its accessor callbacks the internal node/link
+// objects — our GraphNode/GraphLink augmented in place with the x/y/z
+// coordinates d3-force-3d assigns during layout. NodeObject/LinkObject carry
+// an index signature, so field access is untyped without an explicit `any`.
+type SimNode = NodeObject;
+type SimLink = LinkObject;
+type SimGraphMethods = ForceGraphMethods<SimNode, SimLink>;
 
 const EVENT_HISTORY_LIMIT = 8;
 const EVENTS_PER_KIND_LIMIT = 3;
@@ -131,7 +145,7 @@ export function NetworkCanvas() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const containerRef = useRef<HTMLDivElement>(null);
-  const graphRef = useRef<any>(null);
+  const graphRef = useRef<SimGraphMethods | undefined>(undefined);
   const lastBuiltTurn = useRef<number>(-9999);
   const prevNodeIdsRef = useRef<Set<number>>(new Set());
   const prevLinkKeysRef = useRef<Set<string>>(new Set());
@@ -249,7 +263,7 @@ export function NetworkCanvas() {
     [data.links],
   );
 
-  const handleNodeClick = (n: any) => {
+  const handleNodeClick = (n: SimNode) => {
     setSelectedId(n.id as number);
     const g = graphRef.current;
     if (!g || typeof g.cameraPosition !== "function") return;
@@ -280,23 +294,19 @@ export function NetworkCanvas() {
             backgroundColor="rgba(0,0,0,0)"
             nodeRelSize={4}
             nodeVal={() => 1}
-            nodeColor={(n: any) =>
-              motivationColor(n.motivation as string, monochrome, isDark)
+            nodeColor={(n: SimNode) =>
+              motivationColor(n.motivation, monochrome, isDark)
             }
             nodeOpacity={0.95}
-            nodeLabel={(n: any) => {
-              const label =
-                MOTIVATION_LABEL[n.motivation as string] ??
-                (n.motivation as string);
-              const wRaw = Number(n?.wealth);
+            nodeLabel={(n: SimNode) => {
+              const label = MOTIVATION_LABEL[n.motivation] ?? n.motivation;
+              const wRaw = Number(n.wealth);
               const w = Number.isFinite(wRaw) ? wRaw : 0;
               return `#${n.id} · ${label} · w ${w.toFixed(1)}`;
             }}
             linkColor={() => "rgba(180,180,180,0.85)"}
             linkOpacity={0.9}
-            linkWidth={(l: any) =>
-              0.4 + 1.6 * ((l.weight as number) / maxWeight)
-            }
+            linkWidth={(l: SimLink) => 0.4 + 1.6 * (l.weight / maxWeight)}
             linkDirectionalParticles={0}
             onNodeClick={handleNodeClick}
             onBackgroundClick={() => setSelectedId(null)}
@@ -315,8 +325,8 @@ export function NetworkCanvas() {
             enableNodeDrag={false}
             controlType="orbit"
             showNavInfo={false}
-            nodeThreeObject={(n: any) => {
-              const motivation = n.motivation as string;
+            nodeThreeObject={(n: SimNode) => {
+              const motivation = n.motivation;
               const geom =
                 MOTIVATION_GEOMETRY[motivation] ?? MOTIVATION_GEOMETRY.material;
               const mat = getNodeMaterial(

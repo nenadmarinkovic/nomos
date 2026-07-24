@@ -116,9 +116,14 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     themeRef.current = resolvedTheme === "dark" ? "dark" : "light";
   }, [resolvedTheme]);
 
-  useEffect(() => {
+  // Clear any selected agent when the run changes (new/replayed run, or the
+  // engine stops). Done during render — React's supported way to reset state
+  // on a prop change — rather than in an effect.
+  const [selectionRun, setSelectionRun] = useState({ runId, started });
+  if (selectionRun.runId !== runId || selectionRun.started !== started) {
+    setSelectionRun({ runId, started });
     setSelectedId(null);
-  }, [runId, started]);
+  }
 
   function handleInspectorDragEnd(e: DragEndEvent) {
     setInspectorPos((p) => ({

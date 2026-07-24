@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref so a fresh push doesn't queue behind
+# a stale one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint · Typecheck · Test · Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` runs the postinstall `prisma generate`, which only needs the
+      # schema on disk — no database connection.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # The build evaluates the auth setup, so Better Auth needs its env
+      # present. These are throwaway CI values — Prisma's pg adapter connects
+      # lazily, so no live database is required to produce a build.
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          BETTER_AUTH_SECRET: ci-placeholder-secret-at-least-32-chars-long
+          BETTER_AUTH_URL: http://localhost:3000
