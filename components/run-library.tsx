@@ -129,10 +129,7 @@ export function RunLibrary() {
     try {
       await navigator.clipboard.writeText(url);
       setCopiedId(id);
-      window.setTimeout(
-        () => setCopiedId((c) => (c === id ? null : c)),
-        1500,
-      );
+      window.setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1500);
     } catch {
       setError("Could not copy the link to your clipboard");
     }

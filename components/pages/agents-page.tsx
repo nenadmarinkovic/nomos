@@ -123,8 +123,8 @@ function Header({ badge }: { badge?: React.ReactNode }) {
       <p className="text-[15px] leading-relaxed text-foreground/70">
         A snapshot of the population: the mix of drives, the spread of ages,
         wealth against age, and a ranked list of the hoarders and the
-        strugglers. The simulation keeps running in the corner — hit Refresh
-        to grab a fresh sample.
+        strugglers. The simulation keeps running in the corner — hit Refresh to
+        grab a fresh sample.
       </p>
     </header>
   );
@@ -147,9 +147,7 @@ function Legend({
               className="size-2.5 shrink-0 rounded-full"
               style={{ background: m.color }}
             />
-            <span className="text-xs text-foreground/85">
-              {m.label}
-            </span>
+            <span className="text-xs text-foreground/85">{m.label}</span>
             <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
               {pct.toFixed(0)}%
             </span>
@@ -218,9 +216,7 @@ function RankTable({ rows }: { rows: RankedRow[] }) {
 function SectionTitle({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="mb-3 space-y-1">
-      <h2 className="text-xl leading-tight text-foreground">
-        {title}
-      </h2>
+      <h2 className="text-xl leading-tight text-foreground">{title}</h2>
       <p className="text-xs text-muted-foreground">{hint}</p>
     </div>
   );
@@ -229,9 +225,7 @@ function SectionTitle({ title, hint }: { title: string; hint: string }) {
 function EmptyState() {
   return (
     <div className="mt-10 rounded-lg border border-dashed border-foreground/10 px-6 py-10 text-center">
-      <p className="text-lg italic text-foreground/80">
-        No sample yet.
-      </p>
+      <p className="text-lg italic text-foreground/80">No sample yet.</p>
       <p className="mt-2 text-sm text-muted-foreground">
         Press Refresh once a few ticks have passed, or let the run warm up.
       </p>
@@ -258,10 +252,6 @@ interface AgentsData {
 
 const TOP_N = 50;
 
-/**
- * Single O(N) pass: count alive, count per motivation, and keep a small
- * top-N heap of richest agents. Cheap even at 3000 agents.
- */
 function computeData(agents: readonly RenderAgent[]): AgentsData {
   let aliveCount = 0;
   const mix: Record<AgentMotivation, number> = {
@@ -271,7 +261,6 @@ function computeData(agents: readonly RenderAgent[]): AgentsData {
     power: 0,
   };
 
-  // Top-N tracker: a sorted array of <= TOP_N rows. Cheaper than sorting all.
   const top: RankedRow[] = [];
 
   for (let i = 0; i < agents.length; i++) {

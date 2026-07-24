@@ -13,12 +13,6 @@ import { deserializeWorld } from "@/lib/world";
 
 const BASE_TICK_MS = 450;
 
-/**
- * Owns the long-lived simulation worker. Mounted once at the AppShell root so
- * the engine continues ticking regardless of which page is currently shown.
- * Writes the latest world snapshot into `activeWorldRef`; pushes engine
- * metrics into the store via `updateSnapshot`. Renders nothing.
- */
 export function SimulationEngine() {
   const config = useSimulationStore((s) => s.config);
   const started = useSimulationStore((s) => s.started);
@@ -52,9 +46,7 @@ export function SimulationEngine() {
       return;
     }
 
-    const worker = new Worker(
-      new URL("../lib/sim.worker.ts", import.meta.url),
-    );
+    const worker = new Worker(new URL("../lib/sim.worker.ts", import.meta.url));
     workerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent<FrameMessage>) => {

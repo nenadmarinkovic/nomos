@@ -35,17 +35,6 @@ const THEME_OPTIONS = [
   { value: "dark", Icon: MoonIcon, label: "Dark" },
 ] as const;
 
-/**
- * Bottom of the sidebar. A full-row profile button — avatar + name + email
- * — opens a dropdown with the user info, theme picker, and sign-out. When
- * signed out the same slot shows a "Sign in" link with the theme picker
- * sitting under the same dropdown.
- *
- * Pattern adapted from Monolinie's `UserSection`: trigger fills the row
- * (`gap-3 h-9`) with a 28px avatar, two lines of identity, and a
- * caret-up-down on the right. Menu opens upward when expanded, rightward
- * when collapsed.
- */
 export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   const router = useRouter();
   const { data: session, isPending } = useSession();
@@ -59,8 +48,6 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
     );
   }
 
-  // Same `h-14` as `SiteFooter` so the two borders line up across the
-  // sidebar / main split.
   const containerCls = cn(
     "flex h-14 shrink-0 items-center border-t border-foreground/10",
     collapsed ? "px-2" : "px-3",
@@ -134,7 +121,9 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
         </DropdownMenu>
         {collapsed && (
           <Tooltip>
-            <TooltipTrigger render={<span className="sr-only">Open menu</span>} />
+            <TooltipTrigger
+              render={<span className="sr-only">Open menu</span>}
+            />
             <TooltipContent side="right" sideOffset={8}>
               Account &amp; settings
             </TooltipContent>

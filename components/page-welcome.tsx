@@ -3,18 +3,11 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export interface WelcomeStep {
-  /** Step ordinal, e.g. "01". Kept as a string so we can use non-numeric markers if useful. */
   n: string;
   title: string;
-  /** HTML allowed — &lt;em&gt; and inline accents render. */
   body: string;
 }
 
-/**
- * Long-form intro that takes over a page until the user has started a run.
- * Mirrors the welcome panel of the Field page so every page reads as part
- * of the same essay when the simulation is idle.
- */
 export function PageWelcome({
   eyebrow,
   headline,

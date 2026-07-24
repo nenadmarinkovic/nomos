@@ -195,7 +195,9 @@ export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
           >
             <span className="text-muted-foreground">#{hover.id}</span>
             <span className="mx-1.5 text-muted-foreground/50">·</span>
-            <span>{MOTIVATION_LABEL[hover.motivation] ?? hover.motivation}</span>
+            <span>
+              {MOTIVATION_LABEL[hover.motivation] ?? hover.motivation}
+            </span>
             <span className="mx-1.5 text-muted-foreground/50">·</span>
             <span className="tabular-nums">w {hover.wealth.toFixed(1)}</span>
           </div>

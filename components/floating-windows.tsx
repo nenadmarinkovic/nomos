@@ -203,10 +203,7 @@ function GiniWindow() {
       title="Gini"
       meta={snapshot.gini.toFixed(3)}
     >
-      <ChartContainer
-        config={giniConfig}
-        className="aspect-auto h-24 w-full"
-      >
+      <ChartContainer config={giniConfig} className="aspect-auto h-24 w-full">
         <AreaChart
           data={history}
           margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
@@ -220,7 +217,9 @@ function GiniWindow() {
               <ChartTooltipContent
                 indicator="line"
                 labelFormatter={(_v, payload) => {
-                  const p = payload?.[0]?.payload as { turn?: number } | undefined;
+                  const p = payload?.[0]?.payload as
+                    | { turn?: number }
+                    | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />
@@ -237,9 +236,7 @@ function GiniWindow() {
           />
         </AreaChart>
       </ChartContainer>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Wealth concentration
-      </p>
+      <p className="mt-2 text-xs text-muted-foreground">Wealth concentration</p>
     </FloatingWindow>
   );
 }
@@ -254,10 +251,7 @@ function AliveWindow() {
       title="Alive"
       meta={snapshot.alive.toLocaleString()}
     >
-      <ChartContainer
-        config={aliveConfig}
-        className="aspect-auto h-24 w-full"
-      >
+      <ChartContainer config={aliveConfig} className="aspect-auto h-24 w-full">
         <LineChart
           data={history}
           margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
@@ -271,7 +265,9 @@ function AliveWindow() {
               <ChartTooltipContent
                 indicator="line"
                 labelFormatter={(_v, payload) => {
-                  const p = payload?.[0]?.payload as { turn?: number } | undefined;
+                  const p = payload?.[0]?.payload as
+                    | { turn?: number }
+                    | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />
@@ -287,9 +283,7 @@ function AliveWindow() {
           />
         </LineChart>
       </ChartContainer>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Population over time
-      </p>
+      <p className="mt-2 text-xs text-muted-foreground">Population over time</p>
     </FloatingWindow>
   );
 }
@@ -340,9 +334,7 @@ function WealthWindow() {
           />
         </BarChart>
       </ChartContainer>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Distribution by tier
-      </p>
+      <p className="mt-2 text-xs text-muted-foreground">Distribution by tier</p>
     </FloatingWindow>
   );
 }
@@ -382,7 +374,9 @@ function PriceWindow() {
               <ChartTooltipContent
                 indicator="line"
                 labelFormatter={(_v, payload) => {
-                  const p = payload?.[0]?.payload as { turn?: number } | undefined;
+                  const p = payload?.[0]?.payload as
+                    | { turn?: number }
+                    | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />
@@ -406,7 +400,12 @@ function PriceWindow() {
   );
 }
 
-const MOTIVATION_ORDER = ["material", "symbolic", "normative", "power"] as const;
+const MOTIVATION_ORDER = [
+  "material",
+  "symbolic",
+  "normative",
+  "power",
+] as const;
 const MOTIVATION_COLORS: Record<(typeof MOTIVATION_ORDER)[number], string> = {
   material: "#E63946",
   symbolic: "#2E5C9E",
@@ -456,7 +455,9 @@ function StreamWindow() {
         top[i] = { x, y: H - hi * H };
         cumLow[i] = hi;
       }
-      const upper = top.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L");
+      const upper = top
+        .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+        .join(" L");
       const lower = bottom
         .slice()
         .reverse()
@@ -563,7 +564,9 @@ function MoneyWindow() {
               <ChartTooltipContent
                 indicator="line"
                 labelFormatter={(_v, payload) => {
-                  const p = payload?.[0]?.payload as { turn?: number } | undefined;
+                  const p = payload?.[0]?.payload as
+                    | { turn?: number }
+                    | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />
@@ -629,7 +632,9 @@ function TrustWindow() {
               <ChartTooltipContent
                 indicator="line"
                 labelFormatter={(_v, payload) => {
-                  const p = payload?.[0]?.payload as { turn?: number } | undefined;
+                  const p = payload?.[0]?.payload as
+                    | { turn?: number }
+                    | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />

@@ -10,9 +10,6 @@ import { activeWorldRef } from "@/lib/active-world";
 import { useSimulationStore } from "@/lib/store";
 import type { RenderAgent } from "@/lib/world";
 
-// react-force-graph exposes untyped node/graph accessors.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 interface GraphNode {
   id: number;
   motivation: string;
@@ -297,7 +294,9 @@ export function NetworkCanvas() {
             }}
             linkColor={() => "rgba(180,180,180,0.85)"}
             linkOpacity={0.9}
-            linkWidth={(l: any) => 0.4 + 1.6 * ((l.weight as number) / maxWeight)}
+            linkWidth={(l: any) =>
+              0.4 + 1.6 * ((l.weight as number) / maxWeight)
+            }
             linkDirectionalParticles={0}
             onNodeClick={handleNodeClick}
             onBackgroundClick={() => setSelectedId(null)}
@@ -306,7 +305,6 @@ export function NetworkCanvas() {
             d3AlphaDecay={0.06}
             d3VelocityDecay={0.5}
             onEngineStop={() => {
-              // Fit once per session on the first non-empty layout.
               if (hasFitCamera || data.nodes.length === 0) return;
               const g = graphRef.current;
               if (g && typeof g.zoomToFit === "function") {
@@ -318,8 +316,6 @@ export function NetworkCanvas() {
             controlType="orbit"
             showNavInfo={false}
             nodeThreeObject={(n: any) => {
-              // Uniform size; wealth intentionally not visualised (would
-              // dim the late-game population).
               const motivation = n.motivation as string;
               const geom =
                 MOTIVATION_GEOMETRY[motivation] ?? MOTIVATION_GEOMETRY.material;
@@ -343,9 +339,7 @@ export function NetworkCanvas() {
           <span>
             <span className="text-foreground">{stats.nodes}</span>
             {stats.alive > stats.nodes ? (
-              <span className="text-muted-foreground/70">
-                /{stats.alive}
-              </span>
+              <span className="text-muted-foreground/70">/{stats.alive}</span>
             ) : null}{" "}
             nodes
           </span>
@@ -539,7 +533,11 @@ function AgentInspector({
                   aria-hidden
                   className="block size-2 rounded-[1px]"
                   style={{
-                    background: motivationColor(p.motivation, monochrome, isDark),
+                    background: motivationColor(
+                      p.motivation,
+                      monochrome,
+                      isDark,
+                    ),
                   }}
                 />
                 <span className="text-foreground">#{p.id}</span>
@@ -591,8 +589,7 @@ function buildTieGraph(
   let rendered: RenderAgent[];
   if (alive.length > MAX_RENDERED_NODES) {
     const sorted = [...alive].sort(
-      (p, q) =>
-        (embeddedness.get(q.id) ?? 0) - (embeddedness.get(p.id) ?? 0),
+      (p, q) => (embeddedness.get(q.id) ?? 0) - (embeddedness.get(p.id) ?? 0),
     );
     rendered = sorted.slice(0, MAX_RENDERED_NODES);
   } else {

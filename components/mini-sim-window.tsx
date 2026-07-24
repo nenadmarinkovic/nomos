@@ -138,7 +138,14 @@ function MiniSimBody({
             (performance.now() - activeFrameAtRef.current) / interval,
           ),
         );
-        drawMini(world, canvas, dpr, progress, monoRef.current, darkRef.current);
+        drawMini(
+          world,
+          canvas,
+          dpr,
+          progress,
+          monoRef.current,
+          darkRef.current,
+        );
       }
       rafRef.current = requestAnimationFrame(loop);
     }
@@ -243,7 +250,11 @@ function drawMini(
       ? MOTIVATION_COLOR_MONO_DARK
       : MOTIVATION_COLOR_MONO_LIGHT
     : MOTIVATION_COLOR;
-  const resourceRgb = mono ? (isDark ? "170, 170, 170" : "120, 120, 120") : "140, 170, 130";
+  const resourceRgb = mono
+    ? isDark
+      ? "170, 170, 170"
+      : "120, 120, 120"
+    : "140, 170, 130";
 
   // Resource hint
   for (let y = 0; y < world.height; y++) {

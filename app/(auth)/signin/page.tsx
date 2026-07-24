@@ -30,14 +30,10 @@ export default function SignInPage() {
       return;
     }
 
-    // Claim any anonymous runs sitting in this browser's localStorage.
-    // Best-effort — don't block sign-in if the claim call fails.
     try {
       const claimed = await claimAnonRuns();
       if (claimed > 0) clearAnonId();
-    } catch {
-      /* claim is best-effort; sign-in succeeded */
-    }
+    } catch {}
 
     setPending(false);
     router.push(next);

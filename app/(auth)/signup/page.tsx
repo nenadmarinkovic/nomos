@@ -35,14 +35,10 @@ export default function SignUpPage() {
       return;
     }
 
-    // Auto-signed-in by Better Auth. Try to migrate this browser's anonymous
-    // runs into the new account; best-effort — if it fails we still continue.
     try {
       const claimed = await claimAnonRuns();
       if (claimed > 0) clearAnonId();
-    } catch {
-      /* claim is best-effort; sign-up succeeded */
-    }
+    } catch {}
 
     setPending(false);
     router.push(next);

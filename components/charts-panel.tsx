@@ -70,120 +70,130 @@ export function ChartsPanel() {
     <aside className="hidden shrink-0 border-t border-foreground/10 bg-card/40 md:block">
       <div className={`grid ${gridCols} divide-x divide-foreground/10`}>
         {views.gini && (
-        <ChartBlock
-          label="Gini"
-          value={snapshot.gini.toFixed(3)}
-          hint="Wealth concentration"
-        >
-          <ChartContainer
-            config={giniConfig}
-            className="aspect-auto h-24 w-full"
+          <ChartBlock
+            label="Gini"
+            value={snapshot.gini.toFixed(3)}
+            hint="Wealth concentration"
           >
-            <AreaChart data={history} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="turn" hide />
-              <YAxis domain={[0, 1]} hide />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    indicator="line"
-                    labelFormatter={(_v, payload) => {
-                      const p = payload?.[0]?.payload as { turn?: number } | undefined;
-                      return `Turn ${p?.turn ?? 0}`;
-                    }}
-                  />
-                }
-              />
-              <Area
-                type="monotone"
-                dataKey="gini"
-                stroke="var(--color-gini)"
-                fill="var(--color-gini)"
-                fillOpacity={0.18}
-                strokeWidth={1.5}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ChartContainer>
-        </ChartBlock>
+            <ChartContainer
+              config={giniConfig}
+              className="aspect-auto h-24 w-full"
+            >
+              <AreaChart
+                data={history}
+                margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="turn" hide />
+                <YAxis domain={[0, 1]} hide />
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent
+                      indicator="line"
+                      labelFormatter={(_v, payload) => {
+                        const p = payload?.[0]?.payload as
+                          | { turn?: number }
+                          | undefined;
+                        return `Turn ${p?.turn ?? 0}`;
+                      }}
+                    />
+                  }
+                />
+                <Area
+                  type="monotone"
+                  dataKey="gini"
+                  stroke="var(--color-gini)"
+                  fill="var(--color-gini)"
+                  fillOpacity={0.18}
+                  strokeWidth={1.5}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ChartContainer>
+          </ChartBlock>
         )}
 
         {views.alive && (
-        <ChartBlock
-          label="Alive"
-          value={snapshot.alive.toLocaleString()}
-          hint="Population over time"
-        >
-          <ChartContainer
-            config={aliveConfig}
-            className="aspect-auto h-24 w-full"
+          <ChartBlock
+            label="Alive"
+            value={snapshot.alive.toLocaleString()}
+            hint="Population over time"
           >
-            <LineChart data={history} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="turn" hide />
-              <YAxis hide />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    indicator="line"
-                    labelFormatter={(_v, payload) => {
-                      const p = payload?.[0]?.payload as { turn?: number } | undefined;
-                      return `Turn ${p?.turn ?? 0}`;
-                    }}
-                  />
-                }
-              />
-              <Line
-                type="monotone"
-                dataKey="alive"
-                stroke="var(--color-alive)"
-                strokeWidth={1.5}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ChartContainer>
-        </ChartBlock>
+            <ChartContainer
+              config={aliveConfig}
+              className="aspect-auto h-24 w-full"
+            >
+              <LineChart
+                data={history}
+                margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="turn" hide />
+                <YAxis hide />
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent
+                      indicator="line"
+                      labelFormatter={(_v, payload) => {
+                        const p = payload?.[0]?.payload as
+                          | { turn?: number }
+                          | undefined;
+                        return `Turn ${p?.turn ?? 0}`;
+                      }}
+                    />
+                  }
+                />
+                <Line
+                  type="monotone"
+                  dataKey="alive"
+                  stroke="var(--color-alive)"
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ChartContainer>
+          </ChartBlock>
         )}
 
         {views.wealth && (
-        <ChartBlock
-          label="Wealth"
-          value={`${snapshot.alive.toLocaleString()} alive`}
-          hint="Distribution by tier"
-        >
-          <ChartContainer
-            config={histogramConfig}
-            className="aspect-auto h-24 w-full"
+          <ChartBlock
+            label="Wealth"
+            value={`${snapshot.alive.toLocaleString()} alive`}
+            hint="Distribution by tier"
           >
-            <BarChart
-              data={histogramData}
-              margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+            <ChartContainer
+              config={histogramConfig}
+              className="aspect-auto h-24 w-full"
             >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="tier"
-                tickLine={false}
-                axisLine={false}
-                fontSize={9}
-                tickMargin={4}
-              />
-              <YAxis hide />
-              <ChartTooltip
-                cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                content={<ChartTooltipContent indicator="dot" hideLabel />}
-              />
-              <Bar
-                dataKey="count"
-                fill="var(--color-count)"
-                radius={[2, 2, 0, 0]}
-                isAnimationActive={false}
-              />
-            </BarChart>
-          </ChartContainer>
-        </ChartBlock>
+              <BarChart
+                data={histogramData}
+                margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="tier"
+                  tickLine={false}
+                  axisLine={false}
+                  fontSize={9}
+                  tickMargin={4}
+                />
+                <YAxis hide />
+                <ChartTooltip
+                  cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                  content={<ChartTooltipContent indicator="dot" hideLabel />}
+                />
+                <Bar
+                  dataKey="count"
+                  fill="var(--color-count)"
+                  radius={[2, 2, 0, 0]}
+                  isAnimationActive={false}
+                />
+              </BarChart>
+            </ChartContainer>
+          </ChartBlock>
         )}
       </div>
     </aside>

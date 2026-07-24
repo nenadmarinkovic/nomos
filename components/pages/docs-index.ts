@@ -8,7 +8,8 @@ export const DOCS_INDEX: DocsEntry[] = [
   {
     slug: "about",
     title: "About Nomos",
-    blurb: "What the project is, the intellectual move, three illustrative runs.",
+    blurb:
+      "What the project is, the intellectual move, three illustrative runs.",
   },
   {
     slug: "simulation",

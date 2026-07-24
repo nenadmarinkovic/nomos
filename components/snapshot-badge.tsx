@@ -10,11 +10,7 @@ interface SnapshotBadgeProps {
   onRefresh: () => void;
 }
 
-export function SnapshotBadge({
-  turn,
-  stale,
-  onRefresh,
-}: SnapshotBadgeProps) {
+export function SnapshotBadge({ turn, stale, onRefresh }: SnapshotBadgeProps) {
   return (
     <button
       type="button"

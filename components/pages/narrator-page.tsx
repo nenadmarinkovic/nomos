@@ -51,9 +51,9 @@ export function NarratorPage() {
         lead={
           <>
             Nomos grows societies from the bottom up. The Narrator hands the
-            same run to a panel of theorists and lets each read it through
-            their own lens. The events are identical; the readings won&rsquo;t
-            be. That asymmetry is the whole intellectual move.
+            same run to a panel of theorists and lets each read it through their
+            own lens. The events are identical; the readings won&rsquo;t be.
+            That asymmetry is the whole intellectual move.
           </>
         }
         steps={[
@@ -94,7 +94,11 @@ export function NarratorPage() {
 
           {groups.length === 0 ? (
             <EmptyState
-              title={filter ? "No readings from this observer yet" : "The observers are watching"}
+              title={
+                filter
+                  ? "No readings from this observer yet"
+                  : "The observers are watching"
+              }
               hint={
                 filter
                   ? "Try another voice from the right panel, or wait for the next significant moment."
@@ -159,9 +163,8 @@ function Header() {
         How the theorists read what just happened.
       </h1>
       <p className="text-[15px] leading-relaxed text-foreground/70">
-        Each observer narrates significant moments through their own
-        vocabulary. Same event, different vocabularies — that&rsquo;s the
-        intellectual move.
+        Each observer narrates significant moments through their own vocabulary.
+        Same event, different vocabularies — that&rsquo;s the intellectual move.
       </p>
     </header>
   );
@@ -268,9 +271,7 @@ function EmptyState({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="mt-12 space-y-2 text-center">
       <p className="text-xl text-foreground/85">{title}</p>
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        {hint}
-      </p>
+      <p className="text-sm leading-relaxed text-muted-foreground">{hint}</p>
     </div>
   );
 }

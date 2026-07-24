@@ -8,10 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SnapshotBadge } from "@/components/snapshot-badge";
 import { SCALE_INFO } from "@/lib/config";
 import { useSimulationStore } from "@/lib/store";
-import {
-  useStoreSnapshot,
-  useWorldSnapshot,
-} from "@/lib/use-world-snapshot";
+import { useStoreSnapshot, useWorldSnapshot } from "@/lib/use-world-snapshot";
 import type { WorldView } from "@/lib/world";
 
 export function MetricsPage() {
@@ -24,8 +21,6 @@ export function MetricsPage() {
   );
   const advanced = sample.data;
 
-  // Bind the summary numbers to the sample cadence so the page is fully
-  // frozen between explicit refreshes.
   const snapshot = useStoreSnapshot(liveSnapshot, sample.turn);
 
   if (!started) {
@@ -34,16 +29,16 @@ export function MetricsPage() {
         eyebrow="Metrics · The numbers"
         headline={
           <>
-            Read a society&rsquo;s{" "}
-            <em className="text-brand">body language</em> in plain numbers.
+            Read a society&rsquo;s <em className="text-brand">body language</em>{" "}
+            in plain numbers.
           </>
         }
         lead={
           <>
             Nomos doesn&rsquo;t program inequality, classes, or markets — they
             emerge or they don&rsquo;t. The measures on this page are how that
-            emergence reveals itself in aggregate. None of them are inputs.
-            All of them are outputs of what the conditions produced.
+            emergence reveals itself in aggregate. None of them are inputs. All
+            of them are outputs of what the conditions produced.
           </>
         }
         steps={[
@@ -221,11 +216,7 @@ function TokenEconomySection({
           />
           <Summary
             label="Top issuer"
-            value={
-              snapshot.topIssuerId >= 0
-                ? `#${snapshot.topIssuerId}`
-                : "—"
-            }
+            value={snapshot.topIssuerId >= 0 ? `#${snapshot.topIssuerId}` : "—"}
             hint={
               snapshot.topIssuerLiability > 0
                 ? `${Math.round(snapshot.topIssuerLiability)} outstanding`
@@ -277,9 +268,7 @@ function Summary({
         {value}
       </div>
       {hint && (
-        <div className="mt-0.5 text-xs text-muted-foreground">
-          {hint}
-        </div>
+        <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div>
       )}
     </div>
   );
@@ -288,9 +277,7 @@ function Summary({
 function SectionTitle({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="space-y-1">
-      <h2 className="text-xl leading-tight text-foreground">
-        {title}
-      </h2>
+      <h2 className="text-xl leading-tight text-foreground">{title}</h2>
       <p className="text-xs text-muted-foreground">{hint}</p>
     </div>
   );
@@ -315,9 +302,7 @@ interface AdvancedMetrics {
   spiceRichShare: number;
 }
 
-function computeAdvanced(
-  agents: readonly AgentForStats[],
-): AdvancedMetrics {
+function computeAdvanced(agents: readonly AgentForStats[]): AdvancedMetrics {
   let count = 0;
   let totalAge = 0;
   let maxAge = 0;

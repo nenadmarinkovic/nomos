@@ -17,18 +17,11 @@ import {
   type SignificantEvent,
 } from "@/lib/events";
 import type { SimContext, WorldSummary } from "@/lib/observers";
-import {
-  pickObserver,
-  resetObserverRotation,
-} from "@/lib/observer-routing";
+import { pickObserver, resetObserverRotation } from "@/lib/observer-routing";
 import { useSimulationStore } from "@/lib/store";
 
-/** Reading-pace floor between narrations. Keeps the chronicle legible at
- *  4×–8× sim speeds where turn-based cooldowns fire too fast. */
 const MIN_NARRATION_INTERVAL_MS = 12000;
 
-/** Headless. Watches macro metrics, detects significant events, picks one
- *  observer per event, dispatches one Mistral request. Renders nothing. */
 export function ObserverNarrator() {
   const started = useSimulationStore((s) => s.started);
   const runId = useSimulationStore((s) => s.runId);
@@ -172,10 +165,16 @@ function worldSummary(config: SimulationConfig): WorldSummary {
   };
 }
 
-/** Macro context for the observer prompt — motivation mix, recent events,
- *  and a snapshot of the tie graph. */
 function buildSimContext(
-  snapshot: { alive: number; motivationCounts: { material: number; symbolic: number; normative: number; power: number } },
+  snapshot: {
+    alive: number;
+    motivationCounts: {
+      material: number;
+      symbolic: number;
+      normative: number;
+      power: number;
+    };
+  },
   recentEvents: { turn: number; kind: string; title: string }[],
 ): SimContext {
   const counts = snapshot.motivationCounts;
@@ -217,8 +216,6 @@ function buildSimContext(
   };
 }
 
-/** Add spaces around em/en dashes — Mistral tends to omit them and the
- *  resulting "elite—just" reads as a hyphen. */
 function normalizeNarrationText(text: string): string {
   return text
     .replace(/\s*—\s*/g, " — ")

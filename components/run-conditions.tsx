@@ -40,13 +40,13 @@ function RunConditionsCard({ config }: { config: SimulationConfig }) {
   ];
 
   const rules: string[] = [];
-  rules.push(world.inheritance ?? true ? "inheritance" : "no inheritance");
+  rules.push((world.inheritance ?? true) ? "inheritance" : "no inheritance");
   rules.push(
-    world.culturalTransmission ?? true
+    (world.culturalTransmission ?? true)
       ? "cultural drift"
       : "no cultural drift",
   );
-  rules.push(world.conflict ?? true ? "conflict" : "no conflict");
+  rules.push((world.conflict ?? true) ? "conflict" : "no conflict");
   rules.push(`${TOPOLOGY_INFO[agents.topology].label.toLowerCase()} trade`);
 
   const physicsParts = [

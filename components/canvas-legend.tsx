@@ -1,5 +1,16 @@
 "use client";
 
+import { ShapesIcon } from "@phosphor-icons/react";
+
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useSimulationStore } from "@/lib/store";
 
 const MOTIVATION_COLOR: Record<string, string> = {
@@ -27,6 +38,15 @@ const MOTIVATION_LABEL: Record<string, string> = {
   power: "Power",
 };
 
+// Short "what drives this agent" gloss for each motivation. Mirrors the hints
+// shown on the setup screen (lib/config.ts) so the vocabulary stays consistent.
+const MOTIVATION_HINT: Record<string, string> = {
+  material: "Resources and labour come first — survive, harvest, get rich.",
+  symbolic: "Status, taste, and distinction drive choices.",
+  normative: "Belonging and ritual conformity guide action.",
+  power: "Authority and control over others — the drive to lead and be obeyed.",
+};
+
 export function CanvasLegend() {
   const started = useSimulationStore((s) => s.started);
   const monochrome = useSimulationStore((s) => s.monochrome);
@@ -41,69 +61,134 @@ export function CanvasLegend() {
   const spiceRgb = monochrome ? "96, 96, 96" : "214, 158, 90";
 
   return (
-    <div className="space-y-2.5 px-3 py-3">
-      <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-        Key
+    <Dialog>
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          Legend
+        </span>
+        <DialogTrigger className="flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md border border-foreground/15 bg-card px-2 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground">
+          <ShapesIcon size={11} weight="bold" />
+          Open
+        </DialogTrigger>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        {keys.map((k) => (
-          <div key={k} className="flex items-center gap-2">
-            <LegendShape motivation={k} mono={monochrome} />
-            <span className="text-[11px] text-foreground/85">
-              {MOTIVATION_LABEL[k] ?? k}
-            </span>
-          </div>
-        ))}
-      </div>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reading the canvas</DialogTitle>
+          <DialogDescription>
+            What every shape, shade, and colour on the world map stands for.
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="flex items-center justify-between gap-3 border-t border-foreground/10 pt-2">
-        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-          Wealth
-        </span>
-        <span className="flex items-center gap-px">
-          {[0.35, 0.55, 0.8, 1].map((alpha) => (
-            <span
-              key={alpha}
-              aria-hidden
-              style={{ background: `rgba(160, 160, 160, ${alpha})` }}
-              className="block h-2.5 w-3"
-            />
-          ))}
-        </span>
-      </div>
+        <DialogBody className="space-y-6">
+          <section>
+            <h3 className="mb-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              Motivations
+            </h3>
+            <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
+              Every agent is drawn as a shape marking what it is chasing. Shape
+              and colour go together — one for each drive.
+            </p>
+            <ul className="space-y-3">
+              {keys.map((k) => (
+                <li key={k} className="flex items-start gap-3">
+                  <span className="mt-px flex size-5 shrink-0 items-center justify-center">
+                    <LegendShape motivation={k} mono={monochrome} size={18} />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground">
+                      {MOTIVATION_LABEL[k] ?? k}
+                    </div>
+                    <div className="text-sm leading-relaxed text-muted-foreground">
+                      {MOTIVATION_HINT[k] ?? ""}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-          Sugar
-        </span>
-        <span
-          aria-hidden
-          className="block h-2.5 w-2.5"
-          style={{ background: `rgba(${sugarRgb}, 0.85)` }}
-        />
-      </div>
+          <section>
+            <h3 className="mb-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              Wealth
+            </h3>
+            <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
+              Opacity tracks how rich an agent is. The wealthiest render solid;
+              the poorest fade to almost nothing.
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-px">
+                {[0.35, 0.55, 0.8, 1].map((alpha) => (
+                  <span
+                    key={alpha}
+                    aria-hidden
+                    style={{ background: `rgba(160, 160, 160, ${alpha})` }}
+                    className="block h-4 w-6"
+                  />
+                ))}
+              </span>
+              <span className="flex justify-between gap-2 text-xs text-muted-foreground">
+                <span>poor</span>
+                <span aria-hidden>→</span>
+                <span>rich</span>
+              </span>
+            </div>
+          </section>
 
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-          Spice
-        </span>
-        <span
-          aria-hidden
-          className="block h-2.5 w-2.5"
-          style={{ background: `rgba(${spiceRgb}, 0.85)` }}
-        />
-      </div>
-    </div>
+          <section>
+            <h3 className="mb-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              Resources
+            </h3>
+            <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
+              Two goods grow on the land. Agents harvest, consume, and trade
+              them — scarcity is what sets prices in motion.
+            </p>
+            <ul className="space-y-2.5">
+              <li className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className="mt-1 block size-3.5 shrink-0 rounded-sm"
+                  style={{ background: `rgba(${sugarRgb}, 0.9)` }}
+                />
+                <p className="text-sm leading-relaxed text-foreground">
+                  <span className="font-medium">Sugar</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    — the staple every agent burns each turn to stay alive.
+                  </span>
+                </p>
+              </li>
+              <li className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className="mt-1 block size-3.5 shrink-0 rounded-sm"
+                  style={{ background: `rgba(${spiceRgb}, 0.9)` }}
+                />
+                <p className="text-sm leading-relaxed text-foreground">
+                  <span className="font-medium">Spice</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    — a second good; uneven supply gives agents a reason to
+                    trade rather than just hoard.
+                  </span>
+                </p>
+              </li>
+            </ul>
+          </section>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function LegendShape({
   motivation,
   mono,
+  size = 14,
 }: {
   motivation: string;
   mono: boolean;
+  size?: number;
 }) {
   const color = mono
     ? "currentColor"
@@ -137,8 +222,8 @@ function LegendShape({
 
   return (
     <svg
-      width="14"
-      height="14"
+      width={size}
+      height={size}
       viewBox="0 0 14 14"
       aria-hidden
       className={mono ? "text-foreground" : undefined}

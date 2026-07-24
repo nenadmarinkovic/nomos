@@ -45,11 +45,6 @@ const MOTIVATION_COLOR_HEX: Record<string, number> = {
   power: 0x2a9d5c,
 };
 
-// Black & white mode. Tones are theme-aware so agents stay high-contrast
-// against the page background — near-black on the light theme, near-white on
-// the dark theme. Four distinct steps (ordered by the colours' original
-// luminance) keep the motivations tellable apart; the shape carries the rest
-// of the identity (square/circle/triangle/diamond).
 const MOTIVATION_COLOR_MONO_LIGHT: Record<string, number> = {
   normative: 0x4a4a4a,
   material: 0x2e2e2e,
@@ -75,9 +70,6 @@ interface TrailSprite {
   baseScale: number;
 }
 
-/** Pixi WebGL field renderer. Agents are motivation-coloured sprites
- *  (batched by Pixi); resources are an off-screen Canvas2D blitted to
- *  one GPU sprite; selection is a Graphics layer with a pulsing ring. */
 export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -89,17 +81,14 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const lastTrailTurnRef = useRef<number>(-1);
   const spritesRef = useRef<Map<number, Sprite>>(new Map());
   const texturesRef = useRef<Record<MotivationKey, Texture> | null>(null);
-  /** Selection: vision lines + a two-pass ring with pulsing alpha. */
   const selectionLayerRef = useRef<Graphics | null>(null);
-  // Resource layer: off-screen Canvas2D redrawn each tick, wrapped as one
-  // Pixi Sprite. One draw call for ≤12k cells, crisp at any zoom.
+
   const resourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const resourceTextureRef = useRef<Texture | null>(null);
   const resourceSpriteRef = useRef<Sprite | null>(null);
   const lastResourceTurnRef = useRef<number>(-1);
   const rafRef = useRef<number | null>(null);
-  // Size state drives both the host's inline dims and the Pixi renderer.
-  // The ref mirrors it so async callbacks avoid a stale closure.
+
   const [size, setSize] = useState({ width: 0, height: 0 });
   const currentSizeRef = useRef({ width: 0, height: 0 });
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -118,22 +107,16 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const turn = useSimulationStore((s) => s.turn);
   const setCanvasSize = useSimulationStore((s) => s.setCanvasSize);
 
-  // Black & white mode mirrored into a ref so the Pixi render loop can read it
-  // each frame; a separate effect rebuilds the agent textures on toggle.
   const monochrome = useSimulationStore((s) => s.monochrome);
   const monoRef = useRef(monochrome);
 
-  // Theme mirrored into a ref so the Pixi render loop (not a React
-  // component) can read it every frame without extra rerenders.
   const { resolvedTheme } = useTheme();
   const themeRef = useRef<"light" | "dark">("light");
   useEffect(() => {
     themeRef.current = resolvedTheme === "dark" ? "dark" : "light";
   }, [resolvedTheme]);
 
-  // Clear selection on new run.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedId(null);
   }, [runId, started]);
 
@@ -144,14 +127,17 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     }));
   }
 
-  function agentIdAtPointer(e: React.MouseEvent<HTMLDivElement>): number | null {
+  function agentIdAtPointer(
+    e: React.MouseEvent<HTMLDivElement>,
+  ): number | null {
     const host = hostRef.current;
     const world = activeWorldRef.current;
     if (!host || !world) return null;
     const r = host.getBoundingClientRect();
     const gx = Math.floor(((e.clientX - r.left) / r.width) * world.width);
     const gy = Math.floor(((e.clientY - r.top) / r.height) * world.height);
-    if (gx < 0 || gy < 0 || gx >= world.width || gy >= world.height) return null;
+    if (gx < 0 || gy < 0 || gx >= world.width || gy >= world.height)
+      return null;
     const id = world.occupants[gy * world.width + gx];
     return id === -1 ? null : id;
   }
@@ -162,8 +148,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       hoveredIdRef.current = id;
       const host = hostRef.current;
       if (host) host.style.cursor = id !== null ? "pointer" : "crosshair";
-      // RAF only runs while the sim runs; repaint manually otherwise so
-      // the hover ring appears/disappears immediately.
+
       if (!running) paint(1);
     }
   }
@@ -187,19 +172,14 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     const world = activeWorldRef.current;
     if (!app || !layer || !textures || !world) return;
 
-    // Pixi v8: renderer.width/height are CSS-space. Don't divide by dpr again.
     const W = app.renderer.width;
     const H = app.renderer.height;
     const cellW = W / world.width;
     const cellH = H / world.height;
     const shapeSize = Math.min(cellW, cellH);
-    // 6px floor so agents stay legible at city scale (~9px cells).
     const agentSize = Math.max(shapeSize * 0.78, 6);
     const ease = easeOutBack(progress);
 
-    // Resource layer — repaint only when the world's turn changes.
-    // Off-screen canvas is sized at framebuffer resolution (CSS × dpr)
-    // so retina displays render sharp.
     const resourceCanvas = resourceCanvasRef.current;
     const resourceSprite = resourceSpriteRef.current;
     let resourceTexture = resourceTextureRef.current;
@@ -210,8 +190,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       if (resourceCanvas.width !== bufW || resourceCanvas.height !== bufH) {
         resourceCanvas.width = bufW;
         resourceCanvas.height = bufH;
-        // Recreate the texture so UVs match the new canvas. Explicit
-        // constructor (not `Texture.from`) avoids a stale cache hit.
+
         const oldTexture = resourceTexture;
         const newTexture = new Texture({
           source: new CanvasSource({ resource: resourceCanvas }),
@@ -270,9 +249,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     const baseScale = agentSize / 64;
     const trailLayer = trailLayerRef.current;
 
-    // On every world-turn advance, spawn a trail ghost at each moved
-    // agent's *previous* cell. Bounded by MAX_TRAILS so a big field
-    // can't leak sprites.
     if (trailLayer && lastTrailTurnRef.current !== world.turn) {
       const trails = trailsRef.current;
       for (const a of world.agents) {
@@ -338,21 +314,15 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       const iy = a.prevY + dy * ease;
       s.x = ix * cellW + cellW / 2;
       s.y = iy * cellH + cellH / 2;
-      // Per-agent breathing: phase-offset by id so the field isn't
-      // synchronised. 4% amplitude keeps it subtle.
+
       const breathe = 1 + 0.04 * Math.sin(breatheT * 1.6 + a.id * 0.7);
       s.scale.set(baseScale * breathe);
-      // Lean into motion — 15% of the heading angle, decays as the
-      // sprite settles into its destination cell. Idle sprites relax
-      // any residual tilt back toward upright.
       if (dx !== 0 || dy !== 0) {
         const angle = Math.atan2(dy, dx);
         s.rotation = angle * 0.15 * (1 - ease);
       } else {
         s.rotation *= 0.9;
       }
-      // Wealth-based brightness. Sqrt mapping handles the long-tail wealth
-      // distribution so most agents don't collapse to a single dim band.
       const wealth = a.sugar + a.spice;
       const safeWealth = Number.isFinite(wealth) && wealth > 0 ? wealth : 0;
       s.alpha = 0.45 + 0.55 * Math.min(1, Math.sqrt(safeWealth / 30));
@@ -365,9 +335,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       sprites.delete(id);
     }
 
-    // Selection + hover overlay. Ink colour flips with the theme so
-    // rings stay legible on either background. One ring for hover, one
-    // ring plus vision lines for selection.
     const selection = selectionLayerRef.current;
     if (selection) {
       selection.clear();
@@ -376,8 +343,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       const r = Math.max(shapeSize * 0.95, 9);
       const tSec = now / 1000;
 
-      // Hover — quiet ring, no pulse, hidden if it coincides with
-      // the selection to keep things clean.
       const hoverId = hoveredIdRef.current;
       const selId = selectedIdRef.current;
       if (hoverId !== null && hoverId !== selId) {
@@ -401,8 +366,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
           const cx = ax * cellW + cellW / 2;
           const cy = ay * cellH + cellH / 2;
 
-          // Vision lines: alpha falls with Chebyshev distance so nearby
-          // neighbours read as "strong tie", distant ones as "in view".
           const lineWidth = Math.max(0.6, shapeSize * 0.045);
           const visionSpan = Math.max(1, a.vision);
           for (let dy = -a.vision; dy <= a.vision; dy++) {
@@ -430,9 +393,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
             }
           }
 
-          // Single crisp ring with a very soft breathing pulse — the
-          // hover ring shares this weight so the two states feel like
-          // a family, not two different things.
           const pulse = 0.5 + 0.5 * Math.sin(tSec * 2.2);
           selection
             .circle(cx, cy, r)
@@ -442,10 +402,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     }
   }, []);
 
-  // Rebuild the agent textures for the current mode + theme. Swaps the
-  // texture map, drops trail ghosts still pointing at the old textures, forces
-  // a resource repaint, then destroys the old textures once the next paint has
-  // reassigned every live sprite.
   const rebuildAgentTextures = useCallback(() => {
     const app = appRef.current;
     const old = texturesRef.current;
@@ -468,21 +424,15 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     for (const k of MOTIVATION_KEYS) old[k].destroy(true);
   }, [paint]);
 
-  // Black & white toggle → rebuild with the new palette.
   useEffect(() => {
     monoRef.current = monochrome;
     rebuildAgentTextures();
   }, [monochrome, rebuildAgentTextures]);
 
-  // Theme flip while in B&W → re-tint. Mono tones are theme-aware for
-  // contrast; the colour palette is theme-independent, so skip it there.
   useEffect(() => {
     if (monoRef.current) rebuildAgentTextures();
   }, [resolvedTheme, rebuildAgentTextures]);
 
-  // ResizeObserver pushes the container's dimensions into both React
-  // state (drives the host's inline width/height) and the ref (read by
-  // async init callbacks).
   useEffect(() => {
     if (!containerRef.current) return;
     const apply = (w: number, h: number) => {
@@ -502,8 +452,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     return () => ro.disconnect();
   }, [setCanvasSize]);
 
-  // Bootstrap Pixi. Measure synchronously before init() so it starts at
-  // the right size — no race with a later ResizeObserver callback.
   useEffect(() => {
     const host = hostRef.current;
     const container = containerRef.current;
@@ -529,16 +477,13 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       })
       .then(() => {
         if (cancelled) {
-          // Strict-mode race: init finished after cleanup ran.
           app.destroy(true, { children: true });
           return;
         }
-        // Pixi handles the framebuffer; we set CSS so the canvas fills the host.
         app.canvas.style.cssText = `position: absolute; left: 0; top: 0; display: block; width: ${initW}px; height: ${initH}px;`;
         host.appendChild(app.canvas);
         const stage = new Container();
-        // Size the initial resource canvas to the framebuffer so the first
-        // texture has correct UVs.
+
         const dprNow = app.renderer.resolution || 1;
         const initBufW = Math.max(2, Math.round(initW * dprNow));
         const initBufH = Math.max(2, Math.round(initH * dprNow));
@@ -550,8 +495,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         });
         const resourceSprite = new Sprite(resourceTexture);
         stage.addChild(resourceSprite);
-        // Trails sit under agents so a live sprite always occludes its
-        // own ghost.
+
         const trails = new Container();
         stage.addChild(trails);
         const agents = new Container();
@@ -589,9 +533,7 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
       sprites.clear();
-      // Only destroy after init resolves — otherwise Pixi throws
-      // `this._cancelResize is not a function`. The pending init cleans
-      // up itself via `cancelled` in the then() above.
+
       if (appRef.current) {
         appRef.current.destroy(true, { children: true });
         appRef.current = null;
@@ -608,13 +550,8 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       resourceCanvasRef.current = null;
       lastResourceTurnRef.current = -1;
     };
-    // `paint` is stable, so including it doesn't re-trigger init.
   }, [paint]);
 
-  // Drive Pixi's renderer from React state. Runs whenever size changes
-  // *or* once init has completed (re-fires because `paint` is the same
-  // useCallback ref — actually no, only on size change, so init's .then
-  // also resizes itself, see below).
   useEffect(() => {
     const app = appRef.current;
     if (!app || size.width === 0 || size.height === 0) return;
@@ -624,9 +561,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     paint(1);
   }, [size, paint]);
 
-  // Paused repaint on tick, selection, or theme change so the ring
-  // stays live and flips ink colour immediately when the user toggles
-  // dark/light.
   useEffect(() => {
     void turn;
     void selectedId;
@@ -635,7 +569,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     paint(1);
   }, [turn, running, selectedId, resolvedTheme, paint]);
 
-  // Per-RAF interpolated repaint while running.
   useEffect(() => {
     if (!running) return;
     function loop() {
@@ -708,8 +641,8 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
                 becomes.
               </h1>
               <p className="mt-5 text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
-                Nomos doesn&rsquo;t program societies — it grows them. You set
-                a few starting conditions; agents follow simple rules; whatever
+                Nomos doesn&rsquo;t program societies — it grows them. You set a
+                few starting conditions; agents follow simple rules; whatever
                 happens next is what the conditions produced. Inequality,
                 settlements, classes, conflict: never written into the engine,
                 always emerging from the bottom up.
@@ -762,8 +695,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   );
 }
 
-/** Pre-render each motivation shape once into a 64×64 texture; sprites
- *  scale it to the current cell at render time. */
 function buildMotivationTextures(
   app: Application,
   mono: boolean,
@@ -786,8 +717,6 @@ function buildMotivationTextures(
   return out;
 }
 
-/** material=square, symbolic=circle, normative=triangle, power=diamond.
- *  Centred in a 64×64 box for the pre-rendered texture. */
 function drawShape(g: Graphics, motivation: MotivationKey, color: number) {
   const cx = 32;
   const cy = 32;
@@ -816,32 +745,20 @@ function drawShape(g: Graphics, motivation: MotivationKey, color: number) {
     .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
 }
 
-// Mild overshoot (~7%). Agents pass their destination cell, then settle
-// — reads as weight instead of the mechanical glide of a linear/cubic ease.
 function easeOutBack(t: number): number {
   const c1 = 1.2;
   const c3 = c1 + 1;
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
 
-function Step({
-  n,
-  title,
-  body,
-}: {
-  n: string;
-  title: string;
-  body: string;
-}) {
+function Step({ n, title, body }: { n: string; title: string; body: string }) {
   return (
     <li className="grid grid-cols-[2.5rem_1fr] gap-4">
       <span className="pt-1 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         {n}
       </span>
       <div>
-        <div className="text-lg leading-tight text-foreground">
-          {title}
-        </div>
+        <div className="text-lg leading-tight text-foreground">{title}</div>
         <p
           className="mt-1.5 text-sm leading-relaxed text-foreground/75 sm:text-sm"
           dangerouslySetInnerHTML={{ __html: body }}
@@ -850,4 +767,3 @@ function Step({
     </li>
   );
 }
-

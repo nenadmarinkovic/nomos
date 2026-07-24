@@ -54,8 +54,8 @@ export function ExtinctionDialog() {
         <DialogHeader>
           <DialogTitle>The society has died out</DialogTitle>
           <DialogDescription>
-            No survivors remain. The simulation has halted — nothing further
-            can emerge from an empty world.
+            No survivors remain. The simulation has halted — nothing further can
+            emerge from an empty world.
           </DialogDescription>
         </DialogHeader>
 
@@ -94,9 +94,7 @@ export function ExtinctionDialog() {
             />
             <Stat
               label="Regrowth"
-              value={`${Math.round(
-                config.world.physics.regrowthRate * 100,
-              )}%`}
+              value={`${Math.round(config.world.physics.regrowthRate * 100)}%`}
             />
           </div>
         </section>

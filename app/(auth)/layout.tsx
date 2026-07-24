@@ -1,13 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
-/**
- * Auth pages live outside the (sim) AppShell so there's no sidebar, no
- * floating windows, no running engine in the corner. Logo at the top,
- * form in the middle, year at the bottom — every page in this group gets
- * the same frame.
- */
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const year = new Date().getFullYear();
 
   return (
@@ -16,7 +14,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Link
           href="/"
           aria-label="Nomos"
-          className="inline-flex items-center gap-2"
+          className="inline-flex items-center gap-2.5"
         >
           <Image
             src="/logo.svg"
@@ -24,11 +22,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             width={38}
             height={35}
             priority
-            className="h-9 w-auto dark:invert"
+            className="h-12 w-auto dark:invert"
           />
-          <span className="flex flex-col text-xs font-medium leading-[1.2] text-foreground">
-            <span>Nomos, a generative</span>
-            <span>society simulation.</span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold tracking-tight text-foreground">
+              Nomos
+            </span>
+            <span className="text-sm text-muted-foreground">
+              A generative society simulation.
+            </span>
           </span>
         </Link>
       </header>
@@ -37,7 +39,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="w-full max-w-sm">{children}</div>
       </main>
 
-      <footer className="flex flex-col items-center gap-1 px-6 pb-8 text-center text-xs text-muted-foreground">
+      <footer className="flex flex-col items-center gap-1 px-6 pb-8 text-center text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <span>© {year} Nomos</span>
           <span aria-hidden className="text-muted-foreground/40">
@@ -45,7 +47,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </span>
           <span>All rights reserved</span>
         </div>
-        <div className="text-xs text-muted-foreground/70">
+        <div className="text-sm text-muted-foreground/70">
           An open-source project.{" "}
           <a
             href="https://github.com/nenadmarinkovic/nomos"
