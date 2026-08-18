@@ -199,7 +199,7 @@ export function SiteHeader({
                     aria-checked={active}
                     onClick={() => setSpeed(s.value)}
                     className={cn(
-                      "cursor-pointer rounded-[4px] px-2 py-1 font-mono text-xs tabular-nums transition-colors",
+                      "cursor-pointer rounded-lg px-2 py-1 font-mono text-xs tabular-nums transition-colors",
                       active
                         ? "bg-foreground text-background"
                         : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",

@@ -367,7 +367,7 @@ export function NetworkCanvas() {
       </div>
 
       {selectedId === null && (
-        <div className="pointer-events-none absolute bottom-4 left-4 z-10 w-112 max-w-[calc(100vw-2rem)] rounded-md border border-foreground/10 bg-card/90 px-3 py-2 backdrop-blur-sm">
+        <div className="pointer-events-none absolute bottom-4 left-4 z-10 w-md max-w-[calc(100vw-2rem)] rounded-md border border-foreground/10 bg-card/90 px-3 py-2 backdrop-blur-sm">
           {events.length === 0 ? (
             <p className="text-xs italic leading-snug text-foreground/80">
               Each shape is one agent; lines show each agent&apos;s three
@@ -612,7 +612,6 @@ function buildTieGraph(
   const nodes: GraphNode[] = new Array(rendered.length);
   for (let i = 0; i < rendered.length; i++) {
     const a = rendered[i];
-    // Guard against NaN/Infinity/negative wealth — Three.js crashes on those.
     const w = a.sugar + a.spice;
     const safeWealth = Number.isFinite(w) && w > 0 ? w : 0;
     let node = cache.get(a.id);
