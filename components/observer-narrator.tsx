@@ -21,6 +21,7 @@ import { pickObserver, resetObserverRotation } from "@/lib/observer-routing";
 import { useSimulationStore } from "@/lib/store";
 
 const MIN_NARRATION_INTERVAL_MS = 12000;
+const MAX_RATE_LIMIT_BACKOFF_MS = 5 * 60_000;
 
 export function ObserverNarrator() {
   const started = useSimulationStore((s) => s.started);
@@ -31,7 +32,6 @@ export function ObserverNarrator() {
   const resolveNarration = useSimulationStore((s) => s.resolveNarration);
   const failNarration = useSimulationStore((s) => s.failNarration);
 
-  // Per-run detection state and the set of events already dispatched.
   const detectorRef = useRef<DetectorState>({
     peakAlive: 0,
     lastEventTurn: null,
@@ -47,17 +47,12 @@ export function ObserverNarrator() {
   });
   const seenRef = useRef<Set<string>>(new Set());
   const historyRef = useRef<MetricPoint[]>([]);
-  /** Recent events for the observer prompt — kept here so pending narrations
-   *  don't hide them. Capped at 5. */
   const recentEventsRef = useRef<
     { turn: number; kind: string; title: string }[]
   >([]);
-  /** Last narration timestamp (ms). Detector cooldowns are per-turn, so at
-   *  fast speeds they'd fire unreadably often; this gate keeps the perceived
-   *  pace constant. Skipped events re-detect on the next tick. */
   const lastNarrationAtRef = useRef<number>(0);
+  const narrationBlockedUntilRef = useRef<number>(0);
 
-  // Reset everything when a new run begins.
   useEffect(() => {
     detectorRef.current = {
       peakAlive: 0,
@@ -76,6 +71,7 @@ export function ObserverNarrator() {
     historyRef.current = [];
     recentEventsRef.current = [];
     lastNarrationAtRef.current = 0;
+    narrationBlockedUntilRef.current = 0;
     resetObserverRotation();
   }, [runId]);
 
@@ -84,7 +80,6 @@ export function ObserverNarrator() {
     const observers = config.observers;
     if (observers.length === 0) return;
 
-    // Local history keeps detection independent of the store's slicing.
     const hist = historyRef.current;
     if (hist.length === 0 || hist[hist.length - 1].turn !== snapshot.turn) {
       const counts = snapshot.motivationCounts;
@@ -112,9 +107,11 @@ export function ObserverNarrator() {
     const event = detectEvent(snapshot, hist, detector);
     if (!event || seenRef.current.has(event.id)) return;
 
-    // Pace gate. Skip without touching latches — the event re-detects next tick.
     const now = Date.now();
     if (now - lastNarrationAtRef.current < MIN_NARRATION_INTERVAL_MS) {
+      return;
+    }
+    if (now < narrationBlockedUntilRef.current) {
       return;
     }
     lastNarrationAtRef.current = now;
@@ -122,7 +119,6 @@ export function ObserverNarrator() {
     seenRef.current.add(event.id);
     detector.lastEventTurn = event.turn;
     detector.lastFireByKind[event.kind] = event.turn;
-    // Reset the passage streak whenever a real event fires.
     if (event.kind === "passage") {
       detector.consecutivePassages += 1;
     } else {
@@ -144,6 +140,9 @@ export function ObserverNarrator() {
     void requestNarration(picked, event, world, context, {
       resolve: resolveNarration,
       fail: failNarration,
+      blockUntil: (until) => {
+        narrationBlockedUntilRef.current = until;
+      },
     });
   }, [
     started,
@@ -182,7 +181,6 @@ function buildSimContext(
     counts.material + counts.symbolic + counts.normative + counts.power;
   const safeShare = (n: number) => (total > 0 ? n / total : 0);
 
-  // Read the flat [lo, hi, weight, …] tie buffer the worker ships.
   const world = activeWorldRef.current;
   let count = 0;
   let topWeight = 0;
@@ -231,6 +229,7 @@ async function requestNarration(
   handlers: {
     resolve: (key: string, text: string) => void;
     fail: (key: string, error: string) => void;
+    blockUntil: (until: number) => void;
   },
 ): Promise<void> {
   const entryKey = `${event.id}:${observer}`;
@@ -243,7 +242,18 @@ async function requestNarration(
     const data = (await res.json().catch(() => ({}))) as {
       text?: string;
       error?: string;
+      retryAfter?: number;
     };
+    if (res.status === 429) {
+      const header = Number(res.headers.get("Retry-After"));
+      const retryAfter =
+        data.retryAfter ?? (Number.isFinite(header) ? header : 0);
+      const waitMs = Math.min(
+        MAX_RATE_LIMIT_BACKOFF_MS,
+        Math.max(MIN_NARRATION_INTERVAL_MS, retryAfter * 1000),
+      );
+      handlers.blockUntil(Date.now() + waitMs);
+    }
     if (!res.ok || !data.text) {
       handlers.fail(entryKey, data.error ?? `Request failed (${res.status})`);
       return;

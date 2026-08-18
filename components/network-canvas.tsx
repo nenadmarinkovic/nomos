@@ -53,10 +53,10 @@ const EVENT_HISTORY_LIMIT = 8;
 const EVENTS_PER_KIND_LIMIT = 3;
 
 const MOTIVATION_COLOR: Record<string, string> = {
-  material: "#E63946",
-  symbolic: "#2E5C9E",
-  normative: "#FFD23F",
-  power: "#2A9D5C",
+  material: "#0076E7",
+  symbolic: "#E93013",
+  normative: "#F29320",
+  power: "#249375",
 };
 
 const MOTIVATION_COLOR_MONO_LIGHT: Record<string, string> = {
@@ -584,7 +584,6 @@ function buildTieGraph(
   const aliveById = new Map<number, RenderAgent>();
   for (const a of alive) aliveById.set(a.id, a);
 
-  // Tie-weight sum per agent — caps the rendered set and scores top-K edges.
   const embeddedness = new Map<number, number>();
   for (let i = 0; i < ties.length; i += 3) {
     const a = ties[i] | 0;
@@ -595,7 +594,6 @@ function buildTieGraph(
     embeddedness.set(b, (embeddedness.get(b) ?? 0) + w);
   }
 
-  // Render only the most-embedded agents at city scale; the rest is hairball.
   let rendered: RenderAgent[];
   if (alive.length > MAX_RENDERED_NODES) {
     const sorted = [...alive].sort(
@@ -608,7 +606,6 @@ function buildTieGraph(
   const renderedIds = new Set<number>();
   for (const a of rendered) renderedIds.add(a.id);
 
-  // Reuse cached nodes so force-graph's layout state (x/y/z/vx/vy/vz) survives.
   for (const id of cache.keys()) {
     if (!renderedIds.has(id)) cache.delete(id);
   }
@@ -629,7 +626,6 @@ function buildTieGraph(
     nodes[i] = node;
   }
 
-  // Build per-agent edge lists for the top-K filter.
   const raw: GraphLink[] = [];
   const byAgent = new Map<number, { idx: number; weight: number }[]>();
   for (let i = 0; i < ties.length; i += 3) {
@@ -653,7 +649,6 @@ function buildTieGraph(
     listB.push({ idx, weight });
   }
 
-  // Keep an edge if it's among either endpoint's strongest ties.
   const keep = new Set<number>();
   for (const list of byAgent.values()) {
     list.sort((p, q) => q.weight - p.weight);

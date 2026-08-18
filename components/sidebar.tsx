@@ -69,17 +69,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       )}
     >
       <ScrollArea className="flex-1">
-        <div
-          className={cn(
-            "pb-3 pt-4",
-            collapsed ? "px-1.5" : "px-2",
-          )}
-        >
-          <NavGroup
-            sections={SECTIONS}
-            active={active}
-            collapsed={collapsed}
-          />
+        <div className={cn("pb-3 pt-4", collapsed ? "px-1.5" : "px-2")}>
+          <NavGroup sections={SECTIONS} active={active} collapsed={collapsed} />
         </div>
       </ScrollArea>
 
@@ -158,9 +149,7 @@ function NavGroup({
                   isActive ? "text-foreground" : "text-foreground/40",
                 )}
               />
-              {!collapsed && (
-                <span className="leading-tight">{itemLabel}</span>
-              )}
+              {!collapsed && <span className="leading-tight">{itemLabel}</span>}
             </div>
             {!collapsed && (
               <ArrowRightIcon

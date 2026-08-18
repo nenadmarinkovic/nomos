@@ -8,10 +8,6 @@ export const dynamic = "force-dynamic";
 
 type Context = { params: Promise<{ id: string }> };
 
-/** Is the caller allowed to act on this run? A signed-in user owns rows
- *  whose `ownerId` matches; an anonymous browser owns rows whose `ownerKey`
- *  matches and have no `ownerId`. Public runs (gallery) are visible to
- *  anyone for read, regardless of caller. */
 type Caller = Awaited<ReturnType<typeof getCaller>>;
 
 function canRead(

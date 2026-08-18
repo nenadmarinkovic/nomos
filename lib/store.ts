@@ -75,8 +75,6 @@ export type ViewKey =
 
 export type WindowAnchor = "tl" | "tr" | "bl" | "br";
 
-/** Offsets from an anchored corner so windows follow container reflow
- *  (sidebar collapse, resize) instead of drifting from their corner. */
 export interface WindowPosition {
   anchor: WindowAnchor;
   offsetX: number;
@@ -85,8 +83,6 @@ export interface WindowPosition {
 
 export const WIN_WIDTH = 288;
 
-/** Measured heights. Chart windows ≈182px (header 37 + body 145),
- *  stream adds a legend, network is the tallest. */
 export const WIN_HEIGHTS: Record<ViewKey, number> = {
   gini: 182,
   alive: 182,
@@ -127,7 +123,6 @@ export function resolveWindowPosition(
     pos.anchor === "bl" || pos.anchor === "br"
       ? H - winH - pos.offsetY
       : pos.offsetY;
-  // Keep at least a sliver on-screen so tiny containers can't lose windows.
   return {
     x: Math.max(0, Math.min(Math.max(0, W - 40), x)),
     y: Math.max(0, Math.min(Math.max(0, H - 40), y)),
@@ -136,7 +131,6 @@ export function resolveWindowPosition(
 
 export type NarrationStatus = "pending" | "done" | "error";
 
-/** One observer's reading of one significant event. */
 export interface ChronicleEntry {
   key: string;
   eventId: string;
@@ -221,7 +215,6 @@ export const useSimulationStore = create<SimulationState>()(
           snapshot: EMPTY_SNAPSHOT,
           history: [],
           chronicle: [],
-          // New runs start in colour; B&W is an opt-in per run.
           monochrome: false,
         })),
       replayRun: (config) =>
@@ -284,7 +277,6 @@ export const useSimulationStore = create<SimulationState>()(
 
           const cols = visible.length <= 2 ? 1 : 2;
 
-          // Row-major: window i → column i%cols. Columns stack independently.
           const columns: ViewKey[][] = Array.from({ length: cols }, () => []);
           visible.forEach((key, i) => {
             const col = i % cols;
@@ -293,7 +285,6 @@ export const useSimulationStore = create<SimulationState>()(
 
           const positions = { ...s.windowPositions };
 
-          // Same math for all corners — only the anchor flips.
           columns.forEach((colKeys, colIdx) => {
             const offsetX = margin + colIdx * (WIN_WIDTH + gap);
             let offsetY = margin;

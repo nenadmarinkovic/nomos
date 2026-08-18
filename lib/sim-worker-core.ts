@@ -2,7 +2,6 @@ import type { SimulationConfig } from "@/lib/config";
 import { Engine, type EngineSnapshot } from "@/lib/engine";
 import { serializeWorld, type WorldFrame } from "@/lib/world";
 
-/** Messages the main thread sends the worker. */
 export type WorkerInbound =
   | { type: "init"; config: SimulationConfig; speed: number }
   | { type: "setSpeed"; speed: number }
@@ -10,7 +9,6 @@ export type WorkerInbound =
   | { type: "pause" }
   | { type: "stop" };
 
-/** Messages the worker sends back. */
 export interface FrameMessage {
   type: "frame";
   snapshot: EngineSnapshot;
@@ -23,13 +21,6 @@ type TimerId = ReturnType<typeof setTimeout>;
 type Schedule = (cb: () => void, ms: number) => TimerId;
 type Cancel = (id: TimerId) => void;
 
-/**
- * The engine-side of the worker, free of any Worker globals so it can be
- * driven and tested directly. It owns the `Engine`, runs the tick loop on its
- * own schedule, and emits a serialized frame after each tick. The `schedule`
- * and `cancel` hooks default to `setTimeout`/`clearTimeout` but are injectable
- * for deterministic stepping in tests.
- */
 export class SimWorkerCore {
   private engine: Engine | null = null;
   private running = false;
@@ -57,9 +48,6 @@ export class SimWorkerCore {
       case "resume":
         if (!this.running && this.engine) {
           this.running = true;
-          // Tick once immediately so the simulation visibly advances the
-          // moment Resume is clicked, instead of waiting up to BASE_TICK_MS
-          // for the first scheduled tick. Then settle into the normal loop.
           this.engine.tick();
           this.postFrame();
           this.loop();
@@ -84,7 +72,6 @@ export class SimWorkerCore {
       if (!this.running || !this.engine) return;
       this.engine.tick();
       this.postFrame();
-      // Halt when the population is extinct — no more state can change.
       if (this.engine.getSnapshot().alive === 0) {
         this.running = false;
         this.stopLoop();
@@ -104,6 +91,9 @@ export class SimWorkerCore {
   private postFrame(): void {
     if (!this.engine) return;
     const { frame, transfer } = serializeWorld(this.engine);
-    this.emit({ type: "frame", snapshot: this.engine.getSnapshot(), frame }, transfer);
+    this.emit(
+      { type: "frame", snapshot: this.engine.getSnapshot(), frame },
+      transfer,
+    );
   }
 }

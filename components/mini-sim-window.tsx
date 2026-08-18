@@ -25,20 +25,16 @@ import type { WorldView } from "@/lib/world";
 const W = 256;
 const H = 184;
 
-// The footer (h-14 = 56px) sits at the bottom of <main>, which the window
-// overlays; clear it plus a ~30px margin so the window floats just above it.
 const FOOTER_H = 56;
 const MARGIN = 30;
 
 const MOTIVATION_COLOR: Record<string, string> = {
-  material: "#E63946",
-  symbolic: "#2E5C9E",
-  normative: "#FFD23F",
-  power: "#2A9D5C",
+  material: "#0076E7",
+  symbolic: "#E93013",
+  normative: "#F29320",
+  power: "#249375",
 };
 
-// Black & white palettes, theme-aware and matched to the main Field canvas
-// (MOTIVATION_COLOR_MONO_* in simulation-canvas.tsx).
 const MOTIVATION_COLOR_MONO_LIGHT: Record<string, string> = {
   normative: "#4A4A4A",
   material: "#2E2E2E",
@@ -107,7 +103,6 @@ function MiniSimBody({
   const { resolvedTheme } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
-  // Mirrored so the RAF loop reads current values without re-subscribing.
   const monoRef = useRef(monochrome);
   const darkRef = useRef(resolvedTheme === "dark");
   useEffect(() => {
@@ -117,8 +112,6 @@ function MiniSimBody({
     darkRef.current = resolvedTheme === "dark";
   }, [resolvedTheme]);
 
-  // Animated mini-canvas while running — same interpolation curve as the main
-  // Field canvas, just rendered smaller and cheaper.
   useEffect(() => {
     if (!running) return;
     function loop() {
@@ -156,7 +149,6 @@ function MiniSimBody({
     };
   }, [running]);
 
-  // While paused, repaint once per turn change.
   useEffect(() => {
     if (running) return;
     void turn;
@@ -256,7 +248,6 @@ function drawMini(
       : "120, 120, 120"
     : "140, 170, 130";
 
-  // Resource hint
   for (let y = 0; y < world.height; y++) {
     for (let x = 0; x < world.width; x++) {
       const idx = y * world.width + x;
@@ -270,7 +261,6 @@ function drawMini(
     }
   }
 
-  // Agents interpolated between previous and current cell.
   const ease =
     progress < 0.5
       ? 4 * progress * progress * progress

@@ -5,7 +5,6 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Hanken Grotesk — Latin subset (basic English + Western European) */
 @font-face {
   font-family: "Hanken Grotesk";
   font-style: normal;
@@ -29,7 +28,6 @@
     U+2215, U+FEFF, U+FFFD;
 }
 
-/* Hanken Grotesk — Latin Extended (č, ć, đ, š, ž, ő, ű, and other CE/EE glyphs) */
 @font-face {
   font-family: "Hanken Grotesk";
   font-style: normal;
@@ -54,7 +52,6 @@
     U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* Newsreader — used only for brand-accented text (.text-brand) */
 @font-face {
   font-family: "Newsreader";
   font-style: italic;
@@ -137,40 +134,40 @@
 }
 
 :root {
-  --background: #fafafa;
+  --background: #f4f2eb;
   --foreground: #000000;
-  --card: #fbf9f7;
+  --card: #f9f8f2;
   --card-foreground: oklch(0.145 0 0);
-  --popover: #ffffff;
+  --popover: #fcfbf7;
   --popover-foreground: oklch(0.145 0 0);
-  --field: #ffffff;
+  --field: #fbf9f4;
   --brand: #0040ff;
   --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
+  --primary-foreground: oklch(0.985 0.006 94);
+  --secondary: oklch(0.952 0.009 94);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --muted: oklch(0.952 0.009 94);
+  --muted-foreground: oklch(0.565 0.01 94);
+  --accent: oklch(0.952 0.009 94);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.92 0.009 94);
+  --input: oklch(0.92 0.009 94);
+  --ring: oklch(0.72 0.01 94);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+  --sidebar: #f9f8f2;
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0.006 94);
+  --sidebar-accent: oklch(0.952 0.009 94);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-border: oklch(0.92 0.009 94);
+  --sidebar-ring: oklch(0.72 0.01 94);
 }
 
 .dark {
@@ -224,8 +221,6 @@
   }
 }
 
-/* Editorial emphasis (brand-colored <em> and italic display spans) keeps the
-   Newsreader italic display face. Links and nav using text-brand stay Hanken. */
 em.text-brand,
 .text-brand.italic,
 span.text-brand.italic {

@@ -93,8 +93,7 @@ export function ChartsPanel() {
                       indicator="line"
                       labelFormatter={(_v, payload) => {
                         const p = payload?.[0]?.payload as
-                          | { turn?: number }
-                          | undefined;
+                          { turn?: number } | undefined;
                         return `Turn ${p?.turn ?? 0}`;
                       }}
                     />
@@ -138,8 +137,7 @@ export function ChartsPanel() {
                       indicator="line"
                       labelFormatter={(_v, payload) => {
                         const p = payload?.[0]?.payload as
-                          | { turn?: number }
-                          | undefined;
+                          { turn?: number } | undefined;
                         return `Turn ${p?.turn ?? 0}`;
                       }}
                     />

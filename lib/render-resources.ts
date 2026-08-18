@@ -1,12 +1,3 @@
-/**
- * Shared resource-field renderer used by both Canvas2D and the Pixi
- * resource sprite (which renders to an off-screen Canvas2D).
- *
- * Each cell with stock ≥ half its capacity gets a small coloured dot
- * whose alpha tracks how stocked it is. Sugar and spice are nudged in
- * opposite directions inside the cell so they sit side by side rather
- * than overlapping when both are present.
- */
 export function drawResourceField(
   ctx: CanvasRenderingContext2D,
   field: Float32Array,
@@ -36,16 +27,12 @@ export function drawResourceField(
   }
 }
 
-/** Standard sugar tint — slightly desaturated green. */
 export const SUGAR_RGB: readonly [number, number, number] = [120, 200, 130];
 
-/** Standard spice tint — warm amber. */
 export const SPICE_RGB: readonly [number, number, number] = [214, 158, 90];
 
-/** Black & white mode — sugar reads as a lighter gray… */
 export const SUGAR_RGB_MONO: readonly [number, number, number] = [
   158, 158, 158,
 ];
 
-/** …and spice as a darker gray, so the two stay distinguishable. */
 export const SPICE_RGB_MONO: readonly [number, number, number] = [96, 96, 96];

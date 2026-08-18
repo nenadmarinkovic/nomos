@@ -22,8 +22,6 @@ datasource db {
   provider = "postgresql"
 }
 
-// -------- Auth (Better Auth shape) --------
-
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -54,8 +52,6 @@ model Session {
   @@index([token])
 }
 
-/// OAuth provider links. Unused until we add a social provider (GitHub /
-/// Google), but the table exists so Better Auth can light it up later.
 model Account {
   id                    String    @id @default(cuid())
   userId                String
@@ -77,7 +73,6 @@ model Account {
   @@index([userId])
 }
 
-/// Email-verification + password-reset tokens (Better Auth managed).
 model Verification {
   id         String   @id @default(cuid())
   identifier String
@@ -89,16 +84,10 @@ model Verification {
   @@index([identifier])
 }
 
-// -------- Application --------
-
 model Run {
   id          String   @id @default(cuid())
-  /// FK to User. Null means the run was saved anonymously.
   ownerId     String?
-  /// Opaque per-browser cuid (from localStorage `nomos-anon-id`). Set iff
-  /// `ownerId` is null. On sign-up we reassign these rows to the new user.
   ownerKey    String?
-  /// Opts the run into the public gallery.
   isPublic    Boolean  @default(false)
   name        String
   createdAt   DateTime @default(now())
@@ -107,11 +96,8 @@ model Run {
   alive       Int
   gini        Float
   totalWealth Float
-  /// JSON-encoded SimulationConfig.
   config      String
-  /// JSON-encoded HistoryPoint[].
   history     String
-  /// JSON-encoded ChronicleEntry[].
   chronicle   String
 
   owner User? @relation(fields: [ownerId], references: [id], onDelete: Cascade)

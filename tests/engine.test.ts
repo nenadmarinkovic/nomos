@@ -3,10 +3,6 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIG, type SimulationConfig } from "@/lib/config";
 import { Engine, type EngineSnapshot } from "@/lib/engine";
 
-// A small, fast, fully-specified config. Village scale keeps each run cheap
-// enough to tick hundreds of turns per test while still exercising every
-// mechanic (conflict, inheritance, cultural drift, substrate diffusion, the
-// token economy). Only the seed varies between cases.
 function config(seed: number): SimulationConfig {
   return {
     ...DEFAULT_CONFIG,
@@ -15,7 +11,6 @@ function config(seed: number): SimulationConfig {
   };
 }
 
-/** Run a fresh seeded engine for `turns` ticks and return every snapshot. */
 function run(seed: number, turns: number): EngineSnapshot[] {
   const engine = new Engine(config(seed));
   const frames: EngineSnapshot[] = [];
@@ -28,8 +23,6 @@ function run(seed: number, turns: number): EngineSnapshot[] {
 
 describe("Engine determinism", () => {
   it("produces an identical snapshot trajectory for the same seed", () => {
-    // This is the project's core promise: a run is a pure function of its
-    // seed + config, so a replay unfolds exactly as it first did.
     const a = run(1234, 200);
     const b = run(1234, 200);
     expect(b).toEqual(a);
@@ -38,13 +31,10 @@ describe("Engine determinism", () => {
   it("diverges for different seeds", () => {
     const a = run(1, 120);
     const b = run(2, 120);
-    // The seed must actually drive the simulation — two different seeds should
-    // not produce the same history. Compare the final frame.
     expect(b.at(-1)).not.toEqual(a.at(-1));
   });
 
   it("is independent of prior instances (no shared global state)", () => {
-    // Instantiating and running one engine must not perturb the next.
     run(777, 50);
     const isolated = run(1234, 200);
     const fresh = run(1234, 200);
@@ -60,12 +50,9 @@ describe("Engine invariants", () => {
   });
 
   it("keeps population within [0, initial cap]", () => {
-    const cap = 500; // village agent count
+    const cap = 500;
     for (const f of frames) {
       expect(f.alive).toBeGreaterThanOrEqual(0);
-      // Reproduction can grow the population past the seed count, but the
-      // logistic brake is anchored to a cap far above it; a village should
-      // never blow past a few thousand. Guard against runaway growth.
       expect(f.alive).toBeLessThan(cap * 20);
     }
   });

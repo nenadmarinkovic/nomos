@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getCaller } from "@/lib/api-auth";
 import type { SignificantEvent } from "@/lib/events";
 import {
   buildSystemPrompt,
@@ -13,6 +14,7 @@ import {
   MistralRequestError,
   mistralChat,
 } from "@/lib/mistral";
+import { checkObserveLimit, clientIp } from "@/lib/observe-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,12 +55,43 @@ export async function POST(req: Request) {
     );
   }
 
+  const caller = await getCaller(req);
+  const verdict = checkObserveLimit(caller, clientIp(req));
+  if (!verdict.ok) {
+    return NextResponse.json(
+      {
+        error:
+          verdict.scope === "global"
+            ? "The observers are catching their breath — this deployment has hit its hourly narration budget."
+            : "You are narrating faster than the observers can think. Try again shortly.",
+        code: "rate_limited",
+        retryAfter: verdict.retryAfterSec,
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(verdict.retryAfterSec),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(Math.ceil(verdict.resetAt / 1000)),
+        },
+      },
+    );
+  }
+
   try {
     const text = await mistralChat([
       { role: "system", content: buildSystemPrompt(observer) },
       { role: "user", content: buildUserPrompt(event, world, context) },
     ]);
-    return NextResponse.json({ observer, eventId: event.id, text });
+    return NextResponse.json(
+      { observer, eventId: event.id, text },
+      {
+        headers: {
+          "X-RateLimit-Remaining": String(verdict.remaining),
+          "X-RateLimit-Reset": String(Math.ceil(verdict.resetAt / 1000)),
+        },
+      },
+    );
   } catch (err) {
     if (err instanceof MistralConfigError) {
       return NextResponse.json(

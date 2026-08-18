@@ -1,35 +1,23 @@
 import { OBSERVER_INFO, type ObserverKey } from "@/lib/config";
 import type { SignificantEvent } from "@/lib/events";
 
-/**
- * Prompt construction for the AI observers. System prompt fixes the persona;
- * user prompt delivers the neutral facts.
- *
- * Pure module — safe to import from route handlers.
- */
-
 export interface WorldSummary {
   scale: string;
   landscape: string;
   equality: string;
 }
 
-/** Extra macro context passed alongside a single event so observers
- *  can read moments in the run's arc, not in isolation. */
 export interface SimContext {
-  /** Population share per motivation, canonical order. */
   motivationMix: {
     material: number;
     symbolic: number;
     normative: number;
     power: number;
   };
-  /** Recent significant events before this one, oldest first. */
   recentEvents: { turn: number; kind: string; title: string }[];
   ties: {
     count: number;
     topWeight: number;
-    /** Share of alive agents with no surviving tie. */
     isolatesShare: number;
   };
 }

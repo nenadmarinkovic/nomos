@@ -79,13 +79,10 @@ export function FloatingWindows() {
     const H = canvas.height || 600;
     const winH = WIN_HEIGHTS[key];
 
-    // Absolute drop position in container coords.
     const start = resolveWindowPosition(current, key, canvas);
     const nextX = start.x + e.delta.x;
     const nextY = start.y + e.delta.y;
 
-    // Anchor to the nearest corner — that anchor pins the window through
-    // later reflows.
     const centerX = nextX + WIN_WIDTH / 2;
     const centerY = nextY + winH / 2;
     const anchor: WindowAnchor =
@@ -146,7 +143,6 @@ function FloatingWindow({
 
   if (!visible) return null;
 
-  // Re-resolve every render so container reflow keeps the corner offset stable.
   const resolved = resolveWindowPosition(position, windowKey, canvasSize);
   const x = resolved.x + (transform?.x ?? 0);
   const y = resolved.y + (transform?.y ?? 0);
@@ -218,8 +214,7 @@ function GiniWindow() {
                 indicator="line"
                 labelFormatter={(_v, payload) => {
                   const p = payload?.[0]?.payload as
-                    | { turn?: number }
-                    | undefined;
+                    { turn?: number } | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />
@@ -266,8 +261,7 @@ function AliveWindow() {
                 indicator="line"
                 labelFormatter={(_v, payload) => {
                   const p = payload?.[0]?.payload as
-                    | { turn?: number }
-                    | undefined;
+                    { turn?: number } | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />
@@ -375,8 +369,7 @@ function PriceWindow() {
                 indicator="line"
                 labelFormatter={(_v, payload) => {
                   const p = payload?.[0]?.payload as
-                    | { turn?: number }
-                    | undefined;
+                    { turn?: number } | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />
@@ -407,10 +400,10 @@ const MOTIVATION_ORDER = [
   "power",
 ] as const;
 const MOTIVATION_COLORS: Record<(typeof MOTIVATION_ORDER)[number], string> = {
-  material: "#E63946",
-  symbolic: "#2E5C9E",
-  normative: "#FFD23F",
-  power: "#2A9D5C",
+  material: "#0076E7",
+  symbolic: "#E93013",
+  normative: "#F29320",
+  power: "#249375",
 };
 const MOTIVATION_LABELS: Record<(typeof MOTIVATION_ORDER)[number], string> = {
   material: "Material",
@@ -565,8 +558,7 @@ function MoneyWindow() {
                 indicator="line"
                 labelFormatter={(_v, payload) => {
                   const p = payload?.[0]?.payload as
-                    | { turn?: number }
-                    | undefined;
+                    { turn?: number } | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />
@@ -599,9 +591,6 @@ function TrustWindow() {
       history.map((p) => ({
         turn: p.turn,
         topInfluencerCentrality: p.topInfluencerCentrality,
-        // Rescale mistrust into the same visual band as centrality so both
-        // series read against a shared Y-domain (mistrust is 0..1, centrality
-        // is typically 0..~40 in practice).
         topIssuerMistrust: p.topIssuerMistrust * 40,
       })),
     [history],
@@ -633,8 +622,7 @@ function TrustWindow() {
                 indicator="line"
                 labelFormatter={(_v, payload) => {
                   const p = payload?.[0]?.payload as
-                    | { turn?: number }
-                    | undefined;
+                    { turn?: number } | undefined;
                   return `Turn ${p?.turn ?? 0}`;
                 }}
               />

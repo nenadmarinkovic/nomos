@@ -1,10 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-} from "recharts";
+import { ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 
 import { cn } from "@/lib/utils";
 
@@ -25,7 +22,8 @@ const ChartContext = React.createContext<ChartContextProps | null>(null);
 
 function useChart() {
   const context = React.useContext(ChartContext);
-  if (!context) throw new Error("useChart must be used within a <ChartContainer />");
+  if (!context)
+    throw new Error("useChart must be used within a <ChartContainer />");
   return context;
 }
 
@@ -86,8 +84,7 @@ function ChartStyle({ id, config }: { id: string; config: ChartConfig }) {
 ${theme === "dark" ? ".dark " : ""}[data-chart=${id}] {
 ${colorConfig
   .map(([key, item]) => {
-    const color =
-      item.theme?.[theme as "light" | "dark"] ?? item.color;
+    const color = item.theme?.[theme as "light" | "dark"] ?? item.color;
     return color ? `  --color-${key}: ${color};` : null;
   })
   .filter(Boolean)
@@ -158,7 +155,7 @@ function ChartTooltipContent({
     const itemConfig = getPayloadConfigFromPayload(config, item, key);
     const value =
       !labelKey && typeof label === "string"
-        ? config[label]?.label ?? label
+        ? (config[label]?.label ?? label)
         : itemConfig?.label;
 
     if (labelFormatter) {
@@ -171,7 +168,15 @@ function ChartTooltipContent({
 
     if (!value) return null;
     return <div className={cn("font-medium", labelClassName)}>{value}</div>;
-  }, [label, labelFormatter, payload, hideLabel, labelClassName, config, labelKey]);
+  }, [
+    label,
+    labelFormatter,
+    payload,
+    hideLabel,
+    labelClassName,
+    config,
+    labelKey,
+  ]);
 
   if (!active || !payload?.length) return null;
 

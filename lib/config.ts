@@ -1,27 +1,19 @@
 export type Scale = "village" | "town" | "city";
 
-/** Starting wealth concentration: 0 = perfectly equal, 1 = power-law extreme. */
 export type Equality = number;
 
 export type Landscape = "two_peaks" | "centre" | "scattered" | "flat";
 
 export type InitialSettlement =
-  | "scattered"
-  | "clustered"
-  | "single"
-  | "segregated";
+  "scattered" | "clustered" | "single" | "segregated";
 
 export type AgentSophistication =
-  | "minimal"
-  | "bounded_rational"
-  | "adaptive"
-  | "social";
+  "minimal" | "bounded_rational" | "adaptive" | "social";
 
 export type AgentMotivation = "material" | "symbolic" | "normative" | "power";
 
 export type InteractionTopology = "spatial" | "random" | "network";
 
-/** Discriminant for agent rule sets. New models slot in here. */
 export type AgentModelKind = "epstein_minimal";
 
 export type ObserverKey =
@@ -38,15 +30,10 @@ export type ObserverKey =
   | "axelrod";
 
 export interface WorldPhysics {
-  /** Resources consumed by each agent per turn. */
   metabolism: number;
-  /** Fraction of depleted resources that grow back each turn (0..1). */
   regrowthRate: number;
-  /** How many cells of the grid an agent can perceive. */
   vision: number;
-  /** Maximum age in turns before an agent dies. */
   lifespan: number;
-  /** Per-agent spread around metabolism / vision / lifespan means. 0 = identical, 1 = wide. */
   heterogeneity: number;
 }
 
@@ -55,22 +42,9 @@ export interface WorldConfig {
   equality: Equality;
   landscape: Landscape;
   initialSettlement: InitialSettlement;
-  /** Cultural transmission — agents occasionally adopt a wealthy neighbour's
-   *  motivation. Lets ways of being spread horizontally, not only descend
-   *  vertically through birth. */
   culturalTransmission: boolean;
-  /** Inheritance on death — the dying agent's holdings split among their
-   *  surviving trade-tie partners, weighted by tie strength. */
   inheritance: boolean;
-  /** Conflict — power-motivated agents may take a share of a weaker
-   *  neighbour's holdings. Power motivation gets actual teeth. */
   conflict: boolean;
-  /** Substrate diffusion — turns the landscape itself into a cellular
-   *  automaton. Standing resources bleed into adjacent cells (rich patches
-   *  feed exhausted ones) and each cell's fertility relaxes toward its
-   *  neighbours', so depletion spreads like desertification and fertile land
-   *  slowly reseeds the worn ground beside it. The agents stay an ABM; only
-   *  the ground they stand on gains CA dynamics. */
   substrateDiffusion: boolean;
   physics: WorldPhysics;
 }
@@ -82,10 +56,6 @@ export interface AgentModel {
   sophistication: WeightedSelection<AgentSophistication>;
   motivation: WeightedSelection<AgentMotivation>;
   topology: InteractionTopology;
-  /** Per-birth probability a child's traits are resampled from the
-   *  configured motivation mix instead of inherited from the parent.
-   *  Higher = more diversity rebleeds in after a monoculture takes over;
-   *  0 = strict heritability, monocultures lock in permanently. */
   mutationRate?: number;
 }
 
@@ -100,7 +70,10 @@ export function normalizeWeights<K extends string>(
   }
   if (total <= 0) return {};
   const out: Record<string, number> = {};
-  for (const [k, w] of Object.entries(weights) as [string, number | undefined][]) {
+  for (const [k, w] of Object.entries(weights) as [
+    string,
+    number | undefined,
+  ][]) {
     if (w === undefined) continue;
     out[k] = w / total;
   }
@@ -111,10 +84,9 @@ export function describeMix<K extends string>(
   weights: WeightedSelection<K>,
   labelOf: (k: K) => string,
 ): string {
-  const entries = Object.entries(weights).filter(([, w]) => w !== undefined) as [
-    K,
-    number,
-  ][];
+  const entries = Object.entries(weights).filter(
+    ([, w]) => w !== undefined,
+  ) as [K, number][];
   if (entries.length === 0) return "None";
   if (entries.length === 1) return labelOf(entries[0][0]);
   const total = entries.reduce((s, [, w]) => s + w, 0);

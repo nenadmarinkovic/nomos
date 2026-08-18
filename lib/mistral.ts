@@ -1,18 +1,8 @@
-/**
- * Minimal server-side Mistral chat client.
- *
- * Used by the /api/observe route to turn an event + observer persona into a
- * single short narration. One call per active observer per significant event —
- * never per tick. Keep this dependency-free so it stays cheap to reason about.
- */
-
 const MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions";
 
-/** Per-theorist narration model. Small is plenty for two-sentence readings. */
 export const MISTRAL_MODEL =
   process.env.MISTRAL_MODEL ?? "mistral-small-latest";
 
-/** Thrown when the API key is absent so the route can answer 503, not 500. */
 export class MistralConfigError extends Error {
   constructor(message = "MISTRAL_API_KEY is not configured") {
     super(message);
@@ -20,7 +10,6 @@ export class MistralConfigError extends Error {
   }
 }
 
-/** Thrown when Mistral itself rejects or fails the request. */
 export class MistralRequestError extends Error {
   constructor(
     message: string,

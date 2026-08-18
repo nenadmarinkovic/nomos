@@ -39,10 +39,10 @@ interface SimulationCanvasProps {
 }
 
 const MOTIVATION_COLOR_HEX: Record<string, number> = {
-  material: 0xe63946,
-  symbolic: 0x2e5c9e,
-  normative: 0xffd23f,
-  power: 0x2a9d5c,
+  material: 0x0076e7,
+  symbolic: 0xe93013,
+  normative: 0xf29320,
+  power: 0x249375,
 };
 
 const MOTIVATION_COLOR_MONO_LIGHT: Record<string, number> = {
@@ -278,7 +278,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
       lastTrailTurnRef.current = world.turn;
     }
 
-    // Fade + retire trails.
     if (trailLayer) {
       const trails = trailsRef.current;
       for (let i = trails.length - 1; i >= 0; i--) {
@@ -410,7 +409,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
   const rebuildAgentTextures = useCallback(() => {
     const app = appRef.current;
     const old = texturesRef.current;
-    // Not initialised yet — init() builds textures with the current flags.
     if (!app || !old) return;
     const next = buildMotivationTextures(
       app,
@@ -463,7 +461,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     if (!host || !container) return;
     let cancelled = false;
 
-    // Sync measurement — forces layout, gives real dims.
     const r0 = container.getBoundingClientRect();
     const initW = Math.max(1, Math.round(r0.width));
     const initH = Math.max(1, Math.round(r0.height));
@@ -505,7 +502,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         stage.addChild(trails);
         const agents = new Container();
         stage.addChild(agents);
-        // Selection above agents so the ring isn't occluded.
         const selectionLayer = new Graphics();
         stage.addChild(selectionLayer);
         app.stage.addChild(stage);
@@ -522,7 +518,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
         resourceTextureRef.current = resourceTexture;
         resourceSpriteRef.current = resourceSprite;
         appRef.current = app;
-        // Catch up if the container resized during async init.
         const s = currentSizeRef.current;
         if (s.width !== initW || s.height !== initH) {
           app.canvas.style.width = `${s.width}px`;
@@ -592,7 +587,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     };
   }, [running, paint]);
 
-  // Clear when no run is active.
   useEffect(() => {
     if (started) return;
     const layer = agentLayerRef.current;
@@ -744,7 +738,6 @@ function drawShape(g: Graphics, motivation: MotivationKey, color: number) {
       .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
     return;
   }
-  // power — diamond
   g.poly([cx, cy - half, cx + half, cy, cx, cy + half, cx - half, cy])
     .fill(color)
     .stroke({ color: 0x141414, width: 2, alpha: 0.6 });

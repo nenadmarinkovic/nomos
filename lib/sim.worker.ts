@@ -7,6 +7,8 @@ const ctx = self as unknown as {
   onmessage: ((e: MessageEvent) => void) | null;
 };
 
-const core = new SimWorkerCore((msg, transfer) => ctx.postMessage(msg, transfer));
+const core = new SimWorkerCore((msg, transfer) =>
+  ctx.postMessage(msg, transfer),
+);
 
 ctx.onmessage = (e: MessageEvent) => core.handle(e.data as WorkerInbound);

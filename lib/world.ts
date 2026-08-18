@@ -1,9 +1,5 @@
 import type { AgentMotivation } from "@/lib/config";
 
-// The engine runs in a Web Worker. Main thread reads `WorldView` snapshots
-// posted across the boundary. Engine itself implements `WorldView`, so the
-// reader code is the same on both sides.
-
 export const MOTIVATIONS: readonly AgentMotivation[] = [
   "material",
   "symbolic",
@@ -11,7 +7,6 @@ export const MOTIVATIONS: readonly AgentMotivation[] = [
   "power",
 ];
 
-/** Mirror of engine `AgentTraits`. Duplicated so the worker boundary stays loose. */
 export interface RenderAgentTraits {
   greed: number;
   prosociality: number;
@@ -19,7 +14,6 @@ export interface RenderAgentTraits {
   statusSeeking: number;
 }
 
-/** Subset of `Agent` the UI reads. */
 export interface RenderAgent {
   id: number;
   alive: boolean;
@@ -47,9 +41,7 @@ export interface WorldView {
   spice: Float32Array;
   maxSpice: Float32Array;
   occupants: Int32Array;
-  /** Indexed by agent id. */
   agents: readonly RenderAgent[];
-  /** Flat [loId, hiId, weight, …] of decaying trade ties. */
   ties: Float32Array;
 }
 
@@ -155,7 +147,6 @@ export function serializeWorld(view: WorldView): {
   };
 }
 
-/** Rehydrate a posted frame into a `WorldView`. Wraps the buffers, no copy. */
 export function deserializeWorld(frame: WorldFrame): WorldView {
   const data = new Float32Array(frame.agents);
   const agents: RenderAgent[] = new Array(frame.count);

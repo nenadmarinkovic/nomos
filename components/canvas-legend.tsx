@@ -14,16 +14,12 @@ import {
 import { useSimulationStore } from "@/lib/store";
 
 const MOTIVATION_COLOR: Record<string, string> = {
-  material: "#E63946",
-  symbolic: "#2E5C9E",
-  normative: "#FFD23F",
-  power: "#2A9D5C",
+  material: "#0076E7",
+  symbolic: "#E93013",
+  normative: "#F29320",
+  power: "#249375",
 };
 
-// Black & white mode: shapes use the foreground colour (theme-aware, so they
-// stay high-contrast in both themes) stepped by opacity to keep the four
-// motivations distinguishable. Ordering matches the mono palette in
-// simulation-canvas.tsx.
 const MOTIVATION_MONO_OPACITY: Record<string, number> = {
   normative: 1,
   material: 0.82,
@@ -38,8 +34,6 @@ const MOTIVATION_LABEL: Record<string, string> = {
   power: "Power",
 };
 
-// Short "what drives this agent" gloss for each motivation. Mirrors the hints
-// shown on the setup screen (lib/config.ts) so the vocabulary stays consistent.
 const MOTIVATION_HINT: Record<string, string> = {
   material: "Resources and labour come first — survive, harvest, get rich.",
   symbolic: "Status, taste, and distinction drive choices.",
@@ -199,7 +193,14 @@ function LegendShape({
 
   const shape =
     motivation === "symbolic" ? (
-      <circle cx="7" cy="7" r="5.5" fill={color} stroke={stroke} strokeWidth={sw} />
+      <circle
+        cx="7"
+        cy="7"
+        r="5.5"
+        fill={color}
+        stroke={stroke}
+        strokeWidth={sw}
+      />
     ) : motivation === "normative" ? (
       <polygon
         points="7,1.5 12.5,12 1.5,12"
@@ -217,7 +218,15 @@ function LegendShape({
         strokeLinejoin="miter"
       />
     ) : (
-      <rect x="1.5" y="1.5" width="11" height="11" fill={color} stroke={stroke} strokeWidth={sw} />
+      <rect
+        x="1.5"
+        y="1.5"
+        width="11"
+        height="11"
+        fill={color}
+        stroke={stroke}
+        strokeWidth={sw}
+      />
     );
 
   return (

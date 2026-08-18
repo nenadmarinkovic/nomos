@@ -7,7 +7,6 @@ import type { SaveRunInput } from "@/lib/runs-api";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Fields returned for the library list — metadata only, no heavy payload. */
 const SUMMARY_SELECT = {
   id: true,
   name: true,

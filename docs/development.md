@@ -61,7 +61,7 @@ The runtime splits across three layers.
 
 **Server** — Next.js route handlers.
 
-- `/api/observe` accepts an event + theorist payload from the browser, builds the per-theorist system + user prompt, calls Mistral, and streams the reading back into the chronicle.
+- `/api/observe` accepts an event + theorist payload from the browser, builds the per-theorist system + user prompt, calls Mistral, and streams the reading back into the chronicle. It is the only endpoint that costs money per call, so it is rate limited (`lib/rate-limit.ts`, policy in `lib/observe-rate-limit.ts`): a per-minute burst rule under a per-hour volume rule, per caller — by user id when signed in, otherwise by IP — plus a deployment-wide hourly ceiling. Over the limit it answers `429` with `Retry-After`, and the narrator honours it by pausing narration rather than retrying. Limits are env-tunable (`OBSERVE_LIMIT_*`, see `.env.example`). Buckets are in-process, so a multi-instance deployment enforces them per instance.
 
 **External** — Mistral API (`mistral-small`). One LLM call per significant event, not per tick. Without `MISTRAL_API_KEY` the simulation still runs; observers stay silent.
 

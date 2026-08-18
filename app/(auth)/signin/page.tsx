@@ -111,8 +111,6 @@ function SignInForm() {
   );
 }
 
-// Shown while the Suspense boundary resolves useSearchParams(). Mirrors the
-// form's footprint so the page doesn't jump when the real form mounts.
 function AuthFormFallback() {
   return (
     <div className="space-y-7" aria-hidden>

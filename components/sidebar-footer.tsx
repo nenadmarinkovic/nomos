@@ -184,7 +184,6 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
           sideOffset={8}
           className="w-60"
         >
-          {/* User identity block */}
           <div className="flex items-center gap-3 px-2 py-2">
             <span
               aria-hidden
@@ -214,7 +213,6 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-/** Theme picker row, styled to live inside the dropdown menu. */
 function ThemeRow() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);

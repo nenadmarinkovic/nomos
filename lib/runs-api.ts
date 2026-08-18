@@ -2,7 +2,6 @@ import { anonIdHeaders } from "@/lib/anon-id";
 import type { SimulationConfig } from "@/lib/config";
 import type { HistoryPoint, ChronicleEntry } from "@/lib/store";
 
-/** A saved run as it appears in the library list — metadata only, no payload. */
 export interface RunSummary {
   id: string;
   name: string;
@@ -14,14 +13,12 @@ export interface RunSummary {
   totalWealth: number;
 }
 
-/** A saved run with everything needed to browse or replay it. */
 export interface RunDetail extends RunSummary {
   config: SimulationConfig;
   history: HistoryPoint[];
   chronicle: ChronicleEntry[];
 }
 
-/** What the client sends to persist the current run. */
 export interface SaveRunInput {
   name: string;
   config: SimulationConfig;
@@ -45,8 +42,6 @@ export async function listRuns(): Promise<RunSummary[]> {
   return asJson<RunSummary[]>(
     await fetch("/api/runs", {
       cache: "no-store",
-      // `create: false` — listing is a read-only first visit, no need to
-      // mint an anonymous id just to look at the (empty) library.
       headers: anonIdHeaders(false),
     }),
   );
@@ -58,7 +53,6 @@ export async function saveRun(input: SaveRunInput): Promise<RunSummary> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Saves need an owner. Mint the anon id if it doesn't exist yet.
         ...anonIdHeaders(true),
       },
       body: JSON.stringify(input),
@@ -83,11 +77,6 @@ export async function deleteRun(id: string): Promise<void> {
   if (!res.ok) throw new Error(`Delete failed (${res.status})`);
 }
 
-/**
- * Reassign any runs saved under this browser's anonymous `ownerKey` to the
- * currently-authenticated user. Safe to call multiple times; safe to call
- * when no anon id exists (the server returns `{ claimed: 0 }`).
- */
 export async function claimAnonRuns(): Promise<number> {
   const res = await fetch("/api/runs/claim", {
     method: "POST",

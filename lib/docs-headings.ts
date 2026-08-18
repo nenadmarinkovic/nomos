@@ -1,11 +1,3 @@
-/**
- * Markdown TOC helpers.
- *
- * Extracts h2/h3 headings from a markdown source and produces slugs that
- * match `rehype-slug`'s output. Used to render the right-side "On this
- * page" navigation in the docs.
- */
-
 export interface DocHeading {
   level: 2 | 3;
   text: string;
@@ -19,15 +11,13 @@ export interface DocHeading {
 export function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/&[a-z]+;|&#\d+;/g, "") // strip HTML entities
-    .replace(/<[^>]+>/g, "") // strip inline tags
-    .replace(/[^\w\s-]/g, "") // strip punctuation
+    .replace(/&[a-z]+;|&#\d+;/g, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[^\w\s-]/g, "")
     .trim()
     .replace(/\s+/g, "-");
 }
 
-/** Parse a markdown source and return its h2/h3 headings as a flat list,
- *  skipping headings inside fenced code blocks. */
 export function extractHeadings(markdown: string): DocHeading[] {
   const headings: DocHeading[] = [];
   const lines = markdown.split("\n");

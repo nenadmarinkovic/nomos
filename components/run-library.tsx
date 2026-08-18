@@ -90,7 +90,6 @@ export function RunLibrary() {
     setSaving(true);
     setError(null);
     try {
-      // Read the freshest state at click time, not at render time.
       const s = useSimulationStore.getState();
       const summary = await saveRun({
         name: trimmed,

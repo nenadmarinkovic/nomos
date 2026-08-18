@@ -11,10 +11,10 @@ import { useWorldSnapshot } from "@/lib/use-world-snapshot";
 import type { RenderAgent, WorldView } from "@/lib/world";
 
 const MOTIVATION_COLOR: Record<string, string> = {
-  material: "#E63946",
-  symbolic: "#2E5C9E",
-  normative: "#FFD23F",
-  power: "#2A9D5C",
+  material: "#0076E7",
+  symbolic: "#E93013",
+  normative: "#F29320",
+  power: "#249375",
 };
 
 export function AgentsPage() {

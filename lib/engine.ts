@@ -22,7 +22,6 @@ const AGENT_COUNT: Record<Scale, number> = {
   city: 5000,
 };
 
-/** Trait values ∈ [0,1]. Every rule reads only from these. */
 export interface AgentTraits {
   greed: number;
   prosociality: number;
@@ -35,7 +34,6 @@ export interface Agent {
   alive: boolean;
   x: number;
   y: number;
-  /** Position at tick start — used to interpolate the render. */
   prevX: number;
   prevY: number;
   sugar: number;
@@ -47,32 +45,36 @@ export interface Agent {
   maxAge: number;
   initialSugar: number;
   initialSpice: number;
-  /** Derived from traits each tick — a label, not a driver. */
   motivation: AgentMotivation;
   traits: AgentTraits;
   sophistication: AgentSophistication;
-  /** Adaptive movement: learned willingness to range far (0..1). */
   boldness: number;
-  /** Adaptive movement: last tick's holdings, to detect gain or loss. */
   lastHoldings: number;
-  /** Others may trade with this agent again after this turn. */
   shamedUntilTurn: number;
-  /** Recent good trade partners — copied by cultural imitation. */
   favouredPartners: number[];
-  /** Cells this agent has recently harvested well. Bounded queue, biases
-   *  `scoreCell` toward known-productive ground. */
   goodCells: number[];
-  /** EMA of "was the last harvest strong" — the reference against which
-   *  new harvests are judged as noteworthy. */
   meanHarvest: number;
 }
 
-/** Seed for each named motivation. New agents draw a jittered vector
- *  around one of these; the motivation label is derived from the vector. */
 const MOTIVATION_TRAIT_CENTROID: Record<AgentMotivation, AgentTraits> = {
-  material: { greed: 0.7, prosociality: 0.5, dominance: 0.3, statusSeeking: 0.3 },
-  symbolic: { greed: 0.4, prosociality: 0.5, dominance: 0.2, statusSeeking: 0.8 },
-  normative: { greed: 0.3, prosociality: 0.9, dominance: 0.1, statusSeeking: 0.4 },
+  material: {
+    greed: 0.7,
+    prosociality: 0.5,
+    dominance: 0.3,
+    statusSeeking: 0.3,
+  },
+  symbolic: {
+    greed: 0.4,
+    prosociality: 0.5,
+    dominance: 0.2,
+    statusSeeking: 0.8,
+  },
+  normative: {
+    greed: 0.3,
+    prosociality: 0.9,
+    dominance: 0.1,
+    statusSeeking: 0.4,
+  },
   power: { greed: 0.6, prosociality: 0.1, dominance: 0.9, statusSeeking: 0.5 },
 };
 
@@ -93,7 +95,6 @@ function sampleTraits(
   };
 }
 
-/** Small random walk around the parent — children inherit, not clone. */
 function driftTraits(base: AgentTraits, rng: () => number): AgentTraits {
   const TRAIT_DRIFT = 0.05;
   const step = (v: number) =>
@@ -114,7 +115,6 @@ function traitDistance(a: AgentTraits, b: AgentTraits): number {
   return Math.sqrt(dg * dg + dp * dp + dd * dd + ds * ds);
 }
 
-/** Linear pull: `rate` = 0 keeps `traits`, `rate` = 1 becomes `target`. */
 function pullTraitsToward(
   traits: AgentTraits,
   target: AgentTraits,
@@ -131,14 +131,10 @@ function pullTraitsToward(
   };
 }
 
-// Trait-only rule helpers. This is where sociological intuitions live.
-
-/** Greedy → harvest more. Dominant → harvest less (they seize instead). */
 function sugarYieldFromTraits(t: AgentTraits): number {
   return clamp01_5(0.6 + 0.8 * t.greed - 0.8 * t.dominance);
 }
 
-/** Status-seekers favour luxury (spice); greed lifts both yields. */
 function spiceYieldFromTraits(t: AgentTraits): number {
   return clamp01_5(
     0.5 + 0.5 * t.greed + 0.6 * t.statusSeeking - 0.8 * t.dominance,
@@ -149,7 +145,6 @@ function clamp01_5(v: number): number {
   return v < 0.3 ? 0.3 : v > 1.5 ? 1.5 : v;
 }
 
-/** Nearest centroid label. The label describes behaviour, doesn't drive it. */
 function motivationFromTraits(t: AgentTraits): AgentMotivation {
   let best: AgentMotivation = "material";
   let bestDist = Infinity;
@@ -169,38 +164,29 @@ function motivationFromTraits(t: AgentTraits): AgentMotivation {
   return best;
 }
 
-/** Per-tick attack chance. Squared so borderline-dominant rarely attack. */
 function attackPropensity(t: AgentTraits): number {
   const ATTEMPT_RATE = 0.18;
   return ATTEMPT_RATE * t.dominance * t.dominance * (1 - t.prosociality);
 }
 
-/** Prosociality above this threshold triggers the shaming latch. */
 const WITNESS_PROSOCIALITY_THRESHOLD = 0.65;
 
-/** Refuse-shamed odds. Ignore below 0.4, always refuse above 0.8. */
 function refuseShamedProbability(t: AgentTraits): number {
   const p = t.prosociality;
   return p < 0.4 ? 0 : Math.min(1, (p - 0.4) / 0.4);
 }
 
-/** Trade bonus. Geometric so one defector kills it. */
 function cooperativeBonus(a: AgentTraits, b: AgentTraits): number {
   return 0.1 * Math.min(a.prosociality, b.prosociality);
 }
 
-/** Odds an agent looks for a richer neighbour to imitate this tick. */
 function imitationPropensity(t: AgentTraits): number {
   const BASE = 0.03;
   return BASE * t.statusSeeking;
 }
 
-/** Baseline for issuer trustworthiness so fresh IOUs don't collapse
- *  before reaching a third holder. */
 const TOKEN_PRIOR_LIABILITY = 4;
 
-/** Seller-side accept probability. The 0.08 floor lets tokens reach
- *  third-party sellers with no personal tie to the issuer. */
 function tokenAcceptanceProb(
   sellerTraits: AgentTraits,
   trustInIssuer: number,
@@ -226,7 +212,6 @@ function scoreCellByTraits(
   const predatoryWeight =
     ownWealth > neighbourAvgWealth ? 0.8 * t.dominance : 0;
   const statusWeight = 0.1 * t.statusSeeking;
-  // Barren cells discount raw resources, so agents drift off worn ground.
   const foresight = 0.4 + 0.6 * fertility;
   return (
     resources * resourceWeight * foresight +
@@ -239,23 +224,30 @@ export function holdings(a: Agent): number {
   return a.sugar + a.spice;
 }
 
-/** How much sugar this agent will give up for one spice, given their
- *  current holdings and metabolism. Two agents with different MRS both
- *  gain by trading toward each other's ratio. */
 export function mrs(a: Agent): number {
-  return (a.sugar / a.sugarMetab) / (a.spice / a.spiceMetab);
+  return a.sugar / a.sugarMetab / (a.spice / a.spiceMetab);
 }
 
-/** Cobb-Douglas welfare. Both movement and trade try to raise it. */
-function welfare(sugar: number, spice: number, ms: number, msp: number): number {
+function welfare(
+  sugar: number,
+  spice: number,
+  ms: number,
+  msp: number,
+): number {
   const mt = ms + msp;
   return Math.pow(sugar, ms / mt) * Math.pow(spice, msp / mt);
 }
 
 export const WEALTH_BIN_EDGES = [5, 10, 20, 40, 80] as const;
-export const WEALTH_BIN_LABELS = ["<5", "5–10", "10–20", "20–40", "40–80", "80+"] as const;
+export const WEALTH_BIN_LABELS = [
+  "<5",
+  "5–10",
+  "10–20",
+  "20–40",
+  "40–80",
+  "80+",
+] as const;
 
-// Tie weight: +INCREMENT per trade, ×DECAY per tick, drops at THRESHOLD, capped at CAP.
 const TIE_INCREMENT = 1;
 const TIE_DECAY = 0.97;
 const TIE_THRESHOLD = 0.25;
@@ -273,7 +265,6 @@ export interface EngineSnapshot {
   gini: number;
   totalWealth: number;
   wealthBins: number[];
-  /** Geometric mean of this turn's trade prices (sugar/spice), or 0. */
   tradePrice: number;
   tradeVolume: number;
   motivationCounts: {
@@ -282,36 +273,23 @@ export interface EngineSnapshot {
     normative: number;
     power: number;
   };
-  /** Spatial sorting of motivation. 0 = fully mixed, 1 = fully sorted. */
   segregation: number;
-  /** Successful seizures this turn. */
   coercionCount: number;
-  /** Seizures that drew a prosocial-witness sanction this turn. */
   shamingCount: number;
   tieCount: number;
-  /** Share of living agents with no surviving trade tie. */
   isolateShare: number;
   blightActive: boolean;
-  /** Turn the current/last blight began; -9999 if none. */
   blightStartedTurn: number;
-  /** Plague deaths this turn (0 otherwise). */
   plagueDeathsThisTurn: number;
-  /** Carrying capacity lost vs pristine landscape, 0..1. */
   landDegradation: number;
-  /** Total tokens held across all agents. */
   tokenSupply: number;
   tokenTradeVolume: number;
-  /** Biggest issuer by outstanding liability; -1 if none. */
   topIssuerId: number;
   topIssuerLiability: number;
-  /** Issuers held by ≥3 distinct agents — the "money" threshold. */
   circulatingIssuers: number;
-  /** Top agent by inbound trust weight; -1 if none. */
   topInfluencerId: number;
   topInfluencerCentrality: number;
-  /** Share of population distrusting the top issuer, 0..1. */
   topIssuerMistrust: number;
-  /** True on the turn a run on the top issuer's tokens fires. */
   bankRunActive: boolean;
   bankRunStartedTurn: number;
 }
@@ -319,17 +297,14 @@ export interface EngineSnapshot {
 export class Engine {
   readonly width: number;
   readonly height: number;
-  /** Loses capacity on harvest, recovers when fallow. */
   maxCells: Float32Array;
   readonly cells: Float32Array;
   maxSpice: Float32Array;
   readonly spice: Float32Array;
   readonly occupants: Int32Array;
-  /** Pristine ceilings. `maxCells`/`maxSpice` recover toward these. */
   private originalMaxCells: Float32Array;
   private originalMaxSpice: Float32Array;
   private pristineLandTotal: number;
-  /** Scratch buffer for the synchronous substrate CA step. */
   private diffScratch: Float32Array;
   agents: Agent[];
   turn = 0;
@@ -339,22 +314,15 @@ export class Engine {
   private lastCoercionCount = 0;
   private lastShamingCount = 0;
 
-  /** Blight halves regrowth for a stretch; plague kills a random share.
-   *  See `rollShocks` — both are gated by the world's own state. */
   private blightUntilTurn = 0;
   private lastBlightTurn = -9999;
   private lastPlagueTurn = -9999;
   private lastPlagueDeaths = 0;
 
-  /** Sparse pair map. Outer key = lower agent id, inner key = higher. */
   private tiesMap = new Map<number, Map<number, number>>();
 
-  /** distrust[witness][offender] — grows on witnessed coercion, spreads
-   *  along ties, decays per turn. This is where an emergent norm lives. */
   private distrust = new Map<number, Map<number, number>>();
 
-  /** issuerDistrust[witness][issuer] — grows on witnessed default, damps
-   *  future acceptance of that issuer's tokens. */
   private issuerDistrust = new Map<number, Map<number, number>>();
 
   private offenderNotoriety = new Map<number, number>();
@@ -365,7 +333,6 @@ export class Engine {
   private bankRunTurn = -9999;
   private bankRunIssuerId = -1;
 
-  // Token ledger. Holdings[holder][issuer] = qty. Liability[issuer] = sum.
   private tokenHoldings = new Map<number, Map<number, number>>();
   private tokenLiability = new Map<number, number>();
   private tokenIssuedLifetime = new Map<number, number>();
@@ -379,9 +346,7 @@ export class Engine {
   private conflict: boolean;
   private substrateDiffusion: boolean;
   private topology: InteractionTopology;
-  /** Soft cap: birth rate scales down as population approaches this. */
   private populationCap: number;
-  /** Rare-mutation picker: resamples a child's trait centroid from the mix. */
   private mutationMotivation: () => AgentMotivation;
   private mutationRate: number;
 
@@ -420,22 +385,16 @@ export class Engine {
     this.diffScratch = new Float32Array(total);
     this.pristineLandTotal = 0;
     for (let i = 0; i < total; i++) {
-      this.pristineLandTotal += this.originalMaxCells[i] + this.originalMaxSpice[i];
+      this.pristineLandTotal +=
+        this.originalMaxCells[i] + this.originalMaxSpice[i];
     }
 
-    // Seed resources instead of filling to capacity. Only the peaks start
-    // populated; the rest of the map is empty and gets fed by regrowth and
-    // substrate diffusion during warm-up.
     const INITIAL_STOCK_FRACTION = 0.05;
     for (let i = 0; i < total; i++) {
       this.cells[i] = this.maxCells[i] * INITIAL_STOCK_FRACTION;
       this.spice[i] = this.maxSpice[i] * INITIAL_STOCK_FRACTION;
     }
 
-    // Let the world green in before agents arrive. Two full seasonal cycles
-    // of regrowth + substrate diffusion, with occupants[] still all -1, so
-    // capacity is unspoiled and diffusion spreads stock outward from the
-    // seed nuclei.
     const WARMUP_TICKS = 120;
     const priorDiffusion = this.substrateDiffusion;
     this.substrateDiffusion = true;
@@ -482,7 +441,6 @@ export class Engine {
     }
     shuffle(order, this.rng);
 
-    // Move + harvest.
     for (const id of order) {
       const a = this.agents[id];
       if (!a.alive) continue;
@@ -523,15 +481,11 @@ export class Engine {
     }
   }
 
-  /** Each agent rolls attack; targets a visibly poorer non-partner, non-peer. */
   private combatPhase(): void {
     if (!this.conflict) return;
 
     const MIN_GAP = 4;
     const TAKE_FRACTION = 0.3;
-    // Skip near-equal-dominance peers so it doesn't collapse into a
-    // dominance-on-dominance free-for-all.
-    // dominance-on-dominance free-for-all.
     const PEER_RATIO = 0.7;
 
     for (const a of this.agents) {
@@ -557,7 +511,6 @@ export class Engine {
           const t = this.agents[occ];
           if (!t.alive) continue;
           if (t.traits.dominance >= peerThreshold) continue;
-          // Trade partners are off-limits — embedded relationships shield.
           if (this.getTie(a.id, t.id) > TIE_THRESHOLD) continue;
           const gap = myWealth - (t.sugar + t.spice);
           if (gap > bestGap) {
@@ -613,9 +566,6 @@ export class Engine {
     }
   }
 
-  /** Drift each agent's traits toward a wealthier visible neighbour.
-   *  Speed scales with `statusSeeking`; distance travelled costs wealth
-   *  (habitus inertia — identity change isn't free). */
   private culturalPhase(): void {
     if (!this.culturalTransmission) return;
 
@@ -668,7 +618,6 @@ export class Engine {
       }
       a.traits = newTraits;
 
-      // Copy the neighbour's strongest distrust — "stay clear of X" spreads.
       const nbDistrust = this.distrust.get(bestNeighbour.id);
       if (nbDistrust && nbDistrust.size > 0) {
         let bestOffender = -1;
@@ -685,7 +634,6 @@ export class Engine {
         }
       }
 
-      // Practice imitation: adopt one of the neighbour's favoured partners.
       const nbFavs = bestNeighbour.favouredPartners;
       if (nbFavs.length > 0) {
         const pick = nbFavs[Math.floor(this.rng() * nbFavs.length)];
@@ -697,7 +645,6 @@ export class Engine {
     }
   }
 
-  /** Birth chance per agent: wealth × mid-life bell × soft population brake. */
   private reproductionPhase(livingIds: number[]): void {
     const populationFactor = Math.max(
       0,
@@ -711,12 +658,10 @@ export class Engine {
       const a = this.agents[id];
       if (!a.alive) continue;
 
-      // Bell curve: peak fertility mid-life, zero at the extremes.
       const ageNorm = a.maxAge > 0 ? a.age / a.maxAge : 0.5;
       const ageFactor = Math.max(0, 1 - Math.abs(ageNorm - 0.5) * 2.5);
       if (ageFactor <= 0) continue;
 
-      // Capped so one hoarder can't dominate births.
       const wealth = a.sugar + a.spice;
       const wealthFactor = Math.min(2, wealth / 20);
       if (wealthFactor <= 0) continue;
@@ -728,7 +673,6 @@ export class Engine {
     }
   }
 
-  /** Place a child near the parent. Inherits with drift; rare mutations resample. */
   private bear(parent: Agent): void {
     let idx = this.findEmptyCellNear(parent.x, parent.y, parent.vision);
     if (idx < 0) idx = this.findEmptyCell();
@@ -742,10 +686,6 @@ export class Engine {
       : sampleTraits(this.mutationMotivation(), this.rng);
     const childMotivation = motivationFromTraits(childTraits);
 
-    // Economic capital transfer: the parent spends a share of *current*
-    // holdings on the child, floored at the baseline so a newborn always has
-    // enough runway to find its first harvest. Wealthy families raise wealthy
-    // children; poor families raise poor ones.
     const BEQUEST_SHARE = 0.25;
     const sugarGift = Math.max(
       parent.initialSugar,
@@ -788,12 +728,7 @@ export class Engine {
     this.occupants[idx] = child.id;
   }
 
-  /** Random empty cell within `radius` of (cx, cy), or -1 if none found. */
-  private findEmptyCellNear(
-    cx: number,
-    cy: number,
-    radius: number,
-  ): number {
+  private findEmptyCellNear(cx: number, cy: number, radius: number): number {
     const r = Math.max(1, Math.min(radius, 6));
     for (let attempt = 0; attempt < 16; attempt++) {
       const dx = Math.floor(this.rng() * (2 * r + 1)) - r;
@@ -807,16 +742,19 @@ export class Engine {
     return -1;
   }
 
-  private regrow(stock: Float32Array, max: Float32Array, isSugar: boolean): void {
-    // Regrowth swings ~30–170% over a 60-turn season.
+  private regrow(
+    stock: Float32Array,
+    max: Float32Array,
+    isSugar: boolean,
+  ): void {
     const SEASON_PERIOD = 60;
     const SEASON_AMPLITUDE = 0.7;
     const seasonal =
-      1 + SEASON_AMPLITUDE * Math.sin((this.turn * 2 * Math.PI) / SEASON_PERIOD);
+      1 +
+      SEASON_AMPLITUDE * Math.sin((this.turn * 2 * Math.PI) / SEASON_PERIOD);
     const blightActive = isSugar && this.turn < this.blightUntilTurn;
     const blightFactor = blightActive ? 0.4 : 1;
     const rate = this.regrowthRate * seasonal * blightFactor;
-    // Empty cells slowly recover carrying capacity toward pristine.
     const RECOVERY_RATE = 0.0008;
     const original = isSugar ? this.originalMaxCells : this.originalMaxSpice;
     for (let i = 0; i < stock.length; i++) {
@@ -863,9 +801,6 @@ export class Engine {
     stock.set(out);
   }
 
-  /** Pull each cell's fertility fraction (current / pristine) toward its
-   *  neighbours'. Fraction space keeps peaks as peaks — only depletion
-   *  travels. Naturally barren cells stay out. */
   private spreadFertility(max: Float32Array, original: Float32Array): void {
     const w = this.width;
     const h = this.height;
@@ -909,17 +844,12 @@ export class Engine {
     max.set(out);
   }
 
-  /** Blight fires when a local patch of land has been worn past the
-   *  threshold; plague fires when a dense contact cluster crosses it,
-   *  and transmits along the favoured-partner graph. Both come from
-   *  what the society has done to itself, not a global dice roll. */
   private rollShocks(): void {
     const BLIGHT_COOLDOWN = 150;
     const PLAGUE_COOLDOWN = 220;
     if (this.turn < 100) return;
     if (this.turn < this.blightUntilTurn) return;
     if (this.turn - this.lastBlightTurn < BLIGHT_COOLDOWN) {
-      // Still within the blight-refractory period. Plague can still fire.
     } else if (this.detectLocalBlight()) {
       this.blightUntilTurn = this.turn + 25;
       this.lastBlightTurn = this.turn;
@@ -929,9 +859,6 @@ export class Engine {
     this.detectAndCascadePlague();
   }
 
-  /** Scan the grid for the worst 5×5 neighbourhood degradation. If any
-   *  patch has lost more than the threshold of its pristine capacity,
-   *  the blight fires — desertification travelling outward. */
   private detectLocalBlight(): boolean {
     const LOCAL_BLIGHT_THRESHOLD = 0.38;
     const R = 2;
@@ -958,9 +885,6 @@ export class Engine {
     return false;
   }
 
-  /** Density gate + partner-graph cascade. A dense-cluster seed becomes
-   *  patient zero; infection spreads along favoured-partner ties with
-   *  decreasing probability. High-prosociality agents resist a little. */
   private detectAndCascadePlague(): void {
     const PLAGUE_DENSITY = 0.07;
     let alive = 0;
@@ -979,13 +903,12 @@ export class Engine {
         for (let dx = -1; dx <= 1; dx++) {
           const nx = cand.x + dx;
           const ny = cand.y + dy;
-          if (nx < 0 || ny < 0 || nx >= this.width || ny >= this.height) continue;
+          if (nx < 0 || ny < 0 || nx >= this.width || ny >= this.height)
+            continue;
           const occ = this.occupants[ny * this.width + nx];
           if (occ !== -1) count++;
         }
       }
-      // Prefer clustered seeds but accept a lone one if all candidates were
-      // isolated — otherwise sparse populations never seed a plague at all.
       if (count > seedNeighbourhood) {
         seedNeighbourhood = count;
         seed = cand;
@@ -1009,8 +932,6 @@ export class Engine {
       if (!ag?.alive) continue;
       const immunity = SURVIVE_BONUS * ag.traits.prosociality;
       const isSeed = step === 1;
-      // Patient zero always contracts — otherwise a lucky immunity roll
-      // silently defeats the outbreak before it starts.
       const dies = isSeed || this.rng() < strength * (1 - immunity);
       if (dies) {
         this.killAgent(ag);
@@ -1045,8 +966,6 @@ export class Engine {
     const spiceGain = this.spice[idx] * spiceYieldFromTraits(a.traits);
     a.sugar += sugarGain;
     a.spice += spiceGain;
-    // Track "good cells" — anything above the agent's own EMA is worth
-    // returning to. EMA update mixes the new gain at ~15%.
     const gain = sugarGain + spiceGain;
     if (gain > a.meanHarvest * 1.25 && gain > 0.5) {
       if (!a.goodCells.includes(idx)) {
@@ -1057,7 +976,6 @@ export class Engine {
     a.meanHarvest = a.meanHarvest * 0.85 + gain * 0.15;
     this.cells[idx] = 0;
     this.spice[idx] = 0;
-    // Each harvest nibbles the cell's carrying capacity.
     if (this.originalMaxCells[idx] > 0 || this.originalMaxSpice[idx] > 0) {
       const DEGRADE_PER_HARVEST = 0.004;
       this.maxCells[idx] = Math.max(
@@ -1071,8 +989,6 @@ export class Engine {
     }
   }
 
-  /** Move dispatch: greedy (full vision), satisfice (short horizon),
-   *  adaptive (vision × learned boldness), social (follow the richest). */
   private chooseTarget(a: Agent): { x: number; y: number } {
     switch (a.sophistication) {
       case "bounded_rational":
@@ -1086,7 +1002,6 @@ export class Engine {
     }
   }
 
-  /** The four on-axis cells at distance `d`. */
   private axisTargets(a: Agent, d: number): [number, number][] {
     return [
       [a.x + d, a.y],
@@ -1105,7 +1020,6 @@ export class Engine {
     return occ === -1 || occ === a.id;
   }
 
-  /** Best free cell within `vision`; ties broken to the nearer cell. */
   private greedyMove(a: Agent, vision: number): { x: number; y: number } {
     let bestX = a.x;
     let bestY = a.y;
@@ -1132,7 +1046,6 @@ export class Engine {
     return { x: bestX, y: bestY };
   }
 
-  /** Half the vision; take the first cell clearly better than staying put. */
   private satisficeMove(a: Agent): { x: number; y: number } {
     const goodEnough = this.scoreCell(a, a.x, a.y) * 1.1 + 0.5;
     const horizon = Math.max(1, Math.ceil(a.vision / 2));
@@ -1148,15 +1061,11 @@ export class Engine {
     return { x: a.x, y: a.y };
   }
 
-  /** With prob `boldness` use full vision, else look 1 cell. Boldness
-   *  is updated in `consume` from whether holdings rose. */
   private adaptiveMove(a: Agent): { x: number; y: number } {
     const vision = this.rng() < a.boldness ? a.vision : 1;
     return this.greedyMove(a, vision);
   }
 
-  /** Step toward the richest visible neighbour; sometimes copy their
-   *  motivation. Falls back to greedy if nobody is richer. */
   private imitativeMove(a: Agent): { x: number; y: number } {
     let exemplar = -1;
     let exemplarWealth = holdings(a);
@@ -1233,20 +1142,13 @@ export class Engine {
   private scoreCell(a: Agent, x: number, y: number): number {
     const idx = y * this.width + x;
     const resources = this.cells[idx] + this.spice[idx];
-    const pristine =
-      this.originalMaxCells[idx] + this.originalMaxSpice[idx];
+    const pristine = this.originalMaxCells[idx] + this.originalMaxSpice[idx];
     const fertility =
       pristine > 0 ? (this.maxCells[idx] + this.maxSpice[idx]) / pristine : 1;
-    // Self-history: 10% boost for cells the agent remembers as productive.
     const familiar = a.goodCells.includes(idx) ? 1.1 : 1;
 
-    // Fast path: pure-greed agents don't need the neighbour scan.
     const t = a.traits;
-    if (
-      t.prosociality < 0.05 &&
-      t.dominance < 0.05 &&
-      t.statusSeeking < 0.05
-    ) {
+    if (t.prosociality < 0.05 && t.dominance < 0.05 && t.statusSeeking < 0.05) {
       return (
         resources * (0.6 + 0.5 * t.greed) * (0.4 + 0.6 * fertility) * familiar
       );
@@ -1282,8 +1184,6 @@ export class Engine {
     );
   }
 
-  /** Pairwise spice-for-sugar exchange. The aggregate of clearing prices
-   *  each turn is the emergent market price. */
   private tradePhase(): void {
     let logPriceSum = 0;
     let volume = 0;
@@ -1292,7 +1192,6 @@ export class Engine {
       if (!a.alive) continue;
       const partners = this.partnersFor(a);
       for (const bId of partners) {
-        // Each unordered pair handled once.
         if (bId <= a.id) continue;
         const b = this.agents[bId];
         if (!b.alive) continue;
@@ -1308,7 +1207,6 @@ export class Engine {
     this.lastTradePrice = volume > 0 ? Math.exp(logPriceSum / volume) : 0;
   }
 
-  /** Partner candidates under the active topology. */
   private partnersFor(a: Agent): number[] {
     const out: number[] = [];
     if (this.topology === "random") {
@@ -1331,8 +1229,6 @@ export class Engine {
         }
       }
     }
-    // Prepend one still-living favoured partner so copied taste in
-    // relationships actually bites against the raw topology.
     for (let i = a.favouredPartners.length - 1; i >= 0; i--) {
       const fid = a.favouredPartners[i];
       const other = this.agents[fid];
@@ -1351,34 +1247,31 @@ export class Engine {
     if (a.shamedUntilTurn > this.turn) {
       if (this.rng() < refuseShamedProbability(b.traits)) return 0;
     }
-    // Peer-learned distrust: norm-followers act on it, defectors ignore it.
     const distrustA = this.getDistrust(a.id, b.id);
     const distrustB = this.getDistrust(b.id, a.id);
-    if (distrustA > 0 && this.rng() < distrustA * a.traits.prosociality) return 0;
-    if (distrustB > 0 && this.rng() < distrustB * b.traits.prosociality) return 0;
+    if (distrustA > 0 && this.rng() < distrustA * a.traits.prosociality)
+      return 0;
+    if (distrustB > 0 && this.rng() < distrustB * b.traits.prosociality)
+      return 0;
 
     const mrsA = mrs(a);
     const mrsB = mrs(b);
     if (mrsA === mrsB) return 0;
 
-    // Higher MRS = values spice more → buyer.
     const buyer = mrsA > mrsB ? a : b;
     const seller = mrsA > mrsB ? b : a;
 
-    // Local clearing price = geometric mean of the two valuations.
     const price = Math.sqrt(mrsA * mrsB);
     const spiceQty = 1;
     const sugarQty = price * spiceQty;
 
     if (seller.spice <= spiceQty) return 0;
 
-    // Try tokens first if the buyer holds any (use-them-or-lose-them —
-    // issuers can default), or fall back to tokens if buyer is short on
-    // sugar. Acceptance rolls here; token movement waits for the Pareto
-    // check below.
-    let tokenChoice:
-      | { issuerId: number; trustworthiness: number; transfer: boolean }
-      | null = null;
+    let tokenChoice: {
+      issuerId: number;
+      trustworthiness: number;
+      transfer: boolean;
+    } | null = null;
     let buyerSugarOut = sugarQty;
     let sellerSugarIn = sugarQty;
     const buyerHoldsTokens = (this.tokenHoldings.get(buyer.id)?.size ?? 0) > 0;
@@ -1386,13 +1279,31 @@ export class Engine {
     if (tryTokensFirst) {
       const proposal = this.chooseTokenPayment(buyer, seller, sugarQty);
       if (proposal) {
-        // Provisional: if discounted value fails Pareto below, fall
-        // through to sugar trade (when buyer can afford it).
         const sellerValue = sugarQty * proposal.trustworthiness;
-        const sellerBefore = welfare(seller.sugar, seller.spice, seller.sugarMetab, seller.spiceMetab);
-        const sellerAfter = welfare(seller.sugar + sellerValue, seller.spice - spiceQty, seller.sugarMetab, seller.spiceMetab);
-        const buyerBefore = welfare(buyer.sugar, buyer.spice, buyer.sugarMetab, buyer.spiceMetab);
-        const buyerAfter = welfare(buyer.sugar, buyer.spice + spiceQty, buyer.sugarMetab, buyer.spiceMetab);
+        const sellerBefore = welfare(
+          seller.sugar,
+          seller.spice,
+          seller.sugarMetab,
+          seller.spiceMetab,
+        );
+        const sellerAfter = welfare(
+          seller.sugar + sellerValue,
+          seller.spice - spiceQty,
+          seller.sugarMetab,
+          seller.spiceMetab,
+        );
+        const buyerBefore = welfare(
+          buyer.sugar,
+          buyer.spice,
+          buyer.sugarMetab,
+          buyer.spiceMetab,
+        );
+        const buyerAfter = welfare(
+          buyer.sugar,
+          buyer.spice + spiceQty,
+          buyer.sugarMetab,
+          buyer.spiceMetab,
+        );
         if (sellerAfter > sellerBefore && buyerAfter > buyerBefore) {
           tokenChoice = proposal;
           buyerSugarOut = 0;
@@ -1402,10 +1313,30 @@ export class Engine {
       if (!tokenChoice && buyer.sugar <= sugarQty) return 0;
     }
 
-    const buyerBefore = welfare(buyer.sugar, buyer.spice, buyer.sugarMetab, buyer.spiceMetab);
-    const sellerBefore = welfare(seller.sugar, seller.spice, seller.sugarMetab, seller.spiceMetab);
-    const buyerAfter = welfare(buyer.sugar - buyerSugarOut, buyer.spice + spiceQty, buyer.sugarMetab, buyer.spiceMetab);
-    const sellerAfter = welfare(seller.sugar + sellerSugarIn, seller.spice - spiceQty, seller.sugarMetab, seller.spiceMetab);
+    const buyerBefore = welfare(
+      buyer.sugar,
+      buyer.spice,
+      buyer.sugarMetab,
+      buyer.spiceMetab,
+    );
+    const sellerBefore = welfare(
+      seller.sugar,
+      seller.spice,
+      seller.sugarMetab,
+      seller.spiceMetab,
+    );
+    const buyerAfter = welfare(
+      buyer.sugar - buyerSugarOut,
+      buyer.spice + spiceQty,
+      buyer.sugarMetab,
+      buyer.spiceMetab,
+    );
+    const sellerAfter = welfare(
+      seller.sugar + sellerSugarIn,
+      seller.spice - spiceQty,
+      seller.sugarMetab,
+      seller.spiceMetab,
+    );
 
     if (buyerAfter <= buyerBefore || sellerAfter <= sellerBefore) return 0;
 
@@ -1418,7 +1349,6 @@ export class Engine {
     buyer.spice += spiceQty;
     seller.spice -= spiceQty;
 
-    // Bonus scales with the pair's min prosociality plus existing trust.
     const trust = this.getTie(a.id, b.id);
     const trustBonus = (Math.min(trust, TIE_CAP) / TIE_CAP) * 0.05;
     const bonus = cooperativeBonus(a.traits, b.traits) + trustBonus;
@@ -1521,14 +1451,12 @@ export class Engine {
     row.set(hi, next);
   }
 
-  /** Tie weight for a pair (0 if none). Doubles as a trust score. */
   private getTie(idA: number, idB: number): number {
     const lo = idA < idB ? idA : idB;
     const hi = idA < idB ? idB : idA;
     return this.tiesMap.get(lo)?.get(hi) ?? 0;
   }
 
-  /** Erase the pair's tie — coercion destroys trust. */
   private crashTie(idA: number, idB: number): void {
     const lo = idA < idB ? idA : idB;
     const hi = idA < idB ? idB : idA;
@@ -1538,7 +1466,6 @@ export class Engine {
     if (row.size === 0) this.tiesMap.delete(lo);
   }
 
-  /** Credit `qty` tokens to `holder` and grow issuer's liability. */
   private addToken(holderId: number, issuerId: number, qty: number): void {
     if (qty <= 0) return;
     let row = this.tokenHoldings.get(holderId);
@@ -1553,8 +1480,6 @@ export class Engine {
     );
   }
 
-  /** Debit `qty` from `holder`. `retire` drops the issuer's liability
-   *  too; pass `false` for transfers (new holder re-adds it). */
   private removeToken(
     holderId: number,
     issuerId: number,
@@ -1580,19 +1505,16 @@ export class Engine {
     return true;
   }
 
-  /** Wealth ÷ liability, discounted by the issuer's death risk. 0..1. */
   private trustworthiness(issuer: Agent): number {
     if (!issuer.alive) return 0;
     const wealth = issuer.sugar + issuer.spice;
     const liability = this.tokenLiability.get(issuer.id) ?? 0;
     const collateral = wealth / (liability + TOKEN_PRIOR_LIABILITY);
-    const survival = issuer.maxAge > 0 ? 1 - Math.pow(issuer.age / issuer.maxAge, 4) : 0.5;
+    const survival =
+      issuer.maxAge > 0 ? 1 - Math.pow(issuer.age / issuer.maxAge, 4) : 0.5;
     return Math.max(0, Math.min(1, collateral)) * Math.max(0, survival);
   }
 
-  /** Pick a token plan the seller accepts, or null. Prefers spending
-   *  held tokens; a fresh IOU is the last resort. Acceptance rolls here
-   *  so the caller can preview welfare safely. */
   private chooseTokenPayment(
     buyer: Agent,
     seller: Agent,
@@ -1648,7 +1570,6 @@ export class Engine {
     return null;
   }
 
-  /** Apply a previously-chosen token payment. */
   private executeTokenPayment(
     buyer: Agent,
     seller: Agent,
@@ -1687,15 +1608,11 @@ export class Engine {
     }
   }
 
-  /** Friend-of-friend closure: when A has strong ties to B and C, sometimes
-   *  a weak seed tie opens between B and C. This is where triangles close
-   *  and multi-agent coalitions can form out of a dyadic graph. */
   private triadicClosure(): void {
     const CLOSURE_TIE_THRESHOLD = 2;
     const CLOSURE_PROB = 0.02;
     const SEED_WEIGHT = TIE_INCREMENT * 0.5;
 
-    // Build each agent's list of strong partners (both tie directions).
     const strong = new Map<number, number[]>();
     const push = (id: number, other: number) => {
       let list = strong.get(id);
@@ -1733,7 +1650,6 @@ export class Engine {
       const bAgent = this.agents[b];
       const cAgent = this.agents[c];
       if (!bAgent?.alive || !cAgent?.alive) continue;
-      // Only close if neither party distrusts the other.
       if (this.getDistrust(b, c) > 0.2) continue;
       if (this.getDistrust(c, b) > 0.2) continue;
       const lo = b < c ? b : c;
@@ -1776,8 +1692,6 @@ export class Engine {
       deadId,
       (this.tokenDefaultedLifetime.get(deadId) ?? 0) + outstanding,
     );
-    // Burned holders spread distrust onto every *other* issuer they hold,
-    // so a run doesn't need a second default to gather momentum.
     for (const holderId of burnedHolders) {
       const holder = this.agents[holderId];
       if (!holder?.alive) continue;
@@ -1797,7 +1711,6 @@ export class Engine {
     const spice = a.spice > 0 ? a.spice : 0;
     if (sugar + spice <= 0) return;
 
-    // Ties store each pair once as (lo, hi) — look in both directions.
     const partners: { id: number; weight: number }[] = [];
     const lowMap = this.tiesMap.get(a.id);
     if (lowMap) {
@@ -1855,7 +1768,6 @@ export class Engine {
       }
     }
 
-    // For the segregation index — same-motivation pairs out of all neighbour pairs.
     let neighbourPairs = 0;
     let sameMotivationPairs = 0;
     let isolates = 0;
@@ -1949,8 +1861,6 @@ export class Engine {
     };
   }
 
-  /** A run on the biggest issuer: holders redeem what the issuer can
-   *  cover (out of its own sugar) and burn the rest. Credit collapses. */
   private executeBankRun(issuerId: number): void {
     const issuer = this.agents[issuerId];
     if (!issuer?.alive) return;
@@ -1996,11 +1906,13 @@ export class Engine {
         topId = issuerId;
       }
     }
-    // ≥3 distinct holders = the tokens have started circulating as money.
     const holdersPerIssuer = new Map<number, number>();
     for (const row of this.tokenHoldings.values()) {
       for (const issuerId of row.keys()) {
-        holdersPerIssuer.set(issuerId, (holdersPerIssuer.get(issuerId) ?? 0) + 1);
+        holdersPerIssuer.set(
+          issuerId,
+          (holdersPerIssuer.get(issuerId) ?? 0) + 1,
+        );
       }
     }
     let circulating = 0;
@@ -2053,10 +1965,6 @@ export class Engine {
     this.lastInfluencerCentrality = topW;
   }
 
-  /** Holder-normalised: what share of the top issuer's holders distrust
-   *  the issuer, weighted by how strong that distrust is. This is the
-   *  meaningful "bank run" indicator — the general population's opinion
-   *  is irrelevant, only actual holders can start a run. */
   private computeTopIssuerDistrust(topIssuerId: number, alive: number): number {
     if (topIssuerId < 0 || alive <= 0) return 0;
     let holders = 0;
@@ -2076,7 +1984,6 @@ export class Engine {
     return this.rng();
   }
 
-  /** Flat [loId, hiId, weight, …] view of the tie map, for the worker. */
   get ties(): Float32Array {
     let count = 0;
     for (const row of this.tiesMap.values()) count += row.size;
@@ -2113,8 +2020,6 @@ function shuffle<T>(arr: T[], rng: () => number): void {
   }
 }
 
-/** Spatial sorting of motivation. 0 = fully mixed, 1 = fully sorted.
- *  Normalised against the random baseline Σpₘ². */
 function segregationIndex(
   samePairs: number,
   totalPairs: number,
@@ -2147,8 +2052,6 @@ function giniCoefficient(values: number[]): number {
   return (2 * weighted) / (n * total) - (n + 1) / n;
 }
 
-/** Sugar and spice peak in different places so any settled agent is
- *  rich in one and short on the other — the precondition for trade. */
 function buildLandscape(
   sugar: Float32Array,
   spice: Float32Array,
@@ -2169,7 +2072,6 @@ function buildLandscape(
   let sigma = Math.min(width, height) / 6;
 
   if (landscape === "two_peaks") {
-    // Sugar east–west, spice north–south — gradients cross.
     sugarPeaks = [
       { x: width * 0.27, y: height * 0.5 },
       { x: width * 0.73, y: height * 0.5 },
@@ -2180,7 +2082,6 @@ function buildLandscape(
     ];
     sigma = Math.min(width, height) / 5;
   } else if (landscape === "centre") {
-    // Sugar core, spice in the corners.
     sugarPeaks = [{ x: width * 0.5, y: height * 0.5 }];
     spicePeaks = [
       { x: width * 0.2, y: height * 0.2 },
@@ -2222,7 +2123,6 @@ function fillGaussian(
   }
 }
 
-/** Build a weighted random picker. Falls back to `fallback` if every weight is 0. */
 function buildWeightedPicker<K extends string>(
   weights: WeightedSelection<K>,
   fallback: K,
@@ -2303,13 +2203,10 @@ function spawnAgents(
   for (let i = 0; i < count; i++) {
     const p = positions[i];
     if (!p) continue;
-    // Uneven split — each agent starts rich in one, short on the other.
     const frac = 0.3 + rng() * 0.4;
     const sugar = Math.max(1, wealths[i] * frac);
     const spice = Math.max(1, wealths[i] * (1 - frac));
     const metabMean = physics.metabolism;
-    // The chosen motivation seeds a trait centroid; the label is later
-    // derived back from the jittered vector.
     const seedMotivation = pickMotivation();
     const traits = sampleTraits(seedMotivation, rng);
     agents.push({
@@ -2424,7 +2321,6 @@ function placeAgents(
     return positions;
   }
 
-  // segregated
   const order = Array.from({ length: count }, (_, i) => i);
   order.sort((a, b) => wealths[b] - wealths[a]);
   const quadrants = [

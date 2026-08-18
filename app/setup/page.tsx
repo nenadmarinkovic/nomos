@@ -212,22 +212,13 @@ const STEPS: readonly StepDef[] = [
   },
 ] as const;
 
-/**
- * One or more anchors per step. Each shows what the step actually does in
- * plain English and in code. The `mode` badge is honest about what the
- * snippet is — real, simplified, or planned-but-unwired.
- */
 type CodeMode = "real" | "pseudo" | "planned";
 
 interface CodeAnchor {
-  /** One-sentence description shown above the snippet. */
   plain: string;
-  /** ≤ ~7 lines: real code, faithful pseudocode, or a planned sketch. */
   snippet: string;
   mode: CodeMode;
-  /** Source file the snippet is drawn from. Omitted for `planned`. */
   file?: string;
-  /** Line range like "191-213". Used to build the source link. */
   lines?: string;
 }
 
@@ -1047,13 +1038,13 @@ function StepBody({
     return (
       <WeightedPickGrid<AgentSophistication>
         weights={draft.agents.sophistication}
-        options={(Object.keys(SOPHISTICATION_INFO) as AgentSophistication[]).map(
-          (s) => ({
-            key: s,
-            label: SOPHISTICATION_INFO[s].label,
-            hint: SOPHISTICATION_INFO[s].hint,
-          }),
-        )}
+        options={(
+          Object.keys(SOPHISTICATION_INFO) as AgentSophistication[]
+        ).map((s) => ({
+          key: s,
+          label: SOPHISTICATION_INFO[s].label,
+          hint: SOPHISTICATION_INFO[s].hint,
+        }))}
         onChange={(next) => patchAgents({ sophistication: next })}
       />
     );
@@ -1065,11 +1056,13 @@ function StepBody({
       <div className="space-y-6">
         <WeightedPickGrid<AgentMotivation>
           weights={draft.agents.motivation}
-          options={(Object.keys(MOTIVATION_INFO) as AgentMotivation[]).map((m) => ({
-            key: m,
-            label: MOTIVATION_INFO[m].label,
-            hint: MOTIVATION_INFO[m].hint,
-          }))}
+          options={(Object.keys(MOTIVATION_INFO) as AgentMotivation[]).map(
+            (m) => ({
+              key: m,
+              label: MOTIVATION_INFO[m].label,
+              hint: MOTIVATION_INFO[m].hint,
+            }),
+          )}
           onChange={(next) => patchAgents({ motivation: next })}
         />
         <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-3">
@@ -1083,10 +1076,10 @@ function StepBody({
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             Per-birth chance the child&apos;s traits are resampled from the
-            centroid mix above instead of drifting off the parent&apos;s.
-            Higher = diversity rebleeds in after a single region of trait
-            space has taken over; 0 = strict heritability, and once a trait
-            cluster wins it stays won.
+            centroid mix above instead of drifting off the parent&apos;s. Higher
+            = diversity rebleeds in after a single region of trait space has
+            taken over; 0 = strict heritability, and once a trait cluster wins
+            it stays won.
           </p>
           <div className="mt-3">
             <Slider
@@ -1158,8 +1151,8 @@ function BigChoiceCard({
       className={cn(
         "group flex w-full cursor-pointer flex-col gap-2 rounded-lg border px-5 py-4 text-left transition-colors",
         active
-          ? "border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/60"
-          : "border-foreground/10 bg-card hover:border-zinc-200 hover:bg-zinc-50 dark:hover:border-zinc-800 dark:hover:bg-zinc-900/30",
+          ? "border-foreground/20 bg-accent dark:border-zinc-700 dark:bg-zinc-900/60"
+          : "border-foreground/10 bg-card hover:border-foreground/20 hover:bg-accent/60 dark:hover:border-zinc-800 dark:hover:bg-zinc-900/30",
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -1252,8 +1245,7 @@ function WeightedPickGrid<K extends string>({
           <div className="space-y-2.5">
             {selected.map((o) => {
               const w = (weights[o.key] as number) ?? 1;
-              const pct =
-                total > 0 ? Math.round((w / total) * 100) : 0;
+              const pct = total > 0 ? Math.round((w / total) * 100) : 0;
               return (
                 <div
                   key={o.key}
@@ -1292,10 +1284,7 @@ function ObserverPicker({
   draft: SimulationConfig;
   toggleObserver: (k: ObserverKey) => void;
 }) {
-  const keys = useMemo(
-    () => Object.keys(OBSERVER_INFO) as ObserverKey[],
-    [],
-  );
+  const keys = useMemo(() => Object.keys(OBSERVER_INFO) as ObserverKey[], []);
 
   return (
     <div className="space-y-3">
@@ -1321,8 +1310,8 @@ function ObserverPicker({
               className={cn(
                 "group flex w-full cursor-pointer flex-col gap-2 rounded-lg border px-5 py-4 text-left transition-colors",
                 active
-                  ? "border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/60"
-                  : "border-foreground/10 bg-card hover:border-zinc-200 hover:bg-zinc-50 dark:hover:border-zinc-800 dark:hover:bg-zinc-900/30",
+                  ? "border-foreground/20 bg-accent dark:border-zinc-700 dark:bg-zinc-900/60"
+                  : "border-foreground/10 bg-card hover:border-foreground/20 hover:bg-accent/60 dark:hover:border-zinc-800 dark:hover:bg-zinc-900/30",
               )}
             >
               <div className="flex items-start justify-between gap-3">
@@ -1421,7 +1410,9 @@ function SummaryReview({
         />
         <SummaryRow
           label="Substrate"
-          value={draft.world.substrateDiffusion ? "Living ground" : "Inert ground"}
+          value={
+            draft.world.substrateDiffusion ? "Living ground" : "Inert ground"
+          }
           onEdit={() => jumpToStep("substrate")}
         />
         <SummaryRow
@@ -1632,13 +1623,9 @@ function SummaryRow({
       onClick={onEdit}
       className="group flex w-full cursor-pointer items-center justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.02]"
     >
-      <span className="text-sm text-muted-foreground">
-        {label}
-      </span>
+      <span className="text-sm text-muted-foreground">{label}</span>
       <span className="flex items-center gap-2.5">
-        <span className="text-[14px] font-medium text-foreground">
-          {value}
-        </span>
+        <span className="text-[14px] font-medium text-foreground">{value}</span>
         <CaretRightIcon
           size={12}
           weight="bold"

@@ -2,11 +2,7 @@
 
 import * as React from "react";
 import { Select as SelectPrimitive } from "radix-ui";
-import {
-  CaretDownIcon,
-  CaretUpIcon,
-  CheckIcon,
-} from "@phosphor-icons/react";
+import { CaretDownIcon, CaretUpIcon, CheckIcon } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
 
@@ -161,10 +157,7 @@ function SelectItem({
       </div>
       <span className="absolute right-2 top-2.5 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon
-            weight="bold"
-            className="size-3.5 text-[#F25022]"
-          />
+          <CheckIcon weight="bold" className="size-3.5 text-[#F25022]" />
         </SelectPrimitive.ItemIndicator>
       </span>
     </SelectPrimitive.Item>

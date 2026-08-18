@@ -1,11 +1,6 @@
 import type { AgentMotivation } from "@/lib/config";
 import type { EngineSnapshot } from "@/lib/engine";
 
-/**
- * Detect the handful of moments per run worth narrating — founding, crash,
- * inequality surge, collapse — and hand the observer a factual summary.
- */
-
 export type EventKind =
   | "founding"
   | "inequality_surge"
@@ -33,13 +28,9 @@ export interface MetricPoint {
   turn: number;
   alive: number;
   gini: number;
-  /** Sugar per spice this turn, 0 if no trade. */
   tradePrice: number;
-  /** Spatial sorting of motivation. 0 = mixed, 1 = fully sorted. */
   segregation: number;
-  /** Share of living agents with no trade tie. */
   isolateShare: number;
-  /** Population share per motivation. */
   motivationShares: Record<AgentMotivation, number>;
 }
 
@@ -48,30 +39,22 @@ export interface EventMetrics {
   alive: number;
   gini: number;
   totalWealth: number;
-  /** Change over the detection window. */
   deltaAlive: number;
   deltaGini: number;
-  /** Living-population share in the wealthiest bin (0..1). */
   topWealthShare: number;
-  /** Sugar per spice this turn, 0 if no trade. */
   tradePrice: number;
   tradeVolume: number;
   segregation: number;
   coercionCount: number;
   shamingCount: number;
   isolateShare: number;
-  /** Motivation surging in a `motivation_shift`, if any. */
   risingMotivation?: AgentMotivation;
-  /** Its population share at window start and now (0..1). */
   motivationFrom?: number;
   motivationTo?: number;
   tokenSupply: number;
-  /** Issuers with ≥3 distinct holders — the money threshold. */
   circulatingIssuers: number;
   tokenTradeVolume: number;
-  /** Inbound tie weight of the most-trusted agent. */
   topInfluencerCentrality?: number;
-  /** Share of population distrusting the top issuer, 0..1. */
   topIssuerMistrust?: number;
 }
 
@@ -79,9 +62,7 @@ export interface SignificantEvent {
   id: string;
   turn: number;
   kind: EventKind;
-  /** Short label for the chronicle. */
   title: string;
-  /** Theory-neutral facts handed to the model. */
   summary: string;
   severity: "minor" | "major";
   metrics: EventMetrics;
@@ -91,28 +72,18 @@ export interface DetectorState {
   peakAlive: number;
   lastEventTurn: number | null;
   marketFormed: boolean;
-  /** Hysteresis latch — re-arms only when segregation dips below rearm. */
   segregationArmed: boolean;
-  /** First turn Gini stayed above the extreme threshold. Null when below. */
   giniHighSince: number | null;
-  /** First turn top-decile share stayed above the oligarchy threshold. */
   topShareHighSince: number | null;
-  /** Sustained-state latches — fire once, re-arm on relaxation below rearm. */
   extremeInequalityArmed: boolean;
   oligarchyArmed: boolean;
-  /** Consecutive heartbeat events. Capped so stable worlds go quiet. */
   consecutivePassages: number;
-  /** Per-kind last-fire turn — some kinds need longer cooldowns than global. */
   lastFireByKind: Partial<Record<EventKind, number>>;
-  /** Leadership latch — fires once, re-arms below `LEADERSHIP_REARM`. */
   leadershipArmed: boolean;
 }
 
-/** Turns back for delta measurements. */
 const WINDOW = 8;
-/** Minimum turns between non-founding events. */
 const COOLDOWN = 12;
-/** Longer cooldowns for kinds that would otherwise monopolise the chronicle. */
 const KIND_COOLDOWN: Partial<Record<EventKind, number>> = {
   coercion_wave: 60,
   cooperation_thickens: 60,
@@ -142,7 +113,6 @@ const TITLES: Record<EventKind, string> = {
   passage: "The chronicle continues",
 };
 
-/** Human phrasing per motivation, used in `motivation_shift` summaries. */
 const MOTIVATION_LABEL: Record<AgentMotivation, string> = {
   material: "material gain",
   symbolic: "status and display",
@@ -150,37 +120,26 @@ const MOTIVATION_LABEL: Record<AgentMotivation, string> = {
   power: "domination over others",
 };
 
-/** Silence limit — after this many turns, a heartbeat `passage` fires. */
 const PASSAGE_INTERVAL = 30;
-/** Cap consecutive passages so a stable world eventually goes quiet. */
 const MAX_CONSECUTIVE_PASSAGES = 3;
 
-/** Trades per turn before "market" beats barter noise. */
 const MARKET_THRESHOLD = 12;
 
-/** Coercion wave: needs both an absolute floor and a per-capita rate,
- *  so city scale doesn't fire it constantly. */
 const COERCION_FLOOR = 3;
 const COERCION_RATE = 0.004;
 
-/** Segregation hysteresis: fire only when crossing up through the line. */
 const SEGREGATION_LINE = 0.18;
 const SEGREGATION_REARM = 0.12;
 
-/** A motivation must grow this much and reach this share to count as a shift. */
 const MOTIVATION_SURGE = 0.05;
 
-/** Sustained-state levels — watch absolute values, not deltas, so a
- *  long-lived Gini 0.65 gets read rather than buried by the heartbeat. */
 const EXTREME_INEQUALITY_LEVEL = 0.6;
 const EXTREME_INEQUALITY_REARM = 0.5;
 const OLIGARCHY_LEVEL = 0.8;
 const OLIGARCHY_REARM = 0.6;
-/** Turns above threshold before a sustained-state event fires (~30s at 1×). */
 const SUSTAINED_HIGH_DURATION = 80;
 const MOTIVATION_DOMINANCE = 0.4;
 
-/** Isolation surge required to call the trade web fractured. */
 const ISOLATE_SURGE = 0.15;
 const ISOLATE_LEVEL = 0.4;
 
@@ -190,7 +149,6 @@ const ISOLATE_LEVEL = 0.4;
 const LEADERSHIP_LEVEL = 80;
 const LEADERSHIP_REARM = 45;
 
-/** Return a significant event this turn, or null. */
 export function detectEvent(
   snapshot: EngineSnapshot,
   history: MetricPoint[],
@@ -201,7 +159,6 @@ export function detectEvent(
   const topWealthShare =
     total > 0 ? wealthBins[wealthBins.length - 1] / total : 0;
 
-  // Founding — fires once, before anything has happened.
   if (turn === 0) {
     return makeEvent("founding", "major", snapshot, {
       deltaAlive: 0,
@@ -240,13 +197,11 @@ export function detectEvent(
     return makeEvent("shock_blight", "major", snapshot, shared);
   }
 
-  // First time trade thickens into a real market.
   if (!state.marketFormed && tradeVolume >= MARKET_THRESHOLD) {
     state.marketFormed = true;
     return makeEvent("market_forming", "major", snapshot, shared);
   }
 
-  // Collapse: the society is all but gone.
   if (state.peakAlive > 20 && alive <= state.peakAlive * 0.18) {
     return makeEvent("collapse", "major", snapshot, shared);
   }
@@ -259,12 +214,10 @@ export function detectEvent(
     return makeEvent("inequality_surge", "major", snapshot, shared);
   }
 
-  // Crossing Gini 0.5 is a qualitative threshold.
   if (ref.gini < 0.5 && gini >= 0.5) {
     return makeEvent("stratification", "major", snapshot, shared);
   }
 
-  // Sharp exchange-rate swing while a market is running.
   if (
     state.marketFormed &&
     tradeVolume >= MARKET_THRESHOLD / 2 &&
@@ -299,8 +252,6 @@ export function detectEvent(
     return makeEvent("cooperation_thickens", "major", snapshot, shared);
   }
 
-  // Predation burst — major when sanctioned. Per-kind cooldown so a
-  // violent stretch doesn't crowd the chronicle.
   const coercionFloor = Math.max(
     COERCION_FLOOR,
     Math.round(alive * COERCION_RATE),
@@ -317,8 +268,6 @@ export function detectEvent(
     );
   }
 
-  // Spatial sorting — up-crossing only, latched so an oscillating index
-  // doesn't refire every cooldown.
   const seg = snapshot.segregation ?? 0;
   const refSeg = ref.segregation ?? 0;
   if (seg < SEGREGATION_REARM) state.segregationArmed = true;
@@ -331,8 +280,6 @@ export function detectEvent(
     return makeEvent("segregation", "minor", snapshot, shared);
   }
 
-  // Cultural takeover — one motivation's share surging. Otherwise invisible
-  // to the macro metrics.
   const shift = detectMotivationShift(snapshot, ref);
   if (shift) {
     return makeEvent("motivation_shift", "minor", snapshot, {
@@ -341,7 +288,6 @@ export function detectEvent(
     });
   }
 
-  // Trade web frays — isolation climbing as ties decay faster than they form.
   const refIso = ref.isolateShare ?? snapshot.isolateShare ?? 0;
   if (
     (snapshot.isolateShare ?? 0) - refIso >= ISOLATE_SURGE &&
@@ -350,12 +296,10 @@ export function detectEvent(
     return makeEvent("network_fracture", "minor", snapshot, shared);
   }
 
-  // Bank run — the engine sets `bankRunActive` only on the firing turn.
   if (snapshot.bankRunActive && snapshot.bankRunStartedTurn === turn) {
     return makeEvent("bank_run", "major", snapshot, shared);
   }
 
-  // Emergent leadership — one node's incoming trust weight dominates.
   const centrality = snapshot.topInfluencerCentrality ?? 0;
   if (centrality < LEADERSHIP_REARM) state.leadershipArmed = true;
   if (state.leadershipArmed && centrality >= LEADERSHIP_LEVEL) {
@@ -363,8 +307,6 @@ export function detectEvent(
     return makeEvent("leadership_emerges", "minor", snapshot, shared);
   }
 
-  // Sustained-state detectors — fire on *level*, not delta, so a long-lived
-  // regime like Gini 0.65 gets read once instead of hiding behind passages.
   if (gini >= EXTREME_INEQUALITY_LEVEL) {
     if (state.giniHighSince === null) state.giniHighSince = turn;
     if (
@@ -395,7 +337,6 @@ export function detectEvent(
     if (topWealthShare <= OLIGARCHY_REARM) state.oligarchyArmed = true;
   }
 
-  // Heartbeat, capped so a stable world eventually goes quiet.
   if (
     state.lastEventTurn !== null &&
     turn - state.lastEventTurn >= PASSAGE_INTERVAL &&
@@ -407,12 +348,13 @@ export function detectEvent(
   return null;
 }
 
-/** Strongest motivation riser over the window that also clears the surge
- *  and dominance thresholds, or null. */
 function detectMotivationShift(
   snapshot: EngineSnapshot,
   ref: MetricPoint,
-): Pick<EventMetrics, "risingMotivation" | "motivationFrom" | "motivationTo"> | null {
+): Pick<
+  EventMetrics,
+  "risingMotivation" | "motivationFrom" | "motivationTo"
+> | null {
   if (snapshot.alive <= 0 || !ref.motivationShares) return null;
   const counts = snapshot.motivationCounts;
   const keys = Object.keys(counts) as AgentMotivation[];
@@ -423,7 +365,11 @@ function detectMotivationShift(
     const now = counts[k] / snapshot.alive;
     const was = ref.motivationShares[k] ?? 0;
     const delta = now - was;
-    if (now >= MOTIVATION_DOMINANCE && delta >= MOTIVATION_SURGE && delta > bestDelta) {
+    if (
+      now >= MOTIVATION_DOMINANCE &&
+      delta >= MOTIVATION_SURGE &&
+      delta > bestDelta
+    ) {
       best = k;
       bestDelta = delta;
     }
@@ -447,7 +393,6 @@ function referencePoint(
     if (p.turn <= targetTurn) ref = p;
     else break;
   }
-  // Oldest point if the window predates the run.
   return ref ?? history[0];
 }
 
@@ -457,10 +402,7 @@ function makeEvent(
   snapshot: EngineSnapshot,
   partial: Pick<EventMetrics, "deltaAlive" | "deltaGini" | "topWealthShare"> &
     Partial<
-      Pick<
-        EventMetrics,
-        "risingMotivation" | "motivationFrom" | "motivationTo"
-      >
+      Pick<EventMetrics, "risingMotivation" | "motivationFrom" | "motivationTo">
     >,
 ): SignificantEvent {
   const metrics: EventMetrics = {

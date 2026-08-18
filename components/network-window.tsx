@@ -18,10 +18,10 @@ interface NetworkLink extends d3.SimulationLinkDatum<NetworkNode> {
 }
 
 const MOTIVATION_COLOR: Record<string, string> = {
-  material: "#E63946",
-  symbolic: "#2E5C9E",
-  normative: "#FFD23F",
-  power: "#2A9D5C",
+  material: "#0076E7",
+  symbolic: "#E93013",
+  normative: "#F29320",
+  power: "#249375",
 };
 
 const MOTIVATION_LABEL: Record<string, string> = {
@@ -121,7 +121,7 @@ export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
 
     nodeSel.append("path").attr("d", (d) => shapePath(d.motivation));
     nodeSel
-      .attr("fill", (d) => MOTIVATION_COLOR[d.motivation] ?? "#E63946")
+      .attr("fill", (d) => MOTIVATION_COLOR[d.motivation] ?? "#0076E7")
       .attr("stroke", "rgba(20,20,20,0.75)")
       .attr("stroke-width", 0.9);
 

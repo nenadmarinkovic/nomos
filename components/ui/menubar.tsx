@@ -83,10 +83,4 @@ function MenubarItem({
   );
 }
 
-export {
-  Menubar,
-  MenubarMenu,
-  MenubarTrigger,
-  MenubarContent,
-  MenubarItem,
-};
+export { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem };

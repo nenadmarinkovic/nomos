@@ -1,15 +1,8 @@
-/**
- * Headless engine bench.
- *
- *   npx tsx scripts/bench.ts
- *
- * Runs a deterministic Nomos simulation at village and town scales and prints
- * sampled state to stdout. Used to calibrate the engine constants empirically
- * — read the time series and spot dynamics that are flat, runaway, or
- * locked into a degenerate regime.
- */
-
-import { DEFAULT_CONFIG, type Scale, type SimulationConfig } from "../lib/config";
+import {
+  DEFAULT_CONFIG,
+  type Scale,
+  type SimulationConfig,
+} from "../lib/config";
 import { Engine } from "../lib/engine";
 
 interface RunOptions {
@@ -61,14 +54,11 @@ function run({ scale, turns, seed, sampleEvery }: RunOptions): void {
   ];
   const widths = header.map((h) => Math.max(h.length, 6));
 
-  console.log(`\n=== ${scale.toUpperCase()} · seed ${seed} · ${turns} turns ===`);
   console.log(
-    header.map((h, i) => h.padStart(widths[i])).join(" "),
+    `\n=== ${scale.toUpperCase()} · seed ${seed} · ${turns} turns ===`,
   );
+  console.log(header.map((h, i) => h.padStart(widths[i])).join(" "));
 
-  // Rolling counters so we can report per-window averages instead of just the
-  // instantaneous spike at the sampled tick — a per-tick coercionCount tells
-  // us nothing about whether coercion is rare or relentless.
   let coerceAccum = 0;
   let shameAccum = 0;
   let volAccum = 0;
@@ -96,7 +86,10 @@ function run({ scale, turns, seed, sampleEvery }: RunOptions): void {
         bankRunCount++;
         lastBankRunTurn = s.bankRunStartedTurn;
       }
-      if (s.blightStartedTurn !== lastBlightTurnSeen && s.blightStartedTurn > 0) {
+      if (
+        s.blightStartedTurn !== lastBlightTurnSeen &&
+        s.blightStartedTurn > 0
+      ) {
         blightCount++;
         lastBlightTurnSeen = s.blightStartedTurn;
       }
