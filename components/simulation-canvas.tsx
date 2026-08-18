@@ -15,6 +15,8 @@ import {
   Sprite,
   Texture,
 } from "pixi.js";
+
+import "pixi.js/unsafe-eval";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -116,9 +118,6 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
     themeRef.current = resolvedTheme === "dark" ? "dark" : "light";
   }, [resolvedTheme]);
 
-  // Clear any selected agent when the run changes (new/replayed run, or the
-  // engine stops). Done during render — React's supported way to reset state
-  // on a prop change — rather than in an effect.
   const [selectionRun, setSelectionRun] = useState({ runId, started });
   if (selectionRun.runId !== runId || selectionRun.started !== started) {
     setSelectionRun({ runId, started });
@@ -525,6 +524,9 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
           app.renderer.resize(s.width, s.height);
         }
         paint(1);
+      })
+      .catch((err) => {
+        console.error("[simulation-canvas] renderer init failed", err);
       });
 
     const sprites = spritesRef.current;
