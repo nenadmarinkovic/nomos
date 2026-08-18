@@ -358,6 +358,27 @@ function DocsLanding() {
           see in their own vocabulary. These pages explain what that actually
           means.
         </p>
+        <p className="mt-6 text-start text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
+          Nomos is an{" "}
+          <a
+            href="https://github.com/nenadmarinkovic/nomos"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand transition-[filter] hover:brightness-90"
+          >
+            open-source
+          </a>{" "}
+          project by{" "}
+          <a
+            href="https://nenadmarinkovic.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand transition-[filter] hover:brightness-90"
+          >
+            Nenad Marinković
+          </a>
+          .
+        </p>
       </header>
 
       <ul className="mt-10 space-y-3">
@@ -377,19 +398,6 @@ function DocsLanding() {
           </li>
         ))}
       </ul>
-
-      <p className="mt-12 text-right text-xs text-muted-foreground">
-        Open source project by{" "}
-        <a
-          href="https://github.com/nenadmarinkovic/nomos"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-foreground/80 hover:text-brand hover:underline"
-        >
-          Nenad Marinkovic
-        </a>
-        .
-      </p>
     </>
   );
 }
