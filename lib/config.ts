@@ -21,7 +21,6 @@ export type ObserverKey =
   | "bourdieu"
   | "marx"
   | "polanyi"
-  | "durkheim"
   | "granovetter"
   | "turchin"
   | "schelling"
@@ -406,18 +405,9 @@ export const OBSERVER_INFO: Record<ObserverKey, ObserverEntry> = {
     name: "Karl Polanyi",
     era: "1886–1964",
     lens: "embedded economy, great transformation",
-    sees: "Pre-modern economic life is embedded in social relations — reciprocity, redistribution, householding. Money, land, and labour are *fictitious commodities*: treat them as ordinary goods and society reacts to protect itself. The self-regulating market is a recent and unstable invention.",
+    sees: "Pre-modern economic life is embedded in social relations — reciprocity, redistribution, householding. Money, land, and labour are *fictitious commodities*: treat them as ordinary goods and society reacts to protect itself. The self-regulating market is a recent and unstable invention. Society is not the sum of its traders: the shared moral understanding that gives a promise weight exists above any one of them, and reacts as a body when the market strains it.",
     watches:
-      "When trade disembeds from kinship and locality into impersonal price; when promises-to-pay accepted by strangers harden into a circulating medium that has detached from the relations that birthed it; when land's stress under commodification shows as exhausted soil; when the counter-movement appears as shaming, refusal of trade, the community asserting itself against pure market logic.",
-  },
-  durkheim: {
-    label: "Durkheim",
-    name: "Émile Durkheim",
-    era: "1858–1917",
-    lens: "solidarity, anomie, social facts",
-    sees: "Society as a moral reality above individuals. Social facts — norms, rituals, collective beliefs — have causal force no one person creates or controls; even credit, even a private promise accepted by a stranger, presupposes a shared conscience that gives the promise weight.",
-    watches:
-      "The shift from mechanical to organic solidarity; anomie when shared norms loosen and the soil itself is left to wear down without stewardship; the ritual force of shaming the predator and the silent moral consequence when the community refuses to trade with him; whether the conscience collective is strong enough that strangers will accept each other's promises.",
+      "When trade disembeds from kinship and locality into impersonal price; when promises-to-pay accepted by strangers harden into a circulating medium that has detached from the relations that birthed it; when land's stress under commodification shows as exhausted soil; when the counter-movement appears as shaming, refusal of trade, the community asserting itself against pure market logic; whether the collective understanding holding all this together is binding enough that strangers will take each other's word, or has loosened into a normlessness where nothing does.",
   },
   granovetter: {
     label: "Granovetter",
@@ -513,5 +503,5 @@ export const DEFAULT_CONFIG: SimulationConfig = {
     topology: "spatial",
     mutationRate: DEFAULT_MUTATION_RATE,
   },
-  observers: ["epstein", "marx", "bourdieu", "durkheim", "axelrod"],
+  observers: ["epstein", "marx", "bourdieu", "polanyi", "axelrod"],
 };

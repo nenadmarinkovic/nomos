@@ -1,8 +1,8 @@
 # Observers and the chronicle
 
-The chronicle is what makes Nomos different from a typed-agent ABM with stats panels. As the simulation runs, the browser detects significant events and routes each one to whichever theorist's lens has the most concrete purchase on it. One Mistral call per event produces one short paragraph in that theorist's voice. Across a run you hear every voice; no single moment gets buried under eleven parallel takes.
+The chronicle is what makes Nomos different from a typed-agent ABM with stats panels. As the simulation runs, the browser detects significant events and routes each one to whichever theorist's lens has the most concrete purchase on it. One Mistral call per event produces one short paragraph in that theorist's voice. Across a run you hear every voice; no single moment gets buried under ten parallel takes.
 
-## The eleven theorists
+## The ten theorists
 
 Each observer has a `name`, `era`, `lens`, `sees`, and `watches` description (in `OBSERVER_INFO` in `lib/config.ts`). The `sees` shapes their worldview; the `watches` tells the LLM what to actively look for. Both feed into the system prompt for the per-event call.
 
@@ -11,7 +11,6 @@ Each observer has a `name`, `era`, `lens`, `sees`, and `watches` description (in
 | **Marx** | class, surplus, consciousness | Surplus extraction, alienation, contradictions. Private IOUs as new chains; the commons devoured by accumulation. |
 | **Polanyi** | embedded economy, great transformation | When trade disembeds from kinship into impersonal price. Fictitious commodity stress. Promises hardening into circulating money — and, when confidence goes, dissolving in a run. |
 | **Bourdieu** | capital, field, habitus | How habitus reproduces across generations even as trait drift moves agents. Capital converting between forms. Symbolic violence. |
-| **Durkheim** | solidarity, anomie, social facts | Mechanical vs organic solidarity. Anomie when shared norms loosen. Ritual force of shaming. Credit requiring shared conscience. |
 | **Granovetter** | embeddedness, weak ties | Brokerage between clusters. Embedded trust shielding from predation. An issuer's notes travelling through the network until strangers accept. Trust centrality as leadership without a role. |
 | **Schelling** | thresholds, segregation | Tipping points. Spatial sorting. The moment when one issuer's notes tip from a one-off favour into circulating money. |
 | **Turchin** | elite overproduction | Structural-demographic preconditions of crisis. Soil's carrying capacity declining beneath population. Financialisation as late-cycle marker. |
@@ -20,7 +19,7 @@ Each observer has a `name`, `era`, `lens`, `sees`, and `watches` description (in
 | **Flack** | slow variables, policing | What stabilises a system across time. Consensus on issuer trust as a slow variable. Policing through shame. What fails when slow variables erode. |
 | **Axelrod** | evolution of cooperation, tit-for-tat | The shadow of the future. Whether retaliation against defectors is swift and visible. An issuer's reputation letting their promises circulate. Predation as the *test* the cooperative strategy was built for, not collapse. |
 
-Adding Axelrod was deliberate. Without him every coercion event read as decline (Marx and Durkheim's natural framing). With him the same predation-and-sanction data can read as *cooperation being defended*, not collapsing — same event, opposite interpretation. That disagreement is the point.
+Adding Axelrod was deliberate. Without him every coercion event read as decline (Marx and Flack's natural framing). With him the same predation-and-sanction data can read as *cooperation being defended*, not collapsing — same event, opposite interpretation. That disagreement is the point.
 
 ## How significant events are detected
 
@@ -57,12 +56,12 @@ Detection uses hysteresis latches for sustained-state events (Gini holds, oligar
 Each event kind has a priority list of theorists in `lib/observer-routing.ts`:
 
 ```ts
-coercion_wave:        ["axelrod", "marx", "durkheim", "flack"]
+coercion_wave:        ["axelrod", "marx", "flack"]
 cooperation_thickens: ["axelrod", "granovetter", "flack", "epstein"]
 market_forming:       ["polanyi", "farmer", "granovetter"]
 stratification:       ["bourdieu", "marx", "turchin"]
-segregation:          ["schelling", "bourdieu", "durkheim"]
-leadership_emerges:   ["granovetter", "flack", "durkheim"]
+segregation:          ["schelling", "bourdieu", "granovetter"]
+leadership_emerges:   ["granovetter", "flack", "bourdieu"]
 bank_run:             ["polanyi", "farmer", "marx"]
 ```
 

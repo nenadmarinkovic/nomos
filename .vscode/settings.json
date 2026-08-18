@@ -1,0 +1,15 @@
+{
+  // Tailwind v4 replaced the old @tailwind directives with at-rules the
+  // built-in CSS language service doesn't know (@theme, @plugin, @apply,
+  // @custom-variant, @source). They are valid; only the validator is stale.
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
+
+  // With the Tailwind CSS IntelliSense extension installed, this hands CSS
+  // files to it instead — silencing the warnings and adding completions for
+  // theme tokens and utility names.
+  "files.associations": {
+    "*.css": "tailwindcss"
+  }
+}

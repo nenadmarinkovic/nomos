@@ -4,7 +4,7 @@
 
 Nomos is a society simulation that runs in your browser. A grid of small, simple agents harvests two goods (sugar and spice), trades with neighbours, sometimes seizes from each other, drifts in identity by imitating wealthier peers, reproduces, dies — and a panel of AI theorists watches the same run and narrates what they see in their own vocabulary.
 
-Marx reads class. Axelrod reads tit-for-tat. Durkheim reads solidarity. Polanyi reads commodification. Same data, eleven readings, side by side.
+Marx reads class. Axelrod reads tit-for-tat. Flack reads slow variables. Polanyi reads commodification. Same data, ten readings, side by side.
 
 Nothing in the engine programs _inequality, classes, markets, money, norms, or institutions._ They emerge from local rules — or they don't, and that absence is the answer.
 
@@ -16,9 +16,9 @@ Nomos tries to bridge the gap with one move: **the engine is parameter-free abou
 
 **Parameter-free identity.** Each agent carries a continuous trait vector — `greed`, `prosociality`, `dominance`, `statusSeeking`, each in `[0,1]`. _Every behavioural rule_ (coercion, cooperation, cultural drift, harvest yields, trade refusal, token acceptance) reads from these traits. There is no hardcoded "Power agent." There are agents with high dominance and low prosociality who _find themselves_ attacking weaker neighbours, and a clustering pass at the end of each tick assigns them a label like "Power" if their traits land near that centroid. The four classical motivations are _findings_, not configurations.
 
-**Multi-voice reading.** Eleven theorists are available — Marx, Polanyi, Bourdieu, Durkheim, Granovetter, Schelling, Turchin, Farmer, Epstein, Flack, Axelrod. The browser detects significant events as the simulation runs and routes each one to whichever theorist's lens has the most concrete purchase on it. A burst of predation might read to Axelrod as the defector wave that iterated games were built to test, to Marx as a sharpening contradiction, to Durkheim as anomie. Three different paragraphs on the same factual event. Across a run you hear every voice; no single moment gets buried under eleven parallel takes.
+**Multi-voice reading.** Ten theorists are available — Marx, Polanyi, Bourdieu, Granovetter, Schelling, Turchin, Farmer, Epstein, Flack, Axelrod. The browser detects significant events as the simulation runs and routes each one to whichever theorist's lens has the most concrete purchase on it. A burst of predation might read to Axelrod as the defector wave that iterated games were built to test, to Marx as a sharpening contradiction, to Polanyi as the counter-movement stirring. Three different paragraphs on the same factual event. Across a run you hear every voice; no single moment gets buried under ten parallel takes.
 
-The combination is the contribution. A continuous-trait engine with post-hoc clustering improves on typed-agent ABMs even without observers. The multi-voiced framing would be a useful pedagogical tool even on a typed-agent engine. Together they let the same simulation be read as Marxian, Bourdieusian, Durkheimian, _and_ Axelrodian — and let you watch the disagreements.
+The combination is the contribution. A continuous-trait engine with post-hoc clustering improves on typed-agent ABMs even without observers. The multi-voiced framing would be a useful pedagogical tool even on a typed-agent engine. Together they let the same simulation be read as Marxian, Bourdieusian, Polanyian, _and_ Axelrodian — and let you watch the disagreements.
 
 ## Why now
 
@@ -50,7 +50,7 @@ Then someone dies. The default cascade — burned holders growing wary of every 
 
 ### An anchor of trust appears
 
-In another balanced run, no single agent takes over the population, but one accumulates far more inbound trade ties than anyone else. Nobody made them a chief. Nothing gives them authority. They are just the node the population's tie graph has begun to organise around — the person everyone eventually trades through. Granovetter reads the centrality; Flack reads a slow variable finding its host; Durkheim reads the collective effervescence around it. Leadership emerging from exchange, not conferred on it.
+In another balanced run, no single agent takes over the population, but one accumulates far more inbound trade ties than anyone else. Nobody made them a chief. Nothing gives them authority. They are just the node the population's tie graph has begun to organise around — the person everyone eventually trades through. Granovetter reads the centrality; Flack reads a slow variable finding its host; Bourdieu reads the symbolic capital accruing to it. Leadership emerging from exchange, not conferred on it.
 
 These are not coded presets. They are dynamics the engine produces from initial conditions.
 
@@ -63,7 +63,7 @@ Every saved run also has a shareable URL that anyone can open to replay the same
 ## What it doesn't do, honestly
 
 - **It's not a calibrated model of any real society.** Trait centroids and rate constants are first-pass. They produce dynamics that _look like_ the things classical theorists wrote about, but they're not fitted to a historical dataset. The point is to give those theorists something to read.
-- **The observers are LLMs in personas, not Marx and Durkheim.** They're good at distinctive vocabulary and bad at saying something genuinely new.
+- **The observers are LLMs in personas, not Marx and Polanyi.** They're good at distinctive vocabulary and bad at saying something genuinely new.
 - **City scale is bounded.** The Pixi renderer handles 5,000 agents at 60fps; the original 50,000-agent vision is still a horizon.
 - **No public gallery yet.** Saved runs are private to your library (or to whoever has the share URL); there's no browsable feed of other people's runs.
 

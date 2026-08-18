@@ -133,7 +133,7 @@ function NavGroup({
             className={cn(
               "group relative flex cursor-pointer items-center rounded-md text-left text-sm transition-colors",
               isActive
-                ? "bg-foreground/6 text-foreground"
+                ? "bg-foreground/6 font-medium text-foreground"
                 : "text-foreground/65 hover:bg-foreground/3 hover:text-foreground",
               collapsed
                 ? "h-10 justify-center"

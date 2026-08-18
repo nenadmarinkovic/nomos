@@ -8,7 +8,7 @@ A society simulation where agents follow simple rules and AI theorists observe w
 
 ## What Nomos is
 
-A grid of agents harvests two goods (sugar and spice), trades them with neighbours, sometimes seizes from each other, drifts in identity by imitating wealthier peers, reproduces, and dies. A panel of AI theorists watches the same field and narrates what they see in their own vocabulary — Marx on class, Axelrod on tit-for-tat, Durkheim on solidarity, and so on.
+A grid of agents harvests two goods (sugar and spice), trades them with neighbours, sometimes seizes from each other, drifts in identity by imitating wealthier peers, reproduces, and dies. A panel of AI theorists watches the same field and narrates what they see in their own vocabulary — Marx on class, Axelrod on tit-for-tat, Flack on slow variables, and so on.
 
 Nothing in the engine programs *inequality, classes, markets, money, norms, or institutions*. They emerge from local rules — or they don't, and the run is its own answer.
 
@@ -89,7 +89,7 @@ What *does* make sense — and what the **Living ground** option enables — is 
 
 Eleven theorists are available, each with a one-line lens, what they see in the social world, and what they watch for:
 
-Marx · Polanyi · Bourdieu · Durkheim · Granovetter · Schelling · Turchin · Farmer · Epstein · Flack · **Axelrod**
+Marx · Polanyi · Bourdieu · Granovetter · Schelling · Turchin · Farmer · Epstein · Flack · **Axelrod**
 
 (Axelrod was added so the chronicle has a voice that reads the same coercion-and-sanction data as *the evolution of cooperation*, not as incipient revolt — same event, opposite interpretation.)
 

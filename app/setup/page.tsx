@@ -184,7 +184,7 @@ const STEPS: readonly StepDef[] = [
     framing:
       "Every agent carries a trait vector — greed, prosociality, dominance, status-seeking. The four options here are named centroids in that space; your mix decides which regions the initial population is drawn from. The motivation labels you'll see later are read back from where each agent's traits actually sit — not the input you gave here.",
     theoryHook:
-      "This is the deepest choice in the model, and the four centroids track four classical positions. Material seeds high greed with modest neighbour-pull — Marx's productive subject. Symbolic seeds high status-seeking — Bourdieu's capital game. Normative seeds high prosociality — Durkheim's collective conscience. Power seeds high dominance — the question of legitimate domination. Pick more than one and the initial population fans out across trait space. Once the run starts, cultural drift and imitation move traits around; the visible mix at turn 500 is what *emerged*, not what you set. When something surfaces — a moralistic wave, a coercion cycle — the interesting question becomes: which region of the trait space produced it?",
+      "This is the deepest choice in the model, and the four centroids track four classical positions. Material seeds high greed with modest neighbour-pull — Marx's productive subject. Symbolic seeds high status-seeking — Bourdieu's capital game. Normative seeds high prosociality — the collective conscience, shared norms carrying a force no individual authored. Power seeds high dominance — the question of legitimate domination. Pick more than one and the initial population fans out across trait space. Once the run starts, cultural drift and imitation move traits around; the visible mix at turn 500 is what *emerged*, not what you set. When something surfaces — a moralistic wave, a coercion cycle — the interesting question becomes: which region of the trait space produced it?",
   },
   {
     key: "topology",
@@ -200,7 +200,7 @@ const STEPS: readonly StepDef[] = [
     framing:
       "AI theorists watch the same simulation and describe what they see in their own vocabulary.",
     theoryHook:
-      "This is the move that makes Nomos different. The simulation runs once, but the chosen theorists each narrate it through their own lens. Marx might see class struggle where Durkheim sees ritual breakdown and Schelling sees a quiet segregation cascade nobody intended. You're not asking which one is right — you're watching multiple readings of the same emergence, side by side. Pick more than one. Disagreement is where the intellectual move actually lives.",
+      "This is the move that makes Nomos different. The simulation runs once, but the chosen theorists each narrate it through their own lens. Marx might see class struggle where Flack sees a slow variable eroding and Schelling sees a quiet segregation cascade nobody intended. You're not asking which one is right — you're watching multiple readings of the same emergence, side by side. Pick more than one. Disagreement is where the intellectual move actually lives.",
   },
   {
     key: "summary",

@@ -64,8 +64,8 @@ export function NarratorPage() {
           },
           {
             n: "02",
-            title: "Durkheim & Granovetter",
-            body: "<em>Solidarity and embeddedness.</em> Durkheim reads ritual and anomie — when shared norms bind the group, when they fray. Granovetter reads the trade-tie graph directly: who brokers between clusters, which weak ties carry the information that strong ones can&rsquo;t.",
+            title: "Flack & Granovetter",
+            body: "<em>Slow variables and embeddedness.</em> Flack reads what stabilises the run across time — the standing of a trusted issuer, the credibility of policing — and what fails when those erode. Granovetter reads the trade-tie graph directly: who brokers between clusters, which weak ties carry the information that strong ones can&rsquo;t.",
           },
           {
             n: "03",

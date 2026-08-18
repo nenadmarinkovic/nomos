@@ -226,7 +226,7 @@ Both decay each turn on the same beat as ties. Both are erased when the witness 
 
 At the end of every tick, `refreshInfluencer` computes the inbound tie-weight sum for every agent. The agent with the largest sum is the current `topInfluencerId`; the sum is `topInfluencerCentrality`. This is a *signal*, not a role — nobody enforces anything, nobody has authority, but a node has become an anchor of trust in the population's graph.
 
-The `leadership_emerges` event fires when centrality first crosses `LEADERSHIP_LEVEL = 24` (with hysteresis re-arming at `LEADERSHIP_REARM = 14`). It routes to Granovetter (centrality reading), Flack (slow variable finding its host), and Durkheim (the effervescence around it).
+The `leadership_emerges` event fires when centrality first crosses `LEADERSHIP_LEVEL = 24` (with hysteresis re-arming at `LEADERSHIP_REARM = 14`). It routes to Granovetter (centrality reading), Flack (slow variable finding its host), and Bourdieu (the symbolic capital accruing to it).
 
 The Trust floating window plots `topInfluencerCentrality` and `topIssuerMistrust` on a shared axis, so the anchor's rise and the population's confidence in the largest issuer read against each other — and switches its label to `run!` while a bank run is active.
 

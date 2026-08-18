@@ -6,11 +6,25 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import {
   DEFAULT_CONFIG,
   newSeed,
+  OBSERVER_INFO,
   type ObserverKey,
   type SimulationConfig,
 } from "@/lib/config";
 import type { EngineSnapshot } from "@/lib/engine";
 import type { EventKind, SignificantEvent } from "@/lib/events";
+
+/**
+ * Saved runs store the observer roster as it stood when the run was saved, and
+ * the roster changes between versions (one was retired in v0.9). Unknown
+ * keys have no OBSERVER_INFO entry, and `pickObserver`'s fallback branch can
+ * return any key it is handed — so an unfiltered stale key reaches the prompt
+ * builder as undefined. Drop them on replay, falling back to the defaults so a
+ * run whose entire roster was retired still narrates.
+ */
+function knownObservers(observers: readonly ObserverKey[]): ObserverKey[] {
+  const known = observers.filter((o) => o in OBSERVER_INFO);
+  return known.length > 0 ? known : [...DEFAULT_CONFIG.observers];
+}
 
 const EMPTY_SNAPSHOT: EngineSnapshot = {
   turn: 0,
@@ -220,7 +234,7 @@ export const useSimulationStore = create<SimulationState>()(
       replayRun: (config) =>
         set((s) => ({
           // Keep the saved seed — engine is deterministic, replay is exact.
-          config,
+          config: { ...config, observers: knownObservers(config.observers) },
           running: true,
           started: true,
           turn: 0,
@@ -357,7 +371,7 @@ export const useSimulationStore = create<SimulationState>()(
     }),
     {
       name: "nomos-simulation",
-      version: 22,
+      version: 23,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         config: s.config,

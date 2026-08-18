@@ -2,17 +2,17 @@ import type { ObserverKey } from "@/lib/config";
 import type { EventKind } from "@/lib/events";
 
 const PRIORITY: Record<EventKind, ObserverKey[]> = {
-  founding: ["epstein", "polanyi", "durkheim"],
+  founding: ["epstein", "polanyi", "bourdieu"],
 
   inequality_surge: ["marx", "bourdieu", "turchin"],
 
-  leveling: ["polanyi", "durkheim", "marx"],
+  leveling: ["polanyi", "marx", "bourdieu"],
 
   stratification: ["bourdieu", "marx", "turchin"],
 
   population_crash: ["turchin", "flack", "epstein"],
 
-  population_boom: ["epstein", "granovetter", "durkheim"],
+  population_boom: ["epstein", "granovetter", "turchin"],
 
   market_forming: ["polanyi", "farmer", "granovetter"],
 
@@ -20,11 +20,11 @@ const PRIORITY: Record<EventKind, ObserverKey[]> = {
 
   collapse: ["turchin", "flack", "marx"],
 
-  segregation: ["schelling", "bourdieu", "durkheim"],
+  segregation: ["schelling", "bourdieu", "granovetter"],
 
   motivation_shift: ["bourdieu", "schelling", "granovetter"],
 
-  coercion_wave: ["axelrod", "marx", "durkheim", "flack"],
+  coercion_wave: ["axelrod", "marx", "flack"],
 
   cooperation_thickens: ["axelrod", "granovetter", "flack", "epstein"],
 
@@ -36,16 +36,15 @@ const PRIORITY: Record<EventKind, ObserverKey[]> = {
 
   shock_blight: ["polanyi", "epstein", "farmer"],
 
-  shock_plague: ["turchin", "durkheim", "flack"],
+  shock_plague: ["turchin", "flack", "epstein"],
 
-  leadership_emerges: ["granovetter", "flack", "durkheim"],
+  leadership_emerges: ["granovetter", "flack", "bourdieu"],
 
   bank_run: ["polanyi", "farmer", "marx"],
 
   passage: [
     "epstein",
     "marx",
-    "durkheim",
     "bourdieu",
     "polanyi",
     "granovetter",
