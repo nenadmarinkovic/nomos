@@ -31,10 +31,20 @@ interface MistralChatResponse {
 
 export async function mistralChat(
   messages: ChatMessage[],
-  opts: { temperature?: number; maxTokens?: number; signal?: AbortSignal } = {},
+  opts: {
+    temperature?: number;
+    maxTokens?: number;
+    signal?: AbortSignal;
+    timeoutMs?: number;
+  } = {},
 ): Promise<string> {
   const apiKey = process.env.MISTRAL_API_KEY;
   if (!apiKey) throw new MistralConfigError();
+
+  const timeout = AbortSignal.timeout(opts.timeoutMs ?? 30_000);
+  const signal = opts.signal
+    ? AbortSignal.any([opts.signal, timeout])
+    : timeout;
 
   const res = await fetch(MISTRAL_URL, {
     method: "POST",
@@ -49,13 +59,18 @@ export async function mistralChat(
       temperature: opts.temperature ?? 0.7,
       max_tokens: opts.maxTokens ?? 220,
     }),
-    signal: opts.signal,
+    signal,
   });
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
+    if (detail) {
+      console.error(
+        `[mistral] ${res.status} response: ${detail.slice(0, 500)}`,
+      );
+    }
     throw new MistralRequestError(
-      `Mistral request failed (${res.status})${detail ? `: ${detail.slice(0, 300)}` : ""}`,
+      `Mistral request failed (${res.status})`,
       res.status,
     );
   }

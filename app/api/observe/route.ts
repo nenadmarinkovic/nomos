@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { getCaller } from "@/lib/api-auth";
-import type { SignificantEvent } from "@/lib/events";
-import {
-  buildSystemPrompt,
-  buildUserPrompt,
-  isObserverKey,
-  type SimContext,
-  type WorldSummary,
-} from "@/lib/observers";
+import { readJsonBody } from "@/lib/http";
+import { parseObserveRequest } from "@/lib/observe-input";
+import { buildSystemPrompt, buildUserPrompt } from "@/lib/observers";
 import {
   MistralConfigError,
   MistralRequestError,
@@ -19,44 +14,22 @@ import { checkObserveLimit, clientIp } from "@/lib/observe-rate-limit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface ObserveRequest {
-  observer?: unknown;
-  event?: SignificantEvent;
-  world?: WorldSummary;
-  context?: SimContext;
-}
+const MAX_BODY_BYTES = 32 * 1024;
 
 export async function POST(req: Request) {
-  let body: ObserveRequest;
-  try {
-    body = (await req.json()) as ObserveRequest;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  const body = await readJsonBody<unknown>(req, MAX_BODY_BYTES);
+  if (!body.ok) {
+    return NextResponse.json({ error: body.error }, { status: body.status });
   }
 
-  const { observer, event, world, context } = body;
-
-  if (!isObserverKey(observer)) {
-    return NextResponse.json(
-      { error: "Unknown or missing observer" },
-      { status: 400 },
-    );
+  const parsed = parseObserveRequest(body.data);
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
-  if (!event?.summary || typeof event.turn !== "number") {
-    return NextResponse.json(
-      { error: "Missing or malformed event" },
-      { status: 400 },
-    );
-  }
-  if (!world) {
-    return NextResponse.json(
-      { error: "Missing world summary" },
-      { status: 400 },
-    );
-  }
+  const { observer, event, world, context } = parsed.value;
 
   const caller = await getCaller(req);
-  const verdict = checkObserveLimit(caller, clientIp(req));
+  const verdict = await checkObserveLimit(caller, clientIp(req));
   if (!verdict.ok) {
     return NextResponse.json(
       {
@@ -103,13 +76,16 @@ export async function POST(req: Request) {
         { status: 503 },
       );
     }
+    console.error("[observe] narration failed", err);
     if (err instanceof MistralRequestError) {
       return NextResponse.json(
-        { error: err.message, code: "mistral_error" },
+        { error: "The observers could not be reached.", code: "mistral_error" },
         { status: 502 },
       );
     }
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Narration failed." },
+      { status: 500 },
+    );
   }
 }

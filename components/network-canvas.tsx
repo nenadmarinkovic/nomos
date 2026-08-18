@@ -4,7 +4,11 @@ import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { XIcon } from "@phosphor-icons/react";
+import {
+  ArrowsLeftRightIcon,
+  TriangleIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 
 import type {
   ForceGraphMethods,
@@ -32,6 +36,7 @@ type GraphEvent = {
   turn: number;
   kind: "birth" | "death" | "tie";
   text: string;
+  tieWith?: string;
 };
 
 interface RebuildDelta {
@@ -247,7 +252,7 @@ export function NetworkCanvas() {
       }
       for (const k of newLinkKeys.slice(0, EVENTS_PER_KIND_LIMIT)) {
         const [a, b] = k.split(":");
-        burst.push({ turn, kind: "tie", text: `+ #${a}↔#${b}` });
+        burst.push({ turn, kind: "tie", text: `+ #${a}`, tieWith: `#${b}` });
       }
       if (burst.length > 0) {
         setEvents((prev) => [...burst, ...prev].slice(0, EVENT_HISTORY_LIMIT));
@@ -362,7 +367,16 @@ export function NetworkCanvas() {
           <span className="tabular-nums text-foreground/80">
             {Math.max(0, turn - lastRebuildTurn)}t
           </span>{" "}
-          ago · Δ {formatDelta(lastDelta)}
+          ago ·{" "}
+          <span className="inline-flex items-baseline gap-1">
+            <TriangleIcon
+              size={9}
+              weight="bold"
+              className="self-center"
+              aria-label="change"
+            />
+            {formatDelta(lastDelta)}
+          </span>
         </span>
       </div>
 
@@ -386,7 +400,20 @@ export function NetworkCanvas() {
                     className="flex items-baseline gap-1"
                   >
                     <span className="text-muted-foreground/60">T{e.turn}</span>
-                    <span className={eventColor(e.kind)}>{e.text}</span>
+                    <span className={eventColor(e.kind)}>
+                      {e.text}
+                      {e.tieWith && (
+                        <>
+                          <ArrowsLeftRightIcon
+                            size={9}
+                            weight="bold"
+                            className="mx-0.5 inline-block align-baseline"
+                            aria-label="tied to"
+                          />
+                          {e.tieWith}
+                        </>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

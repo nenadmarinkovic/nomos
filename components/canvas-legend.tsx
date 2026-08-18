@@ -1,6 +1,6 @@
 "use client";
 
-import { ShapesIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, ShapesIcon } from "@phosphor-icons/react";
 
 import {
   Dialog,
@@ -123,7 +123,12 @@ export function CanvasLegend() {
               </span>
               <span className="flex justify-between gap-2 text-xs text-muted-foreground">
                 <span>poor</span>
-                <span aria-hidden>→</span>
+                <ArrowRightIcon
+                  size={10}
+                  weight="bold"
+                  className="self-center"
+                  aria-hidden
+                />
                 <span>rich</span>
               </span>
             </div>

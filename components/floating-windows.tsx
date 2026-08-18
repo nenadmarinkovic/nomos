@@ -20,7 +20,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { XIcon } from "@phosphor-icons/react";
+import {
+  ArrowsLeftRightIcon,
+  GreaterThanOrEqualIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 
 import {
   ChartContainer,
@@ -130,7 +134,7 @@ function FloatingWindow({
 }: {
   windowKey: ViewKey;
   title: string;
-  meta?: string;
+  meta?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const visible = useSimulationStore((s) => s.views[windowKey]);
@@ -348,9 +352,19 @@ function PriceWindow() {
   );
 
   const meta =
-    snapshot.tradePrice > 0
-      ? `${snapshot.tradePrice.toFixed(2)} · ${snapshot.tradeVolume}↔`
-      : "no trade";
+    snapshot.tradePrice > 0 ? (
+      <span className="inline-flex items-baseline gap-1">
+        {snapshot.tradePrice.toFixed(2)} · {snapshot.tradeVolume}
+        <ArrowsLeftRightIcon
+          size={9}
+          weight="bold"
+          className="self-center"
+          aria-label="trades"
+        />
+      </span>
+    ) : (
+      "no trade"
+    );
 
   return (
     <FloatingWindow windowKey="price" title="Price" meta={meta}>
@@ -576,7 +590,14 @@ function MoneyWindow() {
         </AreaChart>
       </ChartContainer>
       <p className="mt-2 text-xs text-muted-foreground">
-        IOUs outstanding · issuers whose tokens ≥3 holders
+        IOUs outstanding · issuers whose tokens{" "}
+        <GreaterThanOrEqualIcon
+          size={9}
+          weight="bold"
+          className="inline-block align-baseline"
+          aria-label="at least"
+        />
+        3 holders
       </p>
     </FloatingWindow>
   );

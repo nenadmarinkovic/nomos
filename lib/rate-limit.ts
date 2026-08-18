@@ -102,3 +102,51 @@ export function resetRateLimits(): void {
   buckets.clear();
   lastSweep = 0;
 }
+
+type Store = typeof import("@/lib/rate-limit-store");
+
+let storePromise: Promise<Store | null> | null = null;
+
+function getStore(): Promise<Store | null> {
+  if (!process.env.DATABASE_URL) return Promise.resolve(null);
+  storePromise ??= import("@/lib/rate-limit-store").catch(() => null);
+  return storePromise;
+}
+
+export async function sharedPeek(
+  key: string,
+  rules: RateLimitRule[],
+  now: number = Date.now(),
+): Promise<RateLimitResult> {
+  const store = await getStore();
+  if (!store) return peekRateLimit(key, rules, now);
+  try {
+    return await store.peek(key, rules, now);
+  } catch {
+    return peekRateLimit(key, rules, now);
+  }
+}
+
+export async function sharedCommit(
+  key: string,
+  rules: RateLimitRule[],
+  now: number = Date.now(),
+): Promise<void> {
+  const store = await getStore();
+  if (!store) return commitRateLimit(key, rules, now);
+  try {
+    await store.commit(key, rules, now);
+  } catch {
+    commitRateLimit(key, rules, now);
+  }
+}
+
+export async function sharedRateLimit(
+  key: string,
+  rules: RateLimitRule[],
+  now: number = Date.now(),
+): Promise<RateLimitResult> {
+  const verdict = await sharedPeek(key, rules, now);
+  if (verdict.ok) await sharedCommit(key, rules, now);
+  return verdict;
+}

@@ -16,6 +16,7 @@ const ANON: Caller = { kind: "none" };
 const USER: Caller = { kind: "user", userId: "u_1" };
 
 beforeEach(() => {
+  delete process.env.DATABASE_URL;
   resetRateLimits();
 });
 
@@ -74,53 +75,53 @@ describe("rateLimit", () => {
 });
 
 describe("checkObserveLimit", () => {
-  it("gives signed-in callers a wider allowance than anonymous ones", () => {
+  it("gives signed-in callers a wider allowance than anonymous ones", async () => {
     let anonAllowed = 0;
     for (let i = 0; i < 100; i++) {
-      if (checkObserveLimit(ANON, "1.2.3.4", T0).ok) anonAllowed++;
+      if ((await checkObserveLimit(ANON, "1.2.3.4", T0)).ok) anonAllowed++;
     }
     let userAllowed = 0;
     for (let i = 0; i < 100; i++) {
-      if (checkObserveLimit(USER, "1.2.3.4", T0).ok) userAllowed++;
+      if ((await checkObserveLimit(USER, "1.2.3.4", T0)).ok) userAllowed++;
     }
     expect(anonAllowed).toBe(12);
     expect(userAllowed).toBe(20);
   });
 
-  it("buckets anonymous callers by IP, not by shared anon id", () => {
+  it("buckets anonymous callers by IP, not by shared anon id", async () => {
     const anonA: Caller = { kind: "anon", key: "anon_aaa" };
     const anonB: Caller = { kind: "anon", key: "anon_bbb" };
-    for (let i = 0; i < 12; i++) checkObserveLimit(anonA, "9.9.9.9", T0);
-    expect(checkObserveLimit(anonB, "9.9.9.9", T0).ok).toBe(false);
-    expect(checkObserveLimit(anonB, "8.8.8.8", T0).ok).toBe(true);
+    for (let i = 0; i < 12; i++) await checkObserveLimit(anonA, "9.9.9.9", T0);
+    expect((await checkObserveLimit(anonB, "9.9.9.9", T0)).ok).toBe(false);
+    expect((await checkObserveLimit(anonB, "8.8.8.8", T0)).ok).toBe(true);
   });
 
-  it("reports which ceiling rejected the call", () => {
-    for (let i = 0; i < 12; i++) checkObserveLimit(ANON, "1.1.1.1", T0);
-    const verdict = checkObserveLimit(ANON, "1.1.1.1", T0);
+  it("reports which ceiling rejected the call", async () => {
+    for (let i = 0; i < 12; i++) await checkObserveLimit(ANON, "1.1.1.1", T0);
+    const verdict = await checkObserveLimit(ANON, "1.1.1.1", T0);
     expect(verdict.ok).toBe(false);
     expect(verdict.scope).toBe("caller");
     expect(verdict.tier).toBe("anon");
     expect(verdict.retryAfterSec).toBeGreaterThan(0);
   });
 
-  it("does not charge the global ceiling for a caller-rejected call", () => {
-    for (let i = 0; i < 12; i++) checkObserveLimit(ANON, "1.1.1.1", T0);
-    for (let i = 0; i < 500; i++) checkObserveLimit(ANON, "1.1.1.1", T0);
-    expect(checkObserveLimit(ANON, "2.2.2.2", T0).ok).toBe(true);
+  it("does not charge the global ceiling for a caller-rejected call", async () => {
+    for (let i = 0; i < 12; i++) await checkObserveLimit(ANON, "1.1.1.1", T0);
+    for (let i = 0; i < 500; i++) await checkObserveLimit(ANON, "1.1.1.1", T0);
+    expect((await checkObserveLimit(ANON, "2.2.2.2", T0)).ok).toBe(true);
   });
 
-  it("stops everyone once the deployment-wide hourly ceiling is hit", () => {
+  it("stops everyone once the deployment-wide hourly ceiling is hit", async () => {
     for (let ip = 0; ip < 250; ip++) {
       for (let i = 0; i < 12; i++) {
-        checkObserveLimit(ANON, `10.0.${ip}.1`, T0);
+        await checkObserveLimit(ANON, `10.0.${ip}.1`, T0);
       }
     }
-    const verdict = checkObserveLimit(ANON, "172.16.0.1", T0);
+    const verdict = await checkObserveLimit(ANON, "172.16.0.1", T0);
     expect(verdict.ok).toBe(false);
     expect(verdict.scope).toBe("global");
-    expect(checkObserveLimit(ANON, "172.16.0.2", T0 + MINUTE + 1).ok).toBe(
-      false,
-    );
+    expect(
+      (await checkObserveLimit(ANON, "172.16.0.2", T0 + MINUTE + 1)).ok,
+    ).toBe(false);
   });
 });

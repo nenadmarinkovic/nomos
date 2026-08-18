@@ -1,9 +1,11 @@
 import type { Caller } from "@/lib/api-auth";
 import {
-  commitRateLimit,
-  peekRateLimit,
+  sharedCommit,
+  sharedPeek,
   type RateLimitResult,
 } from "@/lib/rate-limit";
+
+export { clientIp } from "@/lib/client-ip";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -31,19 +33,6 @@ export const OBSERVE_LIMITS = {
   ],
 };
 
-export function clientIp(req: Request): string {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  return (
-    req.headers.get("x-real-ip")?.trim() ||
-    req.headers.get("cf-connecting-ip")?.trim() ||
-    "unknown"
-  );
-}
-
 export function observeBucket(
   caller: Caller,
   ip: string,
@@ -59,23 +48,27 @@ export interface ObserveLimitVerdict extends RateLimitResult {
   tier: "user" | "anon";
 }
 
-export function checkObserveLimit(
+export async function checkObserveLimit(
   caller: Caller,
   ip: string,
   now: number = Date.now(),
-): ObserveLimitVerdict {
+): Promise<ObserveLimitVerdict> {
   const { key, tier } = observeBucket(caller, ip);
   const callerRules = OBSERVE_LIMITS[tier]();
   const globalRules = OBSERVE_LIMITS.global();
 
-  const perCaller = peekRateLimit(key, callerRules, now);
-  if (!perCaller.ok) return { ...perCaller, scope: "caller", tier };
+  const [perCaller, global] = await Promise.all([
+    sharedPeek(key, callerRules, now),
+    sharedPeek(GLOBAL_KEY, globalRules, now),
+  ]);
 
-  const global = peekRateLimit(GLOBAL_KEY, globalRules, now);
+  if (!perCaller.ok) return { ...perCaller, scope: "caller", tier };
   if (!global.ok) return { ...global, scope: "global", tier };
 
-  commitRateLimit(key, callerRules, now);
-  commitRateLimit(GLOBAL_KEY, globalRules, now);
+  await Promise.all([
+    sharedCommit(key, callerRules, now),
+    sharedCommit(GLOBAL_KEY, globalRules, now),
+  ]);
 
   const tightest = global.remaining < perCaller.remaining ? global : perCaller;
   return {

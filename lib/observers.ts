@@ -23,7 +23,7 @@ export interface SimContext {
 }
 
 export function isObserverKey(value: unknown): value is ObserverKey {
-  return typeof value === "string" && value in OBSERVER_INFO;
+  return typeof value === "string" && Object.hasOwn(OBSERVER_INFO, value);
 }
 
 export function buildSystemPrompt(observer: ObserverKey): string {

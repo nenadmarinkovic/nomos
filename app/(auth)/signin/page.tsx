@@ -6,6 +6,7 @@ import { Suspense, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { clearAnonId } from "@/lib/anon-id";
+import { safeNextPath } from "@/lib/safe-redirect";
 import { signIn } from "@/lib/auth-client";
 import { claimAnonRuns } from "@/lib/runs-api";
 
@@ -22,7 +23,7 @@ export default function SignInPage() {
 function SignInForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const next = search.get("next") ?? "/";
+  const next = safeNextPath(search.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

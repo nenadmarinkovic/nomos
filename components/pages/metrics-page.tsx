@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback } from "react";
+import { type ReactNode, useCallback } from "react";
+import { GreaterThanOrEqualIcon } from "@phosphor-icons/react";
 
 import { PageWelcome } from "@/components/page-welcome";
 import { RunConditions } from "@/components/run-conditions";
@@ -45,7 +46,7 @@ export function MetricsPage() {
           {
             n: "01",
             title: "Gini coefficient",
-            body: "Wealth concentration on a 0 → 1 scale. 0 means everyone holds the same; 1 means a single agent holds everything. Watch it rise and you&rsquo;re watching an oligarchy form bottom-up.",
+            body: "Wealth concentration on a 0 to 1 scale. 0 means everyone holds the same; 1 means a single agent holds everything. Watch it rise and you&rsquo;re watching an oligarchy form bottom-up.",
           },
           {
             n: "02",
@@ -212,7 +213,18 @@ function TokenEconomySection({
           <Summary
             label="Circulating issuers"
             value={snapshot.circulatingIssuers.toString()}
-            hint="held by ≥3 strangers"
+            hint={
+              <span className="inline-flex items-baseline gap-0.5">
+                held by
+                <GreaterThanOrEqualIcon
+                  size={9}
+                  weight="bold"
+                  className="self-center"
+                  aria-label="at least"
+                />
+                3 strangers
+              </span>
+            }
           />
           <Summary
             label="Top issuer"
@@ -257,7 +269,7 @@ function Summary({
 }: {
   label: string;
   value: string;
-  hint?: string;
+  hint?: ReactNode;
 }) {
   return (
     <div className="rounded-md border border-foreground/10 bg-card/40 px-3 py-3">

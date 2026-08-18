@@ -106,3 +106,19 @@ model Run {
   @@index([ownerKey, createdAt])
   @@index([isPublic, createdAt])
 }
+
+model RateLimitHit {
+  id     BigInt   @id @default(autoincrement())
+  bucket String
+  at     DateTime
+
+  @@index([bucket, at])
+  @@index([at])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
