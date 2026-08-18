@@ -201,7 +201,7 @@ function MiniSimBody({
           href="/"
           onPointerDown={(e) => e.stopPropagation()}
           aria-label="Open Field"
-          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/6 hover:text-foreground"
         >
           <ArrowSquareUpRightIcon size={12} weight="bold" />
         </Link>

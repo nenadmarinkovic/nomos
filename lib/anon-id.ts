@@ -35,12 +35,6 @@ export function anonIdHeaders(create: boolean = false): HeadersInit {
   return id ? { [ANON_ID_HEADER]: id } : {};
 }
 
-/**
- * Compact url-safe id roughly cuid-shaped: timestamp prefix + 16 chars of
- * entropy. Not cryptographically derived (an attacker who guesses your id
- * can read your anonymous runs), but they have no other vector to obtain
- * one — and the moment the user signs up, ownership becomes proper.
- */
 function generateAnonId(): string {
   const ts = Date.now().toString(36);
   const bytes = new Uint8Array(12);

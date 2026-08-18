@@ -120,10 +120,7 @@ export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
       .style("cursor", "pointer");
 
     nodeSel.append("path").attr("d", (d) => shapePath(d.motivation));
-    nodeSel
-      .attr("fill", (d) => MOTIVATION_COLOR[d.motivation] ?? "#0076E7")
-      .attr("stroke", "rgba(20,20,20,0.75)")
-      .attr("stroke-width", 0.9);
+    nodeSel.attr("fill", (d) => MOTIVATION_COLOR[d.motivation] ?? "#0076E7");
 
     nodeSel
       .on("mouseenter", function (_event, d) {
@@ -178,7 +175,7 @@ export function NetworkWindowBody({ worldRef }: NetworkWindowBodyProps) {
         </span>
       </div>
 
-      <div className="relative h-52 w-full overflow-hidden rounded-sm border border-foreground/10 bg-foreground/[0.02]">
+      <div className="relative h-52 w-full overflow-hidden rounded-sm border border-foreground/10 bg-foreground/2">
         <svg
           ref={svgRef}
           className="absolute inset-0 h-full w-full text-foreground"

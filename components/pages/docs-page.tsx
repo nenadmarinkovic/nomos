@@ -156,7 +156,7 @@ export function DocsPage({
         {body ? (
           <article
             ref={articleRef}
-            className="prose prose-neutral mt-10 max-w-none dark:prose-invert prose-headings:tracking-tight prose-headings:text-foreground prose-h1:text-3xl prose-h1:font-light prose-h2:text-xl prose-h2:font-light prose-h2:mt-10 prose-h3:text-lg prose-h3:font-normal prose-h3:mt-8 prose-h3:text-foreground/90 prose-h2:scroll-mt-20 prose-h3:scroll-mt-20 prose-p:text-base prose-p:text-foreground/75 prose-li:text-base prose-li:text-foreground/75 prose-strong:text-foreground prose-strong:font-semibold prose-em:text-foreground prose-em:italic prose-a:text-brand prose-a:no-underline hover:prose-a:underline prose-code:font-mono prose-code:text-sm prose-code:text-foreground prose-code:bg-foreground/[0.06] prose-code:px-1 prose-code:py-px prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-card/50 prose-pre:border prose-pre:border-foreground/10 prose-pre:text-sm prose-table:text-sm prose-table:text-foreground/80 prose-th:font-mono prose-th:uppercase prose-th:tracking-wide prose-th:text-xs prose-th:text-muted-foreground prose-th:font-medium prose-blockquote:border-l-foreground/20 prose-blockquote:italic prose-blockquote:text-foreground/70"
+            className="prose prose-neutral mt-10 max-w-none dark:prose-invert prose-headings:tracking-tight prose-headings:text-foreground prose-h1:text-3xl prose-h1:font-light prose-h2:text-xl prose-h2:font-light prose-h2:mt-10 prose-h3:text-lg prose-h3:font-normal prose-h3:mt-8 prose-h3:text-foreground/90 prose-h2:scroll-mt-20 prose-h3:scroll-mt-20 prose-p:text-base prose-p:text-foreground/75 prose-li:text-base prose-li:text-foreground/75 prose-strong:text-foreground prose-strong:font-semibold prose-em:text-foreground prose-em:italic prose-a:text-brand prose-a:no-underline hover:prose-a:underline prose-code:font-mono prose-code:text-sm prose-code:text-foreground prose-code:bg-foreground/6 prose-code:px-1 prose-code:py-px prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-pre:bg-card/50 prose-pre:border prose-pre:border-foreground/10 prose-pre:text-sm prose-table:text-sm prose-table:text-foreground/80 prose-th:font-mono prose-th:uppercase prose-th:tracking-wide prose-th:text-xs prose-th:text-muted-foreground prose-th:font-medium prose-blockquote:border-l-foreground/20 prose-blockquote:italic prose-blockquote:text-foreground/70"
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
@@ -175,7 +175,7 @@ export function DocsPage({
       </div>
 
       {headings.length > 0 ? (
-        <aside className="hidden w-56 shrink-0 pt-[30px] xl:block">
+        <aside className="hidden w-56 shrink-0 pt-7.5 xl:block">
           <DocsToc headings={headings} activeId={activeHeadingId} />
         </aside>
       ) : null}

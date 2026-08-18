@@ -190,8 +190,8 @@ function FilterRow({
       className={cn(
         "flex w-full cursor-pointer flex-col items-start gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors",
         active
-          ? "bg-foreground/[0.06] text-foreground"
-          : "text-foreground/70 hover:bg-foreground/[0.03] hover:text-foreground",
+          ? "bg-foreground/6 text-foreground"
+          : "text-foreground/70 hover:bg-foreground/3 hover:text-foreground",
       )}
     >
       <div className="flex w-full items-baseline justify-between gap-2">
@@ -258,7 +258,7 @@ function PendingLines() {
         <div
           key={i}
           className={cn(
-            "h-2.5 animate-pulse rounded bg-foreground/[0.08]",
+            "h-2.5 animate-pulse rounded bg-foreground/8",
             i === 0 ? "w-full" : i === 1 ? "w-[92%]" : "w-2/3",
           )}
         />

@@ -45,8 +45,6 @@ export interface WorldView {
   ties: Float32Array;
 }
 
-/** Packed transferable buffers. Agents share one Float32 buffer (stride =
- *  STRIDE) so the whole frame moves as a handful of ArrayBuffers. */
 export interface WorldFrame {
   width: number;
   height: number;
@@ -81,8 +79,6 @@ const T_PROSOCIALITY = 15;
 const T_DOMINANCE = 16;
 const T_STATUS = 17;
 
-/** Pack a world into transferable buffers. Grids `.slice()` first because
- *  the engine keeps using them after transfer. Integer fields fit in Float32. */
 export function serializeWorld(view: WorldView): {
   frame: WorldFrame;
   transfer: ArrayBuffer[];

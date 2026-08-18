@@ -721,26 +721,22 @@ function drawShape(g: Graphics, motivation: MotivationKey, color: number) {
   const cy = 32;
   const half = 28;
   if (motivation === "material") {
-    g.rect(cx - half, cy - half, half * 2, half * 2)
-      .fill(color)
-      .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
+    g.rect(cx - half, cy - half, half * 2, half * 2).fill(color);
     return;
   }
   if (motivation === "symbolic") {
-    g.circle(cx, cy, half)
-      .fill(color)
-      .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
+    g.circle(cx, cy, half).fill(color);
     return;
   }
   if (motivation === "normative") {
-    g.poly([cx, cy - half, cx + half, cy + half, cx - half, cy + half])
-      .fill(color)
-      .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
+    g.poly([cx, cy - half, cx + half, cy + half, cx - half, cy + half]).fill(
+      color,
+    );
     return;
   }
-  g.poly([cx, cy - half, cx + half, cy, cx, cy + half, cx - half, cy])
-    .fill(color)
-    .stroke({ color: 0x141414, width: 2, alpha: 0.6 });
+  g.poly([cx, cy - half, cx + half, cy, cx, cy + half, cx - half, cy]).fill(
+    color,
+  );
 }
 
 function easeOutBack(t: number): number {

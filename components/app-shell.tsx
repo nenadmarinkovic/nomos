@@ -39,8 +39,6 @@ export function AppShell({
   const sharedRunId = searchParams?.get("run") ?? undefined;
   const sharedHandled = useRef(false);
 
-  // A shared link (`/?run=<id>`) loads that run and replays it, then strips
-  // the param so a reload doesn't restart it.
   useEffect(() => {
     if (!sharedRunId || sharedHandled.current) return;
     sharedHandled.current = true;

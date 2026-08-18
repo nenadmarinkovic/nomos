@@ -367,7 +367,7 @@ export function NetworkCanvas() {
       </div>
 
       {selectedId === null && (
-        <div className="pointer-events-none absolute bottom-4 left-4 z-10 w-[28rem] max-w-[calc(100vw-2rem)] rounded-md border border-foreground/10 bg-card/90 px-3 py-2 backdrop-blur-sm">
+        <div className="pointer-events-none absolute bottom-4 left-4 z-10 w-112 max-w-[calc(100vw-2rem)] rounded-md border border-foreground/10 bg-card/90 px-3 py-2 backdrop-blur-sm">
           {events.length === 0 ? (
             <p className="text-xs italic leading-snug text-foreground/80">
               Each shape is one agent; lines show each agent&apos;s three
@@ -467,7 +467,7 @@ function AgentInspector({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+            className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/6 hover:text-foreground"
           >
             <XIcon size={12} weight="bold" />
           </button>
@@ -487,7 +487,7 @@ function AgentInspector({
         <div className="flex items-center gap-2">
           <span
             aria-hidden
-            className="block size-3 rounded-[2px]"
+            className="block size-3 rounded-xs"
             style={{
               background: motivationColor(agent.motivation, monochrome, isDark),
             }}
@@ -503,7 +503,7 @@ function AgentInspector({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/6 hover:text-foreground"
         >
           <XIcon size={12} weight="bold" />
         </button>

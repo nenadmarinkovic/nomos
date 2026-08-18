@@ -155,7 +155,7 @@ export function RunLibrary() {
           render={
             <DialogTrigger
               aria-label="Run library"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground"
             >
               <ArchiveIcon size={18} weight="regular" />
             </DialogTrigger>

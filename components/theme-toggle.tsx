@@ -14,9 +14,6 @@ const options = [
 
 const noopSubscribe = () => () => {};
 
-// Resolves to `false` during SSR and the first client render, then `true`
-// once hydrated — without a setState-in-effect. Guards against a hydration
-// mismatch while `useTheme` settles on the resolved theme.
 function useMounted() {
   return useSyncExternalStore(
     noopSubscribe,
@@ -33,7 +30,7 @@ export function ThemeToggle({ className }: { className?: string }) {
     return (
       <div
         className={cn(
-          "h-7 w-[80px] rounded-full bg-card border border-foreground/10",
+          "h-7 w-20 rounded-full bg-card border border-foreground/10",
           className,
         )}
       />

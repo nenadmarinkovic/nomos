@@ -31,7 +31,7 @@ function MenubarTrigger({
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
       className={cn(
-        "flex cursor-pointer select-none items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground data-[state=open]:bg-foreground/[0.06] data-[state=open]:text-foreground",
+        "flex cursor-pointer select-none items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground outline-none transition-colors hover:bg-foreground/6 hover:text-foreground data-[state=open]:bg-foreground/6 data-[state=open]:text-foreground",
         className,
       )}
       {...props}
@@ -58,7 +58,7 @@ function MenubarContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-[8rem] overflow-hidden rounded-md border border-foreground/15 bg-card p-1 text-foreground outline-none",
+          "z-50 min-w-32 overflow-hidden rounded-md border border-foreground/15 bg-card p-1 text-foreground outline-none",
           className,
         )}
         {...props}
@@ -75,7 +75,7 @@ function MenubarItem({
     <MenubarPrimitive.Item
       data-slot="menubar-item"
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-foreground/[0.06]",
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-foreground/6",
         className,
       )}
       {...props}

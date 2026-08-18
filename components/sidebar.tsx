@@ -65,7 +65,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <aside
       className={cn(
         "group/sidebar relative hidden h-full shrink-0 flex-col border-r border-foreground/10 bg-background transition-[width] duration-200 md:flex",
-        collapsed ? "w-[60px]" : "w-56",
+        collapsed ? "w-15" : "w-56",
       )}
     >
       <ScrollArea className="flex-1">
@@ -96,7 +96,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           className="group/handle absolute -right-3 top-0 z-50 flex h-full w-6 cursor-col-resize items-center justify-center"
         >
-          <div className="absolute right-[11px] top-0 h-full w-px transition-colors duration-150 group-hover/handle:bg-foreground/20" />
+          <div className="absolute right-2.75 top-0 h-full w-px transition-colors duration-150 group-hover/handle:bg-foreground/20" />
           <div className="relative opacity-0 transition-opacity duration-150 group-hover/handle:opacity-100">
             <div className="absolute inset-y-0 left-1/2 w-3 -translate-x-1/2 bg-background" />
             <div className="relative flex size-6 items-center justify-center rounded-full border border-foreground/10 bg-background text-muted-foreground hover:text-foreground">
@@ -133,8 +133,8 @@ function NavGroup({
             className={cn(
               "group relative flex cursor-pointer items-center rounded-md text-left text-sm transition-colors",
               isActive
-                ? "bg-foreground/[0.06] text-foreground"
-                : "text-foreground/65 hover:bg-foreground/[0.03] hover:text-foreground",
+                ? "bg-foreground/6 text-foreground"
+                : "text-foreground/65 hover:bg-foreground/3 hover:text-foreground",
               collapsed
                 ? "h-10 justify-center"
                 : "justify-between gap-2.5 px-2.5 py-2",

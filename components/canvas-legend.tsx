@@ -60,7 +60,7 @@ export function CanvasLegend() {
         <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           Legend
         </span>
-        <DialogTrigger className="flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md border border-foreground/15 bg-card px-2 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground">
+        <DialogTrigger className="flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md border border-foreground/15 bg-card px-2 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground outline-none transition-colors hover:bg-foreground/6 hover:text-foreground">
           <ShapesIcon size={11} weight="bold" />
           Open
         </DialogTrigger>
@@ -187,46 +187,17 @@ function LegendShape({
   const color = mono
     ? "currentColor"
     : (MOTIVATION_COLOR[motivation] ?? MOTIVATION_COLOR.material);
-  const stroke = mono ? "currentColor" : "rgba(20,20,20,0.7)";
-  const sw = 0.9;
   const opacity = mono ? (MOTIVATION_MONO_OPACITY[motivation] ?? 0.8) : 1;
 
   const shape =
     motivation === "symbolic" ? (
-      <circle
-        cx="7"
-        cy="7"
-        r="5.5"
-        fill={color}
-        stroke={stroke}
-        strokeWidth={sw}
-      />
+      <circle cx="7" cy="7" r="5.5" fill={color} />
     ) : motivation === "normative" ? (
-      <polygon
-        points="7,1.5 12.5,12 1.5,12"
-        fill={color}
-        stroke={stroke}
-        strokeWidth={sw}
-        strokeLinejoin="miter"
-      />
+      <polygon points="7,1.5 12.5,12 1.5,12" fill={color} />
     ) : motivation === "power" ? (
-      <polygon
-        points="7,1.5 12.5,7 7,12.5 1.5,7"
-        fill={color}
-        stroke={stroke}
-        strokeWidth={sw}
-        strokeLinejoin="miter"
-      />
+      <polygon points="7,1.5 12.5,7 7,12.5 1.5,7" fill={color} />
     ) : (
-      <rect
-        x="1.5"
-        y="1.5"
-        width="11"
-        height="11"
-        fill={color}
-        stroke={stroke}
-        strokeWidth={sw}
-      />
+      <rect x="1.5" y="1.5" width="11" height="11" fill={color} />
     );
 
   return (

@@ -53,8 +53,7 @@ function DocsTopNav({ activeSlug }: { activeSlug: string }) {
         width: tabRect.width,
         height: tabRect.height,
       });
-      // Enable transitions on the next frame so the first measurement
-      // doesn't slide in from (0, 0).
+
       requestAnimationFrame(() => setAnimated(true));
     };
     measure();
@@ -71,7 +70,7 @@ function DocsTopNav({ activeSlug }: { activeSlug: string }) {
         {pill ? (
           <span
             aria-hidden
-            className="pointer-events-none absolute left-0 top-0 rounded-md bg-foreground/[0.08] will-change-transform"
+            className="pointer-events-none absolute left-0 top-0 rounded-md bg-foreground/8 will-change-transform"
             style={{
               transform: `translate3d(${pill.left}px, ${pill.top}px, 0)`,
               width: pill.width,
@@ -91,7 +90,7 @@ function DocsTopNav({ activeSlug }: { activeSlug: string }) {
             }}
             href={`/docs/${entry.slug}`}
             className={cn(
-              "relative z-[1] rounded-md px-3 py-1.5 text-sm transition-colors duration-200",
+              "relative z-1 rounded-md px-3 py-1.5 text-sm transition-colors duration-200",
               activeSlug === entry.slug
                 ? "text-foreground"
                 : "text-foreground/65 hover:text-foreground",

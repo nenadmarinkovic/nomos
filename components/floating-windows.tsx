@@ -179,7 +179,7 @@ function FloatingWindow({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => toggleView(windowKey)}
           aria-label={`Close ${title}`}
-          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/6 hover:text-foreground"
         >
           <XIcon size={12} weight="bold" />
         </button>
@@ -472,7 +472,7 @@ function StreamWindow() {
       title="Motivations"
       meta={total > 0 ? total.toLocaleString() : undefined}
     >
-      <div className="h-24 w-full overflow-hidden rounded-sm bg-foreground/[0.03]">
+      <div className="h-24 w-full overflow-hidden rounded-sm bg-foreground/3">
         {paths ? (
           <svg
             viewBox="0 0 264 96"
@@ -665,7 +665,7 @@ function NarratorWindow() {
       title="Narrator"
       meta={pending ? "···" : undefined}
     >
-      <div className="min-h-[121px]">
+      <div className="min-h-30.25">
         {!latest ? (
           <p className="text-sm leading-relaxed text-muted-foreground">
             {pending

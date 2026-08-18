@@ -15,7 +15,7 @@ export function SnapshotBadge({ turn, stale, onRefresh }: SnapshotBadgeProps) {
     <button
       type="button"
       onClick={onRefresh}
-      className="group flex cursor-pointer items-center gap-2 rounded-md border border-foreground/10 bg-card/60 px-2.5 py-1.5 transition-colors hover:bg-foreground/[0.03]"
+      className="group flex cursor-pointer items-center gap-2 rounded-md border border-foreground/10 bg-card/60 px-2.5 py-1.5 transition-colors hover:bg-foreground/3"
     >
       <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         As of

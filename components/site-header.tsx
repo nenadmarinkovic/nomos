@@ -100,7 +100,7 @@ export function SiteHeader({
         className={cn(
           "hidden shrink-0 items-center border-foreground/10 transition-[width] duration-200 md:flex md:border-r",
           sidebarCollapsed
-            ? "px-1.5 md:w-[60px] md:justify-center"
+            ? "px-1.5 md:w-15 md:justify-center"
             : "px-4 md:w-56",
         )}
       >
@@ -113,7 +113,7 @@ export function SiteHeader({
             priority
             className={cn(
               "w-auto dark:invert",
-              sidebarCollapsed ? "h-[38px]" : "h-12",
+              sidebarCollapsed ? "h-9.5" : "h-12",
             )}
           />
           {!sidebarCollapsed && (
@@ -156,7 +156,7 @@ export function SiteHeader({
                     aria-label={
                       sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
                     }
-                    className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+                    className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground"
                   >
                     <SidebarSimpleIcon size={18} weight="regular" />
                   </button>
@@ -202,7 +202,7 @@ export function SiteHeader({
                       "cursor-pointer rounded-[4px] px-2 py-1 font-mono text-xs tabular-nums transition-colors",
                       active
                         ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
+                        : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                     )}
                   >
                     {s.label}

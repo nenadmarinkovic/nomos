@@ -38,9 +38,6 @@ export function AgentInspectorOverlay({
   const [snap, setSnap] = useState<AgentSnapshot | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
-  // Re-reads the worker-updated world ref on every `turn` to keep the
-  // inspector live — a legitimate use of setState-in-effect for external
-  // state sync.
   useEffect(() => {
     const world = activeWorldRef.current;
     if (!world) {
@@ -98,7 +95,7 @@ export function AgentInspectorOverlay({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={onClose}
           aria-label="Close inspector"
-          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+          className="cursor-pointer rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/6 hover:text-foreground"
         >
           <XIcon size={12} weight="bold" />
         </button>

@@ -61,14 +61,14 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
             <button
               type="button"
               className={cn(
-                "flex w-full cursor-pointer items-center gap-3 rounded-md text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground",
+                "flex w-full cursor-pointer items-center gap-3 rounded-md text-foreground/70 transition-colors hover:bg-foreground/4 hover:text-foreground",
                 collapsed ? "h-10 justify-center px-0" : "h-10 px-1.5",
               )}
               aria-label="Account & settings"
             >
               <span
                 aria-hidden
-                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/[0.08] text-muted-foreground"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-muted-foreground"
               >
                 <UserIcon size={13} weight="regular" />
               </span>
@@ -148,14 +148,14 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
           <button
             type="button"
             className={cn(
-              "flex w-full cursor-pointer items-center gap-3 rounded-md transition-colors hover:bg-foreground/[0.04]",
+              "flex w-full cursor-pointer items-center gap-3 rounded-md transition-colors hover:bg-foreground/4",
               collapsed ? "h-10 justify-center px-0" : "h-10 px-1.5",
             )}
             aria-label={`Account · ${user.email}`}
           >
             <span
               aria-hidden
-              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/[0.08] text-muted-foreground"
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-muted-foreground"
             >
               <UserIcon size={13} weight="regular" />
             </span>
@@ -187,7 +187,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
           <div className="flex items-center gap-3 px-2 py-2">
             <span
               aria-hidden
-              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground/[0.08] text-muted-foreground"
+              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-muted-foreground"
             >
               <UserIcon size={15} weight="regular" />
             </span>

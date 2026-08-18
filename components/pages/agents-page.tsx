@@ -162,7 +162,7 @@ function RankTable({ rows }: { rows: RankedRow[] }) {
   return (
     <div className="overflow-hidden rounded-md border border-foreground/10">
       <table className="w-full text-sm">
-        <thead className="bg-foreground/[0.02]">
+        <thead className="bg-foreground/2">
           <tr className="border-b border-foreground/10 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
             <th className="px-3 py-2 text-left font-normal">#</th>
             <th className="px-3 py-2 text-left font-normal">Motivation</th>
@@ -176,7 +176,7 @@ function RankTable({ rows }: { rows: RankedRow[] }) {
           {rows.map((r) => (
             <tr
               key={r.id}
-              className="border-b border-foreground/5 last:border-b-0 transition-colors hover:bg-foreground/[0.02]"
+              className="border-b border-foreground/5 last:border-b-0 transition-colors hover:bg-foreground/2"
             >
               <td className="px-3 py-1.5 font-mono text-xs text-muted-foreground">
                 #{r.id}

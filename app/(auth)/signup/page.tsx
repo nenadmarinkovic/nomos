@@ -95,7 +95,7 @@ function SignUpForm() {
         {error && (
           <p
             role="alert"
-            className="rounded-md border border-destructive/30 bg-destructive/[0.05] px-3 py-2 text-sm leading-snug text-destructive"
+            className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm leading-snug text-destructive"
           >
             {error}
           </p>
@@ -127,14 +127,14 @@ function AuthFormFallback() {
   return (
     <div className="space-y-7" aria-hidden>
       <div className="space-y-2 text-center">
-        <div className="mx-auto h-7 w-40 rounded bg-foreground/[0.06]" />
-        <div className="mx-auto h-4 w-64 rounded bg-foreground/[0.04]" />
+        <div className="mx-auto h-7 w-40 rounded bg-foreground/6" />
+        <div className="mx-auto h-4 w-64 rounded bg-foreground/4" />
       </div>
       <div className="space-y-4">
-        <div className="h-[68px] rounded-md bg-foreground/[0.04]" />
-        <div className="h-[68px] rounded-md bg-foreground/[0.04]" />
-        <div className="h-[68px] rounded-md bg-foreground/[0.04]" />
-        <div className="h-11 rounded-md bg-foreground/[0.06]" />
+        <div className="h-17 rounded-md bg-foreground/4" />
+        <div className="h-17 rounded-md bg-foreground/4" />
+        <div className="h-17 rounded-md bg-foreground/4" />
+        <div className="h-11 rounded-md bg-foreground/6" />
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ function SelectTrigger({
         "placeholder:text-zinc-500 dark:placeholder:text-zinc-500",
         "focus-visible:border-foreground/40 focus-visible:ring-2 focus-visible:ring-foreground/10",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        "data-[placeholder]:text-zinc-500 [&>span]:line-clamp-1",
+        "data-placeholder:text-zinc-500 [&>span]:line-clamp-1",
         className,
       )}
       {...props}
@@ -87,7 +87,7 @@ function SelectContent({
         data-slot="select-content"
         position={position}
         className={cn(
-          "relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[8rem] overflow-hidden rounded-md border border-foreground/10 bg-card text-sm text-foreground",
+          "relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-32 overflow-hidden rounded-md border border-foreground/10 bg-card text-sm text-foreground",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
           "data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1",
           position === "popper" &&
@@ -141,8 +141,8 @@ function SelectItem({
       data-slot="select-item"
       className={cn(
         "relative flex w-full cursor-pointer select-none items-start gap-2 rounded-sm py-2 pl-2 pr-8 text-sm outline-none",
-        "focus:bg-foreground/[0.06] focus:text-foreground",
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "focus:bg-foreground/6 focus:text-foreground",
+        "data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...props}

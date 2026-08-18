@@ -730,7 +730,7 @@ export default function SetupPage() {
         <Link
           href="/"
           aria-label="Close guided setup"
-          className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+          className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground"
         >
           <XIcon size={18} weight="regular" />
         </Link>
@@ -745,7 +745,7 @@ export default function SetupPage() {
             <span className="mx-1.5 text-muted-foreground/40">/</span>
             {String(STEPS.length).padStart(2, "0")}
           </span>
-          <div className="relative h-[3px] flex-1 overflow-hidden rounded-full bg-foreground/[0.08]">
+          <div className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-foreground/8">
             <div
               className="absolute inset-y-0 left-0 rounded-full bg-foreground"
               style={{
@@ -1460,7 +1460,7 @@ function SummaryReview({
         <button
           type="button"
           onClick={() => jumpToStep("observers")}
-          className="group flex w-full cursor-pointer items-start justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.02]"
+          className="group flex w-full cursor-pointer items-start justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/2"
         >
           <span className="shrink-0 pt-1 text-sm text-muted-foreground">
             {draft.observers.length === 0
@@ -1621,7 +1621,7 @@ function SummaryRow({
     <button
       type="button"
       onClick={onEdit}
-      className="group flex w-full cursor-pointer items-center justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.02]"
+      className="group flex w-full cursor-pointer items-center justify-between gap-4 py-2.5 text-left transition-colors hover:bg-foreground/2"
     >
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="flex items-center gap-2.5">
