@@ -22,6 +22,12 @@ import { SidebarFooter } from "@/components/sidebar-footer";
 import { ViewsToggle } from "@/components/views-toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -68,27 +74,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         collapsed ? "w-15" : "w-56",
       )}
     >
-      <ScrollArea className="flex-1">
-        <div className={cn("pb-3 pt-4", collapsed ? "px-1.5" : "px-2")}>
-          <NavGroup sections={SECTIONS} active={active} collapsed={collapsed} />
-        </div>
-      </ScrollArea>
-
-      {!collapsed && (
-        <div className="flex shrink-0 flex-col empty:hidden">
-          <div className="border-t border-foreground/10 empty:hidden">
-            <CanvasViewToggle />
-            <MonochromeToggle />
-          </div>
-          <div className="border-t border-foreground/10 empty:hidden">
-            <ViewsToggle />
-          </div>
-          <div className="border-t border-foreground/10 empty:hidden">
-            <CanvasLegend />
-          </div>
-        </div>
-      )}
-      <SidebarFooter collapsed={collapsed} />
+      <SidebarBody collapsed={collapsed} active={active} />
 
       {onToggle && (
         <button
@@ -113,14 +99,94 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   );
 }
 
+export function MobileNav({
+  open,
+  onOpenChange,
+  restoreFocusRef,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  restoreFocusRef?: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const pathname = usePathname() ?? "/";
+  const active = sectionFromPath(pathname);
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="left"
+        className="md:hidden"
+        id="sidebar-nav"
+        onCloseAutoFocus={(e) => {
+          if (!restoreFocusRef?.current) return;
+          e.preventDefault();
+          restoreFocusRef.current.focus();
+        }}
+      >
+        <SheetHeader>
+          <SheetTitle>Nomos</SheetTitle>
+        </SheetHeader>
+        <SidebarBody
+          collapsed={false}
+          active={active}
+          onNavigate={() => onOpenChange(false)}
+        />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function SidebarBody({
+  collapsed,
+  active,
+  onNavigate,
+}: {
+  collapsed: boolean;
+  active: SectionKey;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      <ScrollArea className="flex-1">
+        <div className={cn("pb-3 pt-4", collapsed ? "px-1.5" : "px-2")}>
+          <NavGroup
+            sections={SECTIONS}
+            active={active}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
+        </div>
+      </ScrollArea>
+
+      {!collapsed && (
+        <div className="flex shrink-0 flex-col empty:hidden">
+          <div className="border-t border-foreground/10 empty:hidden">
+            <CanvasViewToggle />
+            <MonochromeToggle />
+          </div>
+          <div className="border-t border-foreground/10 empty:hidden">
+            <ViewsToggle />
+          </div>
+          <div className="border-t border-foreground/10 empty:hidden">
+            <CanvasLegend />
+          </div>
+        </div>
+      )}
+      <SidebarFooter collapsed={collapsed} />
+    </>
+  );
+}
+
 function NavGroup({
   sections,
   active,
   collapsed,
+  onNavigate,
 }: {
   sections: SectionDef[];
   active: SectionKey;
   collapsed: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <nav className="flex flex-col gap-px">
@@ -129,6 +195,7 @@ function NavGroup({
         const link = (
           <Link
             href={href}
+            onClick={onNavigate}
             aria-current={isActive ? "page" : undefined}
             className={cn(
               "group relative flex cursor-pointer items-center rounded-md text-left text-sm transition-colors",

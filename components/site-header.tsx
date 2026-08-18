@@ -43,6 +43,9 @@ interface SiteHeaderProps {
   running: boolean;
   paused: boolean;
   sidebarCollapsed: boolean;
+  toggleLabel?: string;
+  toggleExpanded?: boolean;
+  toggleRef?: React.Ref<HTMLButtonElement>;
   activeSection: SectionKey;
   onToggleSidebar?: () => void;
   onPause: () => void;
@@ -62,6 +65,9 @@ export function SiteHeader({
   running,
   paused,
   sidebarCollapsed,
+  toggleLabel,
+  toggleExpanded,
+  toggleRef,
   activeSection,
   onToggleSidebar,
   onPause,
@@ -80,6 +86,8 @@ export function SiteHeader({
       ? "resume"
       : "run";
 
+  const label =
+    toggleLabel ?? (sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar");
   const showStop = running || paused;
   const showSpeed = running || paused;
 
@@ -151,11 +159,12 @@ export function SiteHeader({
               <TooltipTrigger
                 render={
                   <button
+                    ref={toggleRef}
                     type="button"
                     onClick={onToggleSidebar}
-                    aria-label={
-                      sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
-                    }
+                    aria-label={label}
+                    aria-expanded={toggleExpanded}
+                    data-sidebar-toggle=""
                     className="flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground"
                   >
                     <SidebarSimpleIcon size={18} weight="regular" />
@@ -163,7 +172,7 @@ export function SiteHeader({
                 }
               />
               <TooltipContent side="bottom" sideOffset={6}>
-                {sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                {label}
               </TooltipContent>
             </Tooltip>
           )}

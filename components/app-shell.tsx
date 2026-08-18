@@ -6,11 +6,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ExtinctionDialog } from "@/components/extinction-dialog";
 import { MiniSimWindow } from "@/components/mini-sim-window";
 import { ObserverNarrator } from "@/components/observer-narrator";
-import { Sidebar, sectionFromPath } from "@/components/sidebar";
+import { MobileNav, Sidebar, sectionFromPath } from "@/components/sidebar";
 import { SimulationEngine } from "@/components/simulation-engine";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { SCALE_INFO } from "@/lib/config";
+import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { getRun } from "@/lib/runs-api";
 import { useSimulationStore } from "@/lib/store";
 
@@ -60,13 +61,23 @@ export function AppShell({
   const section = sectionFromPath(pathname);
   const isField = section === "world";
 
+  const isDesktop = useMediaQuery(DESKTOP_QUERY, true);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultCollapsed);
-  const toggleSidebar = () =>
-    setSidebarCollapsed((v) => {
-      const next = !v;
-      document.cookie = `${SIDEBAR_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax`;
-      return next;
-    });
+  const [mobileNavRequested, setMobileNavRequested] = useState(false);
+  const mobileNavOpen = !isDesktop && mobileNavRequested;
+
+  const toggleSidebar = () => {
+    if (isDesktop) {
+      setSidebarCollapsed((v) => {
+        const next = !v;
+        document.cookie = `${SIDEBAR_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax`;
+        return next;
+      });
+    } else {
+      setMobileNavRequested((v) => !v);
+    }
+  };
 
   return (
     <div className="flex h-screen flex-col">
@@ -74,6 +85,17 @@ export function AppShell({
         running={running}
         paused={paused}
         sidebarCollapsed={sidebarCollapsed}
+        toggleRef={toggleRef}
+        toggleExpanded={isDesktop ? undefined : mobileNavOpen}
+        toggleLabel={
+          isDesktop
+            ? sidebarCollapsed
+              ? "Expand sidebar"
+              : "Collapse sidebar"
+            : mobileNavOpen
+              ? "Close navigation"
+              : "Open navigation"
+        }
         activeSection={section}
         onToggleSidebar={toggleSidebar}
         onPause={pauseRun}
@@ -83,6 +105,11 @@ export function AppShell({
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+        <MobileNav
+          open={mobileNavOpen}
+          onOpenChange={setMobileNavRequested}
+          restoreFocusRef={toggleRef}
+        />
         <main className="relative flex flex-1 flex-col overflow-hidden">
           <div className="flex flex-1 overflow-hidden">{children}</div>
           <SiteFooter
