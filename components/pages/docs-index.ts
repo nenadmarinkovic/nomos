@@ -20,7 +20,7 @@ export const DOCS_INDEX: DocsEntry[] = [
   {
     slug: "observers",
     title: "Observers & chronicle",
-    blurb: "The eleven theorists, event detection, routing, pacing.",
+    blurb: "The ten theorists, event detection, routing, pacing.",
   },
   {
     slug: "development",

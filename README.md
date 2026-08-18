@@ -87,7 +87,7 @@ What *does* make sense — and what the **Living ground** option enables — is 
 
 ## Observers and the Chronicle
 
-Eleven theorists are available, each with a one-line lens, what they see in the social world, and what they watch for:
+Ten theorists are available, each with a one-line lens, what they see in the social world, and what they watch for:
 
 Marx · Polanyi · Bourdieu · Granovetter · Schelling · Turchin · Farmer · Epstein · Flack · **Axelrod**
 
