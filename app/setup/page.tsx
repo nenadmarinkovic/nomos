@@ -259,7 +259,7 @@ for (let i = 0; i < count; i++) {
     wealths.push(baseline);
   } else {
     const u = Math.max(0.001, rng());
-    const exp = -Math.log(u) * baseline;    // heavy-tailed draw
+    const exp = -Math.log(u) * baseline;
     wealths.push(baseline * (1 - eq) + exp * eq);
   }
 }`,
@@ -316,7 +316,7 @@ if (settlement === "single") {
 }
 if (settlement === "clustered") {
   const k = Math.min(5, Math.max(2, Math.floor(count / 100)));
-  const centroids = pickCentroids(k);   // k random hubs, per run
+  const centroids = pickCentroids(k);
   const sigma = Math.min(W, H) / 10;
   for (let i = 0; i < count; i++) {
     const c = centroids[Math.floor(rng() * k)];
@@ -324,7 +324,6 @@ if (settlement === "clustered") {
   }
   return positions;
 }
-// segregated: sort by wealth desc, fill each quadrant in order
 const order = [...Array(count).keys()].sort((a, b) => wealths[b] - wealths[a]);
 const quadrants = [tl, tr, bl, br];
 const groupSize = Math.ceil(count / 4);
@@ -358,7 +357,7 @@ for (let oi = 0; oi < order.length; oi++) {
   a.age++;
 
   if (a.sugar <= 0 || a.spice <= 0 || a.age >= a.maxAge) {
-    this.killAgent(a);           // starved, or past its lifespan
+    this.killAgent(a);
   }
 }`,
     },
@@ -371,7 +370,6 @@ for (let oi = 0; oi < order.length; oi++) {
       file: "lib/engine.ts",
       lines: "745-768",
       snippet: `private regrow(stock: Float32Array, max: Float32Array, isSugar: boolean): void {
-  // Seasonal swing — regrowth between ~30% and ~170% of base over 60 turns.
   const seasonal =
     1 + 0.7 * Math.sin((this.turn * 2 * Math.PI) / 60);
   const blightActive = isSugar && this.turn < this.blightUntilTurn;
@@ -381,7 +379,7 @@ for (let oi = 0; oi < order.length; oi++) {
     const m = max[i];
     if (m > 0) {
       const next = stock[i] + rate * m;
-      stock[i] = next > m ? m : next;   // grow, but cap at full
+      stock[i] = next > m ? m : next;
     }
   }
 }`,
@@ -409,7 +407,7 @@ for (let oi = 0; oi < order.length; oi++) {
       out[i] = s + STOCK_DIFFUSION * flux;
     }
   }
-  stock.set(out);   // commit synchronously — this is a CA, not a sweep
+  stock.set(out);
 }`,
     },
   ],
@@ -455,7 +453,7 @@ for (let oi = 0; oi < order.length; oi++) {
       snippet: `a.age++;
 
 if (a.sugar <= 0 || a.spice <= 0 || a.age >= a.maxAge) {
-  this.killAgent(a);   // starved, or past its lifespan
+  this.killAgent(a);
 }`,
     },
   ],
@@ -468,10 +466,9 @@ if (a.sugar <= 0 || a.spice <= 0 || a.age >= a.maxAge) {
       lines: "1852-1919",
       snippet: `const sampleAttr = (mean: number) => {
   if (h === 0) return mean;
-  return mean * (1 - h + 2 * h * rng());   // [mean·(1−h), mean·(1+h)]
+  return mean * (1 - h + 2 * h * rng());
 };
 
-// applied per agent when spawning:
 vision:     Math.max(1,   Math.round(sampleAttr(physics.vision))),
 sugarMetab: Math.max(0.1, sampleAttr(metabMean)),
 spiceMetab: Math.max(0.1, sampleAttr(metabMean)),
@@ -488,13 +485,13 @@ maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
       snippet: `private chooseTarget(a: Agent): { x: number; y: number } {
   switch (a.sophistication) {
     case "bounded_rational":
-      return this.satisficeMove(a);         // good-enough at half vision
+      return this.satisficeMove(a);
     case "adaptive":
-      return this.adaptiveMove(a);          // vision × learned boldness
+      return this.adaptiveMove(a);
     case "social":
-      return this.imitativeMove(a);         // follow the richest neighbour
-    default:                                 // "minimal"
-      return this.greedyMove(a, a.vision);  // best cell in full vision
+      return this.imitativeMove(a);
+    default:
+      return this.greedyMove(a, a.vision);
   }
 }`,
     },
@@ -549,7 +546,6 @@ maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
       snippet: `private partnersFor(a: Agent): number[] {
   const out: number[] = [];
   if (this.topology === "random") {
-    // Random meetings: a few draws from the whole field.
     for (let i = 0; i < 4; i++) {
       const j = Math.floor(this.rng() * this.agents.length);
       const other = this.agents[j];
@@ -557,7 +553,6 @@ maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
     }
     return out;
   }
-  // Spatial = adjacent; network = within vision (further reach).
   const radius = this.topology === "network" ? Math.min(a.vision, 4) : 1;
   for (let dy = -radius; dy <= radius; dy++) {
     const ny = a.y + dy;
@@ -590,7 +585,6 @@ maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
     \`What you watch for: \${info.watches}\`,
     "",
     "You are handed a neutral, factual description of something that just happened. Read it through your own perspective…",
-    // Rules follow: 2–3 sentences, present tense, stay in character…
   ].join("\\n");
 }`,
     },
