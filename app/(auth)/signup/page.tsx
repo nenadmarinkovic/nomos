@@ -42,7 +42,9 @@ function SignUpForm() {
     });
     if (res.error) {
       setPending(false);
-      setError(res.error.message ?? "Sign-up failed.");
+      setError(
+        res.error.message ?? "That didn\u2019t work. Try a different email.",
+      );
       return;
     }
 
@@ -63,7 +65,7 @@ function SignUpForm() {
           Create an account
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Keep your runs across devices and revisit the Chronicle.
+          So your saved runs follow you to any device.
         </p>
       </header>
 

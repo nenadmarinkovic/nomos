@@ -40,39 +40,43 @@ function RunConditionsCard({ config }: { config: SimulationConfig }) {
   ];
 
   const rules: string[] = [];
-  rules.push((world.inheritance ?? true) ? "inheritance" : "no inheritance");
+  rules.push(
+    (world.inheritance ?? true) ? "children inherit" : "no inheritance",
+  );
   rules.push(
     (world.culturalTransmission ?? true)
-      ? "cultural drift"
-      : "no cultural drift",
+      ? "agents copy each other"
+      : "no copying",
   );
-  rules.push((world.conflict ?? true) ? "conflict" : "no conflict");
-  rules.push(`${TOPOLOGY_INFO[agents.topology].label.toLowerCase()} trade`);
+  rules.push((world.conflict ?? true) ? "fighting allowed" : "no fighting");
+  rules.push(
+    `trades with ${TOPOLOGY_INFO[agents.topology].label.toLowerCase()}`,
+  );
 
   const physicsParts = [
-    `lifespan ${world.physics.lifespan}t`,
-    `vision ${world.physics.vision}`,
-    `metabolism ${world.physics.metabolism.toFixed(1)}`,
+    `lives ${world.physics.lifespan} turns`,
+    `sees ${world.physics.vision}`,
+    `burns ${world.physics.metabolism.toFixed(1)}/turn`,
     `regrowth ${Math.round(world.physics.regrowthRate * 100)}%`,
-    `heterogeneity ${world.physics.heterogeneity.toFixed(2)}`,
+    `variation ${world.physics.heterogeneity.toFixed(2)}`,
   ];
 
   return (
     <section className="rounded-md border border-foreground/10 bg-card/40 px-4 py-3">
       <div className="flex items-center justify-between gap-2 pb-2">
         <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
-          Initial conditions
+          What you set
         </p>
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground/70">
           {agents.kind.replace(/_/g, " ")}
         </p>
       </div>
-      <dl className="grid grid-cols-[6.5rem_1fr] gap-y-1 font-mono text-xs leading-relaxed">
+      <dl className="grid grid-cols-[7rem_1fr] gap-y-1 font-mono text-xs leading-relaxed">
         <Row label="World" value={worldParts.join(" · ")} />
         <Row label="Rules" value={rules.join(" · ")} />
-        <Row label="Mix" value={motivationMix} />
-        <Row label="Cognition" value={sophistMix} />
-        <Row label="Physics" value={physicsParts.join(" · ")} />
+        <Row label="They want" value={motivationMix} />
+        <Row label="They decide" value={sophistMix} />
+        <Row label="Bodies" value={physicsParts.join(" · ")} />
       </dl>
     </section>
   );

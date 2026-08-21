@@ -92,123 +92,123 @@ interface StepDef {
 const STEPS: readonly StepDef[] = [
   {
     key: "scale",
-    question: "How many people live in this society?",
+    question: "How many people live here?",
     framing:
-      "Smaller worlds let you watch each life. Larger ones reveal cities, institutions, and crises.",
+      "A small world lets you follow individual lives. A big one gets you crowds, neighbourhoods and crashes.",
     theoryHook:
-      "Different things happen at different sizes. In a village of 500 you can see every encounter — whether a market or a custom takes hold. In a town of 5,000 institutions start to crystallize: shared norms, recurring roles, durable hierarchies. In a city of 50,000 you get the texture of real societies — neighbourhoods, classes, even the rise and fall of order itself. Bigger is slower to compute, but more 'society-like' in what it can produce.",
+      "Size changes what you can see. In a village of 500 you can watch a single agent get rich or starve. In a city of 50,000 individuals blur and you start seeing whole districts move. Bigger worlds are slower to run.",
   },
   {
     key: "equality",
-    question: "Do they start equal?",
+    question: "Do they all start with the same amount?",
     framing:
-      "Some societies begin behind a Rawlsian veil — everyone identical. Others inherit history from turn one.",
+      "Either everyone opens with an identical pile of food, or some are born richer than others.",
     theoryHook:
-      "If everyone starts with the same resources and inequality still appears, the simulation itself produced it — through luck, geography, neighbour effects, or how the rules compound small differences. That's a strong claim: inequality doesn't need a head start to emerge, it can grow from nothing. Starting unequal asks a different question instead — how does structure persist, soften, or harden when history is already baked in?",
+      "Starting everyone equal is the more interesting test. If a gap opens up anyway, it came from the run itself: luck, where they happened to be standing, who they traded with. Starting unequal asks a different question, which is whether a head start ever wears off.",
   },
   {
     key: "landscape",
     question: "What does the land look like?",
     framing:
-      "Geography decides where people gather, what they fight over, and which routes carry trade or migration.",
+      "Where the food is decides where people go, what they fight over, and which routes get used.",
     theoryHook:
-      "Resources have a shape, and that shape shapes everything. Two abundant zones means people cluster around each and likely meet — to trade in good times, to fight in bad. A single rich centre acts like a magnet: population pulls inward, leaving a periphery (the classic story of urbanization). Scattered patches scatter the society too — many small settlements, more local economies, slower spread of ideas. Flat means geography has no opinion: whatever happens is purely social.",
+      "Two rich areas means two crowds that meet in the middle, to trade when times are good and to fight when they are not. One rich centre pulls everyone inward and empties the edges. Scattered patches give you lots of small separate settlements. Flat land gives the geography no say at all, so anything that happens is purely social.",
   },
   {
     key: "settlement",
-    question: "Where do they start out?",
+    question: "Where does everyone start out?",
     framing:
-      "At the very first turn, the world has to be populated somehow. Whether people are scattered, gathered into a few groups, already in one place, or pre-sorted by wealth — the starting pattern shapes what can emerge.",
+      "Somebody has to place them on the map at turn one. Spread out, in a few groups, all in one spot, or already sorted by wealth.",
     theoryHook:
-      "The initial pattern of where people are is one of the quietest but most consequential choices. With a scattered start, distinctive clusters have to form through behaviour — that's the real test of whether neighbourhoods and tribes are emergent. With a clustered start, you skip ahead: 'people-near-each-other-look-alike' is already given. A single settlement forces migration into the story. A segregated start asks Schelling's question in reverse: once sorted, does a society stay sorted, or does mixing reassert itself?",
+      "This one matters more than it looks. Spread everyone out and any grouping you see later actually formed on its own. Start them in clumps and you have handed the world its neighbourhoods for free. Start them sorted by wealth and you get to see whether a divided world ever mixes back together.",
   },
   {
     key: "metabolism",
-    question: "How fast do they burn through resources?",
+    question: "How fast do they burn through food?",
     framing:
-      "Every agent consumes a little each turn just to stay alive. The harder that burn, the tighter the margin between surplus and starvation.",
+      "Every agent eats a bit each turn just to stay alive. The higher this is, the thinner the margin between getting by and starving.",
     theoryHook:
-      "Metabolism is the heartbeat of any agent-based society. When it's low, almost nobody falls behind and surplus piles up — economies of comfort. When it's high, every turn is a small crisis: people compete for the same patches, the weak drop out, and inequality gets a brutal source even before any rules of trade exist. This single dial decides whether you're modelling abundance or scarcity.",
+      "Low burn means almost nobody dies and food piles up. High burn makes every turn a small emergency: agents crowd the same patches, the slow ones drop out, and a gap opens between rich and poor before anyone has traded anything. This one dial decides whether you are running a comfortable world or a desperate one.",
   },
   {
     key: "regrowth",
-    question: "How quickly does the world replenish?",
+    question: "How fast does food grow back?",
     framing:
-      "Resources don't only get used — they regrow. The speed of that regrowth sets the carrying capacity of the whole society.",
+      "Food gets eaten, but it also grows back. How fast decides how many people the world can support.",
     theoryHook:
-      "Slow regrowth turns the simulation into a Malthusian world: once exhausted, a region takes a long time to recover, and societies that overshoot collapse. Fast regrowth lifts the ceiling — there's always more, scarcity rarely bites, and the dynamics shift toward distribution and status rather than survival. The contrast between these two regimes is one of the oldest debates in human history.",
+      "Slow regrowth means a stripped area stays stripped for a long time, so a population that grows too fast eats itself into a collapse. Fast regrowth raises the ceiling: there is always more, going hungry is rare, and the run becomes about who gets what rather than whether anyone survives.",
   },
   {
     key: "substrate",
-    question: "Does the land itself move?",
+    question: "Does the ground itself change?",
     framing:
-      "Resources can sit still on each patch, or the ground can behave like a living surface — abundance seeping into bare cells, exhaustion creeping outward from worn ground.",
+      "Food can either regrow patch by patch, or the ground can behave like something alive, with rich soil bleeding into empty squares and worn-out soil spreading outward.",
     theoryHook:
-      "By default the landscape is inert scenery: each patch regrows on its own, blind to its neighbours. Switch this on and the substrate becomes a cellular automaton in its own right — standing resources diffuse toward emptier cells, and a patch's fertility drifts toward its neighbours', so heavy use spreads like desertification while fertile land slowly reseeds the ground beside it. The agents stay an agent-based model; only the earth under them gains its own local rules. The interesting question is what changes when scarcity can travel: do depleted regions heal, or do dust bowls march across the map faster than anyone can outrun them?",
+      "Normally each square regrows on its own and ignores its neighbours. Turn this on and food spreads toward emptier squares, and how fertile a square is drifts toward its neighbours. Heavy use spreads outward like a desert, and good land slowly reseeds the ground next to it. The question is whether stripped land heals or whether the damage travels faster than anyone can walk away from it.",
   },
   {
     key: "vision",
     question: "How far can they see?",
     framing:
-      "Each agent only knows what it can perceive around itself. Vision sets the radius of that local knowledge.",
+      "An agent only knows about the squares it can see. This sets how far that goes.",
     theoryHook:
-      "Vision is the cheapest way to produce inequality from nothing. Epstein showed that with everything else equal, agents who can see further find resources faster, accumulate more, and outcompete the rest. Short vision keeps the world locally knit and parochial: news travels slowly, opportunities go unnoticed. Long vision approaches an idealized market where everyone sees everything — the world economics textbooks usually assume but real societies almost never reach.",
+      "This is the cheapest way to create inequality out of nothing. Give two identical agents different eyesight and the one who sees further finds food first, every time, and the gap compounds. Short sight keeps the world local and slow. Very long sight is closer to the textbook market where everyone knows about every opportunity, which almost never happens in real life.",
   },
   {
     key: "lifespan",
     question: "How long do they live?",
     framing:
-      "Every agent has a finite life. Lifespan decides how quickly the population turns over.",
+      "Everyone dies eventually. This sets how quickly the population turns over.",
     theoryHook:
-      "Short lives mean a society that resets quickly: wealth dissolves with each death, hierarchies don't have time to entrench, and demographic pressure is constant. Long lives let structure accumulate — old agents carry old advantages forward, and the present is shaped by decisions made long ago. The classic insight: societies with very long-lived agents tend to look stable but rigid, while short-lived ones look chaotic but mobile.",
+      "Short lives keep resetting the world: wealth breaks up at every death and nothing has time to harden. Long lives let advantages stack up, so what happens now depends on choices made hundreds of turns ago. Long-lived worlds tend to look stable but stuck; short-lived ones look chaotic but keep moving.",
   },
   {
     key: "heterogeneity",
-    question: "Are all agents identical, or do they vary?",
+    question: "Are they all the same, or do they vary?",
     framing:
-      "Decide whether everyone shares the same vision, metabolism, and lifespan — or whether each agent draws their own values from a spread.",
+      "Either every agent gets the same eyesight, appetite and lifespan, or each one draws its own from a range.",
     theoryHook:
-      "This is Epstein's most-cited result. With everything else equal — same starting wealth, same landscape — a population where vision varies even slightly will still produce dramatic inequality. The agents who happen to see further find resources faster, and the gap compounds. A perfectly uniform population is a useful baseline, but it isn't really a society: real populations differ, and those differences are often the silent engine behind macro patterns. The wider the spread, the more outcomes look like the world we know.",
+      "This is the famous result from the original model. Keep everything else equal, give people the same starting wealth and the same land, and just let eyesight vary slightly. You still get dramatic inequality, because the agents who see a little further find food a little sooner and it snowballs. An identical population is a useful baseline, but it is not really a society.",
   },
   {
     key: "sophistication",
-    question: "How do they think?",
+    question: "How do they decide where to go?",
     framing:
-      "From blind stimulus-response to social imitation. Cognition sets the ceiling on what culture can do. Pick more than one — real populations mix cognitive types.",
+      "From pure reflex to copying whoever looks successful. You can pick more than one, and real populations are always a mix.",
     theoryHook:
-      "Agents can be very simple or quite clever, and real populations are never one or the other. Minimal agents just react — see resource, go to resource. Bounded-rational ones have limited information and pick 'good enough' rather than optimal. Adaptive agents learn from past outcomes. Social agents watch each other and copy — and that's where fashion, herd behaviour, and shared culture come from. Pick more than one and the population becomes a mix: some imitators alongside some learners alongside some satisficers, which is what Doyne Farmer argues real societies actually look like. Homogeneous populations almost never behave like real ones.",
+      "Some agents just walk toward the best thing they can see. Some stop at the first option that is good enough. Some learn from how their past moves worked out. Some ignore the food entirely and copy their richest neighbour, which is where fashion and herd behaviour come from. Mixing several types is closer to how real populations behave.",
   },
   {
     key: "motivation",
-    question: "What kinds of dispositions seed the population?",
+    question: "What do they care about?",
     framing:
-      "Every agent carries a trait vector — greed, prosociality, dominance, status-seeking. The four options here are named centroids in that space; your mix decides which regions the initial population is drawn from. The motivation labels you'll see later are read back from where each agent's traits actually sit — not the input you gave here.",
+      "Each agent has its own mix of greed, sociability, appetite for status, and appetite for control. These four options are just starting points in that mix. The labels you see later are read back from where each agent actually ended up.",
     theoryHook:
-      "This is the deepest choice in the model, and the four centroids track four classical positions. Material seeds high greed with modest neighbour-pull — Marx's productive subject. Symbolic seeds high status-seeking — Bourdieu's capital game. Normative seeds high prosociality — the collective conscience, shared norms carrying a force no individual authored. Power seeds high dominance — the question of legitimate domination. Pick more than one and the initial population fans out across trait space. Once the run starts, cultural drift and imitation move traits around; the visible mix at turn 500 is what *emerged*, not what you set. When something surfaces — a moralistic wave, a coercion cycle — the interesting question becomes: which region of the trait space produced it?",
+      "This is the deepest choice here. Material agents mostly want more stuff. Symbolic ones want to be admired. Normative ones want to fit in with the people around them. Power ones want others to do what they say. Pick more than one and the population starts spread across all of them. Once the run begins agents copy each other, so the mix you see at turn 500 is not the one you set.",
   },
   {
     key: "topology",
-    question: "Who can talk to whom — at the start?",
+    question: "Who can reach whom at the start?",
     framing:
-      "The initial social graph: the structure at turn one. Whether hierarchies grow on top of it is for the simulation to decide.",
+      "Whether agents only deal with whoever is standing nearby, bump into anyone at random, or keep a stable set of contacts.",
     theoryHook:
-      "The shape of social connection at the start decides what reaches whom. With spatial neighbours, geography is destiny — news and gossip travel only as fast as people walk. Random mixing means anyone might meet anyone (almost never true in real life, but useful as a baseline). Persistent networks mean influence flows through friends-of-friends, so trust and information move along stable paths. You'll notice 'hierarchy' isn't on this menu — that's deliberate. A generative model should let hierarchies *emerge* from local interaction, not declare them at turn zero. If brokers and gatekeepers appear later in the run, that's the simulation telling you something.",
+      "This decides how fast anything travels. With neighbours only, news moves at walking pace. With random mixing anyone can meet anyone, which is unrealistic but a useful baseline. With stable contacts, influence flows through friends of friends. You will notice there is no option for hierarchy. That is on purpose: if leaders and gatekeepers show up later in the run, they got there on their own.",
   },
   {
     key: "observers",
-    question: "Whose eyes will watch?",
+    question: "Who should be watching?",
     framing:
-      "AI theorists watch the same simulation and describe what they see in their own vocabulary.",
+      "AI observers watch the same run and write about what they see, each in their own way.",
     theoryHook:
-      "This is the move that makes Nomos different. The simulation runs once, but the chosen theorists each narrate it through their own lens. Marx might see class struggle where Flack sees a slow variable eroding and Schelling sees a quiet segregation cascade nobody intended. You're not asking which one is right — you're watching multiple readings of the same emergence, side by side. Pick more than one. Disagreement is where the intellectual move actually lives.",
+      "This is the part that makes Nomos different from a normal simulation. The run happens once, but each observer you pick describes it differently. Marx might call something class conflict where Schelling calls it a tipping point nobody intended. You are not looking for the right answer. Pick a few, because the disagreements are the good part.",
   },
   {
     key: "summary",
-    question: "Ready to begin?",
+    question: "Ready?",
     framing:
-      "Here's the society you've designed — world, agents, and observers in one view. Look it over, jump back to anything you'd like to change, then begin the simulation.",
+      "Here is everything you picked. Go back and change anything you want, then start the run.",
     theoryHook:
-      "Every choice on this page is a hypothesis: about what conditions produce what kinds of societies. Hit Begin, watch what emerges, and let the observers narrate it through their own theoretical vocabularies. If something surprises you, the answer is somewhere in these settings — that's the whole point of generative social science.",
+      "Every setting on this page is a guess about what kind of world it produces. Start the run and find out. If something surprises you, the cause is somewhere in these settings.",
   },
 ] as const;
 
@@ -228,7 +228,7 @@ const STEP_CODE: Partial<Record<StepKey, CodeAnchor[]>> = {
   scale: [
     {
       plain:
-        "Your pick sets how wide the world is and how many agents are born into it.",
+        "Your pick decides how wide the map is and how many agents start on it.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "13-23",
@@ -248,7 +248,7 @@ const AGENT_COUNT: Record<Scale, number> = {
   equality: [
     {
       plain:
-        "Each agent's starting wealth is blended between a flat baseline everyone shares and an exponential random draw. The more inequality you ask for, the more the draw dominates.",
+        "Starting wealth is a blend of a flat amount everyone gets and a random draw. The more inequality you ask for, the more the random draw takes over.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "1868-1879",
@@ -268,7 +268,7 @@ for (let i = 0; i < count; i++) {
   landscape: [
     {
       plain:
-        "Resources are piled up at a few 'peaks' and fade with Gaussian distance. Your choice decides where those peaks sit.",
+        "Food is piled up around a few peaks and thins out with distance. Your choice decides where those peaks go.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "1751-1791",
@@ -299,7 +299,7 @@ fillGaussian(spice, width, height, spicePeaks, sigma);`,
   settlement: [
     {
       plain:
-        "On turn one the agents have to be placed somewhere. Your choice picks the pattern — random cells, a single Gaussian blob, a few clusters, or wealth-sorted quadrants.",
+        "On turn one everyone has to be put somewhere. Your choice picks the pattern: random squares, one blob, a few clumps, or four corners sorted by wealth.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "1968-2037",
@@ -339,7 +339,7 @@ for (let oi = 0; oi < order.length; oi++) {
   metabolism: [
     {
       plain:
-        "Every turn each agent burns a little of both goods just to stay alive. Run either one down to nothing and it dies.",
+        "Every turn each agent eats a little of both goods. Run either one down to zero and it dies.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "1077-1094",
@@ -366,7 +366,7 @@ for (let oi = 0; oi < order.length; oi++) {
   regrowth: [
     {
       plain:
-        "Each patch grows back a slice of its ceiling every turn — but the rate breathes seasonally (~30–170% of base over 60 turns) and drops to 40% while a blight is active.",
+        "Each square regrows part of its maximum every turn. The rate rises and falls with a 60-turn season, and drops to 40% during a blight.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "745-768",
@@ -390,7 +390,7 @@ for (let oi = 0; oi < order.length; oi++) {
   substrate: [
     {
       plain:
-        "When substrate diffusion is on, every tick each cell exchanges standing resources with its four orthogonal neighbours (mass-preserving), and separately relaxes its fertility toward theirs.",
+        "With living ground on, every square trades a little food with the four squares next to it each turn, and its fertility slowly drifts toward theirs. Nothing is created or lost, it just moves.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "788-805",
@@ -416,7 +416,7 @@ for (let oi = 0; oi < order.length; oi++) {
   vision: [
     {
       plain:
-        "An agent scans the four cardinal directions ring by ring, up to its vision, and moves to the highest-scoring free cell — ties break toward the nearer one.",
+        "An agent looks up, down, left and right, one step at a time, out to the edge of its sight, and moves to the best free square it finds. If two are equally good it takes the closer one.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "972-996",
@@ -448,7 +448,7 @@ for (let oi = 0; oi < order.length; oi++) {
   lifespan: [
     {
       plain:
-        "Agents age one turn at a time; the same check that catches starvation kills any agent past its maximum age, however well fed.",
+        "Agents get one turn older each turn. The same check that catches starvation also removes anyone past their maximum age, however well fed they are.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "1089-1093",
@@ -462,7 +462,7 @@ if (a.sugar <= 0 || a.spice <= 0 || a.age >= a.maxAge) {
   heterogeneity: [
     {
       plain:
-        "Each agent's vision, metabolism, and lifespan are drawn around the configured average. Zero heterogeneity makes everyone identical; higher widens the spread linearly.",
+        "Each agent's sight, appetite and lifespan are drawn around the average you set. At zero variation everyone is identical. Higher settings widen the spread.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "1852-1919",
@@ -481,7 +481,7 @@ maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
   sophistication: [
     {
       plain:
-        "Each turn's movement rule dispatches on the agent's sophistication — greedy optimum, satisfice a short horizon, follow learned boldness, or imitate the wealthiest visible neighbour.",
+        "How an agent moves depends on the type it is: take the best square it can see, take the first good-enough one, follow what it has learned, or copy the richest neighbour in sight.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "939-950",
@@ -502,7 +502,7 @@ maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
   motivation: [
     {
       plain:
-        "Motivation isn't a switch anymore — it's a four-dimensional trait vector. Each named motivation seeds its own centroid, then each agent is jittered around it.",
+        "Motivation is not a fixed label. Each agent carries four numbers: greed, sociability, dominance and status-seeking. Your choice sets where those numbers start, then each agent is nudged a little off that.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "64-69",
@@ -515,7 +515,7 @@ maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
     },
     {
       plain:
-        "A cell's score reads directly off those traits — greed weights raw resources, prosociality weights company, dominance turns nearby weaker neighbours into prey, and statusSeeking chases high-wealth surroundings.",
+        "Those four numbers decide what a square is worth to an agent. Greed likes food, sociability likes company, dominance likes weaker neighbours nearby, and status-seeking likes rich company.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "223-240",
@@ -542,7 +542,7 @@ maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
   topology: [
     {
       plain:
-        "Who an agent can trade with each turn — four random strangers from anywhere, only the eight cells touching it, or a wider box that grows with its vision (capped at 4).",
+        "Who an agent can trade with each turn: four random strangers from anywhere, only the eight squares touching it, or a wider area that grows with its eyesight.",
       mode: "real",
       file: "lib/engine.ts",
       lines: "1158-1184",
@@ -577,7 +577,7 @@ maxAge:     Math.max(10,  Math.round(sampleAttr(physics.lifespan))),`,
   observers: [
     {
       plain:
-        "Each observer's system prompt fixes the theorist's persona; the user prompt hands them the same neutral event. One such pair is issued per chosen observer, per significant event.",
+        "Each observer gets a prompt setting up who they are, then the same plain description of what happened. One pair of prompts per observer, per event.",
       mode: "real",
       file: "lib/observers.ts",
       lines: "51-69",
@@ -605,22 +605,22 @@ const EQUALITY_BUCKETS: ReadonlyArray<{
   {
     value: 0.05,
     label: "Perfectly equal",
-    hint: "Everyone starts with identical resources. Any divergence is endogenous.",
+    hint: "Everyone gets the same. Any gap that opens later was made by the run.",
   },
   {
     value: 0.25,
-    label: "Slight differences",
-    hint: "Tiny random variation. Tests whether small accidents amplify.",
+    label: "Almost equal",
+    hint: "Small random differences. See whether tiny luck snowballs.",
   },
   {
     value: 0.55,
-    label: "Stratified",
-    hint: "Wealth bands already exist. Inheritance and class matter from turn one.",
+    label: "Already divided",
+    hint: "Rich and poor exist from turn one.",
   },
   {
     value: 0.85,
-    label: "Extreme inequality",
-    hint: "Few rich, many poor. Power-law distribution from the start.",
+    label: "Very unequal",
+    hint: "A few very rich agents and a lot of poor ones.",
   },
 ];
 
@@ -729,7 +729,7 @@ export default function SetupPage() {
 
         <Link
           href="/"
-          aria-label="Close guided setup"
+          aria-label="Close setup"
           className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground"
         >
           <XIcon size={18} weight="regular" />
@@ -968,13 +968,13 @@ function StepBody({
           active={draft.world.substrateDiffusion}
           onClick={() => patchWorld({ substrateDiffusion: true })}
           label="Living ground"
-          hint="The landscape is a cellular automaton: resources diffuse and fertility spreads, so exhaustion and abundance travel across the map."
+          hint="Food seeps between neighbouring squares and good soil spreads. Worn-out land and rich land both travel across the map."
         />
         <BigChoiceCard
           active={!draft.world.substrateDiffusion}
           onClick={() => patchWorld({ substrateDiffusion: false })}
           label="Inert ground"
-          hint="Each patch regrows alone, blind to its neighbours. The land is fixed scenery the agents move across."
+          hint="Every square regrows on its own and ignores the ones next to it. The land is just scenery."
         />
       </div>
     );
@@ -1068,18 +1068,17 @@ function StepBody({
         <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-3">
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-sm font-medium text-foreground">
-              Mutation rate
+              How often children differ
             </span>
             <span className="font-mono text-xs tabular-nums text-muted-foreground">
               {Math.round(rate * 100)}%
             </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Per-birth chance the child&apos;s traits are resampled from the
-            centroid mix above instead of drifting off the parent&apos;s. Higher
-            = diversity rebleeds in after a single region of trait space has
-            taken over; 0 = strict heritability, and once a trait cluster wins
-            it stays won.
+            The chance that a child ignores its parent and gets fresh traits
+            from the mix above. At 0 children always take after their parents,
+            so whichever type wins early stays on top. Turn it up and new kinds
+            of agent keep appearing.
           </p>
           <div className="mt-3">
             <Slider
@@ -1239,7 +1238,7 @@ function WeightedPickGrid<K extends string>({
               Mix
             </span>
             <span className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground/70">
-              Share of population
+              Share of the population
             </span>
           </div>
           <div className="space-y-2.5">
@@ -1334,7 +1333,7 @@ function ObserverPicker({
                   {active && <CheckIcon size={11} weight="bold" />}
                 </span>
               </div>
-              <p className="text-sm italic leading-snug text-foreground/70">
+              <p className="text-sm leading-snug text-foreground/70">
                 {info.lens}
               </p>
             </button>
@@ -1381,7 +1380,7 @@ function SummaryReview({
           onEdit={() => jumpToStep("scale")}
         />
         <SummaryRow
-          label="Starting equality"
+          label="Starting wealth"
           value={equalityBucket(draft.world.equality).label}
           onEdit={() => jumpToStep("equality")}
         />
@@ -1391,32 +1390,32 @@ function SummaryReview({
           onEdit={() => jumpToStep("landscape")}
         />
         <SummaryRow
-          label="Initial settlement"
+          label="Where they start"
           value={SETTLEMENT_INFO[draft.world.initialSettlement].label}
           onEdit={() => jumpToStep("settlement")}
         />
       </SummarySection>
 
-      <SummarySection title="Physics">
+      <SummarySection title="How the world works">
         <SummaryRow
-          label="Metabolism"
+          label="Food burned per turn"
           value={METABOLISM_BUCKETS[metabolismIdx].label}
           onEdit={() => jumpToStep("metabolism")}
         />
         <SummaryRow
-          label="Regrowth"
+          label="How fast food grows back"
           value={REGROWTH_BUCKETS[regrowthIdx].label}
           onEdit={() => jumpToStep("regrowth")}
         />
         <SummaryRow
-          label="Substrate"
+          label="The ground"
           value={
             draft.world.substrateDiffusion ? "Living ground" : "Inert ground"
           }
           onEdit={() => jumpToStep("substrate")}
         />
         <SummaryRow
-          label="Vision"
+          label="How far they see"
           value={VISION_BUCKETS[visionIdx].label}
           onEdit={() => jumpToStep("vision")}
         />
@@ -1426,15 +1425,15 @@ function SummaryReview({
           onEdit={() => jumpToStep("lifespan")}
         />
         <SummaryRow
-          label="Heterogeneity"
+          label="How much they vary"
           value={HETEROGENEITY_BUCKETS[heterogeneityIdx].label}
           onEdit={() => jumpToStep("heterogeneity")}
         />
       </SummarySection>
 
-      <SummarySection title="Agents">
+      <SummarySection title="The people">
         <SummaryRow
-          label="Cognition"
+          label="How they decide"
           value={describeMix(
             draft.agents.sophistication,
             (k) => SOPHISTICATION_INFO[k].label,
@@ -1442,7 +1441,7 @@ function SummaryReview({
           onEdit={() => jumpToStep("sophistication")}
         />
         <SummaryRow
-          label="Motivation"
+          label="What they want"
           value={describeMix(
             draft.agents.motivation,
             (k) => MOTIVATION_INFO[k].label,
@@ -1450,13 +1449,13 @@ function SummaryReview({
           onEdit={() => jumpToStep("motivation")}
         />
         <SummaryRow
-          label="Topology"
+          label="Who they can reach"
           value={TOPOLOGY_INFO[draft.agents.topology].label}
           onEdit={() => jumpToStep("topology")}
         />
       </SummarySection>
 
-      <SummarySection title="Observers">
+      <SummarySection title="Who is watching">
         <button
           type="button"
           onClick={() => jumpToStep("observers")}
@@ -1510,9 +1509,9 @@ function SummarySection({
 }
 
 const MODE_LABEL: Record<CodeMode, string> = {
-  real: "Actual code",
-  pseudo: "Simplified",
-  planned: "Planned — not wired yet",
+  real: "Real code",
+  pseudo: "Simplified version",
+  planned: "Planned, not built yet",
 };
 
 function blobHref(file: string, lines?: string): string {

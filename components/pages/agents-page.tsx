@@ -27,42 +27,37 @@ export function AgentsPage() {
   if (!started) {
     return (
       <PageWelcome
-        eyebrow="Agents · The actors"
-        headline={
-          <>
-            Watch <em className="text-brand">surprising societies</em> grow from
-            simple agents.
-          </>
-        }
+        eyebrow="Agents · Who lives here"
+        headline={<>Everyone in the world, and how they are doing.</>}
         lead={
           <>
-            Every agent in Nomos is built from the same skeleton — a body that
-            harvests, eats, and ages. What makes them differ is what they
-            <em> want</em> and how they <em>think</em>. Hundreds of them run
-            side by side; whatever comes out is what those bodies, minds, and
-            drives produced together.
+            Every agent works the same way. It stands somewhere on the map,
+            holds some food, burns a bit of it each turn, and eventually dies of
+            old age. What makes them different is how far they can see, how they
+            decide where to go, and what they are chasing. This page shows you
+            who is currently alive.
           </>
         }
         steps={[
           {
             n: "01",
             title: "The body",
-            body: "Each agent has a position on a sugar / spice landscape, holdings of both goods, a metabolism that burns through them every tick, and a fixed lifespan. Move, harvest, exchange, pay metabolism, age, die — or leave an heir.",
+            body: "There are two goods on the map, sugar and spice. Each agent holds some of both, spends a little every turn just to stay alive, and dies when it runs out or gets too old. If inheritance is on, its wealth goes to a child.",
           },
           {
             n: "02",
-            title: "The mind",
-            body: "Sophistication decides how an agent picks where to move. <em>Minimal</em> agents optimise greedily over their whole field of view. <em>Bounded</em> ones satisfice over a short horizon (Herbert Simon, 1956). <em>Adaptive</em> ones learn how far to range. <em>Social</em> ones imitate the wealthiest neighbour they can see.",
+            title: "How it decides where to go",
+            body: "Some agents scan everything they can see and go for the best patch. Some stop at the first patch that is good enough. Some learn over time how far it is worth walking. Some just follow the richest neighbour they can see.",
           },
           {
             n: "03",
-            title: "The drive",
-            body: "Motivation is what they're after. <em>Material</em> chase resources (Marx). <em>Symbolic</em> chase status (Bourdieu). <em>Normative</em> chase belonging and the norms the group holds in common. <em>Power</em> chase domination over others. Set the mix on the setup screen and the engine takes that as the seed.",
+            title: "What it is chasing",
+            body: "Some agents mainly want food and wealth. Some want status. Some want to fit in with the people around them. Some want to be in charge. You set the starting mix, and it shifts on its own as agents copy each other.",
           },
           {
             n: "04",
-            title: "What you'll see here",
-            body: "Once a run is alive, this page becomes a population atlas — the motivation mix, the ranked hoarders and strugglers, ages and territories. None of it is scripted; it's whoever the conditions produced.",
+            title: "What you get on this page",
+            body: "Once a run is going, you get the split between those four drives, the richest and the poorest agents ranked, and how old everyone is. It is a snapshot, so use Refresh to pull a fresh one.",
           },
         ]}
       />
@@ -88,16 +83,16 @@ export function AgentsPage() {
           <div className="mt-8 space-y-10">
             <section>
               <SectionTitle
-                title="Motivation mix"
-                hint={`${data.aliveCount.toLocaleString()} alive · share of each drive in the population.`}
+                title="What they want"
+                hint={`${data.aliveCount.toLocaleString()} agents alive. Here is what they are each after.`}
               />
               <Legend mix={data.motivationMix} />
             </section>
 
             <section>
               <SectionTitle
-                title="Population ranked"
-                hint={`Top ${Math.min(50, data.ranked.length)} agents by wealth.`}
+                title="Richest agents"
+                hint={`The top ${Math.min(50, data.ranked.length)} by how much food they are holding.`}
               />
               <RankTable rows={data.ranked.slice(0, 50)} />
             </section>
@@ -113,18 +108,17 @@ function Header({ badge }: { badge?: React.ReactNode }) {
     <header className="space-y-3">
       <div className="flex items-start justify-between gap-4">
         <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
-          Agents · Population atlas
+          Agents · Population
         </p>
         {badge}
       </div>
       <h1 className="text-3xl leading-tight tracking-tight text-foreground">
-        Who is alive, and how are they doing?
+        Who is alive right now?
       </h1>
       <p className="text-[15px] leading-relaxed text-foreground/70">
-        A snapshot of the population: the mix of drives, the spread of ages,
-        wealth against age, and a ranked list of the hoarders and the
-        strugglers. The simulation keeps running in the corner — hit Refresh to
-        grab a fresh sample.
+        The split between the four drives, and every agent ranked by wealth.
+        This is a snapshot taken when you opened the page. The run keeps going
+        in the background, so press Refresh for a newer one.
       </p>
     </header>
   );
@@ -225,9 +219,9 @@ function SectionTitle({ title, hint }: { title: string; hint: string }) {
 function EmptyState() {
   return (
     <div className="mt-10 rounded-lg border border-dashed border-foreground/10 px-6 py-10 text-center">
-      <p className="text-lg italic text-foreground/80">No sample yet.</p>
+      <p className="text-lg text-foreground/80">Nothing to show yet.</p>
       <p className="mt-2 text-sm text-muted-foreground">
-        Press Refresh once a few ticks have passed, or let the run warm up.
+        Give the run a few turns, then press Refresh.
       </p>
     </div>
   );

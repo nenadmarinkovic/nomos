@@ -634,41 +634,40 @@ export function SimulationCanvas({ running }: SimulationCanvasProps) {
           <div className="pointer-events-auto absolute inset-0 overflow-y-auto bg-background">
             <div className="mx-auto flex max-w-2xl flex-col px-6 pb-16 pt-16">
               <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                A generative society simulation
+                A society simulation
               </p>
               <h1 className="mt-3 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
-                Build a society from{" "}
-                <em className="text-brand">simple rules</em> and watch what it
-                becomes.
+                Set a few simple rules. Watch a society grow out of them.
               </h1>
               <p className="mt-5 text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
-                Nomos doesn&rsquo;t program societies — it grows them. You set a
-                few starting conditions; agents follow simple rules; whatever
-                happens next is what the conditions produced. Inequality,
-                settlements, classes, conflict: never written into the engine,
-                always emerging from the bottom up.
+                You pick the starting conditions. Then a few thousand very
+                simple agents get on with their lives: they look around, gather
+                food, trade, have children, and die. Everything that shows up
+                after that, like crowded settlements, rich and poor, or fights
+                over good land, comes out of those small decisions. None of it
+                is written into the code.
               </p>
 
               <ol className="mt-10 space-y-5">
                 <Step
                   n="01"
                   title="Set the conditions"
-                  body="How many people. How equal they start. What kind of land. What they want — resources (Marx), status (Bourdieu), belonging and shared norms, or domination over others. What kind of minds they have — Herbert Simon&rsquo;s bounded rationality, learners, or imitators."
+                  body="How many people there are and how equal they start. What the land looks like. How far they can see, how fast they burn through food, how long they live, and what they care about. The setup walks you through it in about a minute."
                 />
                 <Step
                   n="02"
                   title="Press Run"
-                  body="Agents move, harvest, pay metabolism, age, die, and — if you turned inheritance on — leave their wealth to children. The same Sugarscape rule Joshua Epstein wrote in 1996, run in your browser."
+                  body="Every turn, each agent looks around, moves to the best spot it can see, eats, gets a little older, and sometimes has a child. That is the whole loop. Thousands of agents run it at the same time."
                 />
                 <Step
                   n="03"
-                  title="Watch what emerges"
-                  body="Wealth concentrates. Clusters form on the resource peaks. The poor migrate or starve. The Gini coefficient climbs in real time. You didn&rsquo;t script any of it — it grew from what you set."
+                  title="Watch what happens"
+                  body="Crowds build up on the good land. A few agents get rich and most do not. The poor move or starve. You can watch the inequality number climb while it runs."
                 />
                 <Step
                   n="04"
-                  title="Hear the theorists"
-                  body="AI observers read the same run through different lenses — Marx, Polanyi, Bourdieu, Granovetter, Schelling, Turchin, Farmer, Epstein, Flack, Axelrod — and narrate what they see in their own vocabulary. Same emergence, multiple readings, side by side."
+                  title="Hear what the observers make of it"
+                  body="Ten AI observers watch the same run, each reading it a different way. Marx looks for class. Bourdieu looks for status. Schelling looks for tipping points. They often disagree, which is the interesting part."
                 />
               </ol>
             </div>

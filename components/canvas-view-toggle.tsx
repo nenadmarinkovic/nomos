@@ -9,6 +9,7 @@ import {
   MenubarMenu,
   MenubarTrigger,
 } from "@/components/ui/menubar";
+import { SidebarRow } from "@/components/sidebar-section";
 import { useSimulationStore } from "@/lib/store";
 
 type CanvasView = "field" | "network";
@@ -29,30 +30,23 @@ export function CanvasViewToggle() {
   const CurrentIcon = current.Icon;
 
   return (
-    <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-        Canvas
-      </span>
+    <SidebarRow label="View">
       <Menubar>
         <MenubarMenu>
-          <MenubarTrigger>
+          <MenubarTrigger className="text-foreground/55 hover:text-foreground">
             <CurrentIcon size={11} weight="bold" />
             {current.label}
           </MenubarTrigger>
           <MenubarContent align="end">
             {VIEWS.map(({ key, label, Icon }) => (
               <MenubarItem key={key} onSelect={() => setView(key)}>
-                <Icon
-                  size={12}
-                  weight="bold"
-                  className="text-muted-foreground"
-                />
+                <Icon size={12} weight="bold" className="text-foreground/55" />
                 <span className="text-xs">{label}</span>
               </MenubarItem>
             ))}
           </MenubarContent>
         </MenubarMenu>
       </Menubar>
-    </div>
+    </SidebarRow>
   );
 }

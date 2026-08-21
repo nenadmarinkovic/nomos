@@ -200,7 +200,7 @@ function GiniWindow() {
   return (
     <FloatingWindow
       windowKey="gini"
-      title="Gini"
+      title="Inequality"
       meta={snapshot.gini.toFixed(3)}
     >
       <ChartContainer config={giniConfig} className="aspect-auto h-24 w-full">
@@ -556,7 +556,7 @@ function MoneyWindow() {
       : "no tokens";
 
   return (
-    <FloatingWindow windowKey="money" title="Money" meta={meta}>
+    <FloatingWindow windowKey="money" title="IOUs" meta={meta}>
       <ChartContainer config={moneyConfig} className="aspect-auto h-24 w-full">
         <AreaChart
           data={data}
@@ -690,8 +690,8 @@ function NarratorWindow() {
         {!latest ? (
           <p className="text-sm leading-relaxed text-muted-foreground">
             {pending
-              ? "Observers are watching…"
-              : "Run the simulation. Observers will narrate as the society unfolds."}
+              ? "Someone is writing…"
+              : "Start a run and the observers will start writing here."}
           </p>
         ) : (
           <div className="flex flex-col gap-2">

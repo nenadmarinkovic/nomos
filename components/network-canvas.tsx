@@ -383,10 +383,10 @@ export function NetworkCanvas() {
       {selectedId === null && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-10 w-md max-w-[calc(100vw-2rem)] rounded-md border border-foreground/10 bg-card/90 px-3 py-2 backdrop-blur-sm">
           {events.length === 0 ? (
-            <p className="text-xs italic leading-snug text-foreground/80">
-              Each shape is one agent; lines show each agent&apos;s three
-              strongest trade partners. Drag to orbit, scroll to zoom, click an
-              agent to inspect.
+            <p className="text-xs leading-snug text-foreground/80">
+              Every shape is one agent. The lines go to the three agents it
+              trades with most. Drag to turn it, scroll to zoom, click an agent
+              to see its details.
             </p>
           ) : (
             <>
@@ -499,9 +499,7 @@ function AgentInspector({
             <XIcon size={12} weight="bold" />
           </button>
         </div>
-        <p className="mt-2 italic text-muted-foreground">
-          Gone — this agent has died.
-        </p>
+        <p className="mt-2 text-muted-foreground">This one is dead.</p>
       </div>
     );
   }
@@ -543,21 +541,21 @@ function AgentInspector({
           value={`${agent.sugar.toFixed(1)} / ${agent.spice.toFixed(1)}`}
         />
         <Stat label="Age" value={`${agent.age} / ${agent.maxAge}`} />
-        <Stat label="Vision" value={agent.vision.toString()} />
+        <Stat label="Sees" value={agent.vision.toString()} />
         <Stat
-          label="Metab"
+          label="Burns"
           value={`${agent.sugarMetab.toFixed(1)} / ${agent.spiceMetab.toFixed(1)}`}
         />
-        <Stat label="Embedded" value={embeddedness.toFixed(1)} />
+        <Stat label="Connectedness" value={embeddedness.toFixed(1)} />
       </div>
 
       <div className="border-t border-foreground/10 px-3 py-3">
         <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Top trade partners
+          Trades most with
         </span>
         {partners.length === 0 ? (
-          <p className="mt-1.5 text-xs italic text-muted-foreground">
-            No partners yet — this agent hasn&apos;t traded.
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Hasn&apos;t traded with anyone yet.
           </p>
         ) : (
           <ul className="mt-1.5 flex flex-col gap-1">

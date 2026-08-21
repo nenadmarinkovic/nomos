@@ -54,7 +54,7 @@ export function PageWelcome({
         </ol>
 
         {outro && (
-          <div className="mt-10 text-[15px] italic leading-relaxed text-muted-foreground">
+          <div className="mt-10 text-[15px] leading-relaxed text-muted-foreground">
             {outro}
           </div>
         )}

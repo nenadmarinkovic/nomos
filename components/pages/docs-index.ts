@@ -9,22 +9,24 @@ export const DOCS_INDEX: DocsEntry[] = [
     slug: "about",
     title: "About Nomos",
     blurb:
-      "What the project is, the intellectual move, three illustrative runs.",
+      "What this is, why it works the way it does, and what a few runs look like.",
   },
   {
     slug: "simulation",
     title: "How the simulation works",
     blurb:
-      "The trait vector, per-tick walkthrough, token economy, crisis layer.",
+      "What happens on every turn, how trade and IOUs work, and how crises start.",
   },
   {
     slug: "observers",
-    title: "Observers & chronicle",
-    blurb: "The ten theorists, event detection, routing, pacing.",
+    title: "The observers",
+    blurb:
+      "Who the ten observers are, and how the app decides who writes what.",
   },
   {
     slug: "development",
     title: "Development",
-    blurb: "Stack, architecture, scripts, calibration knobs, how to extend.",
+    blurb:
+      "How the code is put together, how to run it locally, and what to change.",
   },
 ];

@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { SidebarRow } from "@/components/sidebar-section";
 import { useSimulationStore } from "@/lib/store";
 
 const MOTIVATION_COLOR: Record<string, string> = {
@@ -35,10 +36,10 @@ const MOTIVATION_LABEL: Record<string, string> = {
 };
 
 const MOTIVATION_HINT: Record<string, string> = {
-  material: "Resources and labour come first — survive, harvest, get rich.",
-  symbolic: "Status, taste, and distinction drive choices.",
-  normative: "Belonging and ritual conformity guide action.",
-  power: "Authority and control over others — the drive to lead and be obeyed.",
+  material: "Wants food and wealth. Harvests, hoards, gets rich.",
+  symbolic: "Wants status. Moves toward whoever is doing well.",
+  normative: "Wants to fit in. Stays close to the group.",
+  power: "Wants control. Looks for weaker neighbours to push around.",
 };
 
 export function CanvasLegend() {
@@ -56,21 +57,18 @@ export function CanvasLegend() {
 
   return (
     <Dialog>
-      <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          Legend
-        </span>
-        <DialogTrigger className="flex h-7 cursor-pointer select-none items-center gap-1.5 rounded-md border border-foreground/15 bg-card px-2 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground outline-none transition-colors hover:bg-foreground/6 hover:text-foreground">
+      <SidebarRow label="Legend">
+        <DialogTrigger className="flex cursor-pointer select-none items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-xs uppercase tracking-[0.14em] text-foreground/55 outline-none transition-colors hover:bg-foreground/6 hover:text-foreground data-[state=open]:bg-foreground/6 data-[state=open]:text-foreground">
           <ShapesIcon size={11} weight="bold" />
           Open
         </DialogTrigger>
-      </div>
+      </SidebarRow>
 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reading the canvas</DialogTitle>
+          <DialogTitle>What you are looking at</DialogTitle>
           <DialogDescription>
-            What every shape, shade, and colour on the world map stands for.
+            What the shapes, shades and colours on the map mean.
           </DialogDescription>
         </DialogHeader>
 
@@ -80,8 +78,8 @@ export function CanvasLegend() {
               Motivations
             </h3>
             <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
-              Every agent is drawn as a shape marking what it is chasing. Shape
-              and colour go together — one for each drive.
+              Each agent is drawn as a shape showing what it wants. Each shape
+              has its own colour.
             </p>
             <ul className="space-y-3">
               {keys.map((k) => (
@@ -107,8 +105,8 @@ export function CanvasLegend() {
               Wealth
             </h3>
             <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
-              Opacity tracks how rich an agent is. The wealthiest render solid;
-              the poorest fade to almost nothing.
+              The richer an agent is, the more solid it looks. The poorest ones
+              are almost invisible.
             </p>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-px">
@@ -139,8 +137,8 @@ export function CanvasLegend() {
               Resources
             </h3>
             <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
-              Two goods grow on the land. Agents harvest, consume, and trade
-              them — scarcity is what sets prices in motion.
+              Two things grow on the land. Agents pick them up, eat them and
+              trade them with each other.
             </p>
             <ul className="space-y-2.5">
               <li className="flex items-start gap-3">
@@ -153,7 +151,8 @@ export function CanvasLegend() {
                   <span className="font-medium">Sugar</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    — the staple every agent burns each turn to stay alive.
+                    is the food everyone burns through every turn just to stay
+                    alive.
                   </span>
                 </p>
               </li>
@@ -167,8 +166,8 @@ export function CanvasLegend() {
                   <span className="font-medium">Spice</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    — a second good; uneven supply gives agents a reason to
-                    trade rather than just hoard.
+                    is the second good. Because it grows in different places,
+                    agents have a reason to trade instead of just hoarding.
                   </span>
                 </p>
               </li>

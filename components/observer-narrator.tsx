@@ -262,7 +262,7 @@ async function requestNarration(
   } catch (err) {
     handlers.fail(
       entryKey,
-      err instanceof Error ? err.message : "Network error",
+      err instanceof Error ? err.message : "Couldn\u2019t reach the observer",
     );
   }
 }

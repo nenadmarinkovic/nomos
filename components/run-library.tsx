@@ -70,7 +70,11 @@ export function RunLibrary() {
     try {
       setRuns(await listRuns());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load runs");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Couldn\u2019t load your saved runs",
+      );
     } finally {
       setLoading(false);
     }
@@ -103,7 +107,9 @@ export function RunLibrary() {
       });
       setRuns((prev) => [summary, ...prev]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save run");
+      setError(
+        err instanceof Error ? err.message : "Couldn\u2019t save this run",
+      );
     } finally {
       setSaving(false);
     }
@@ -118,7 +124,9 @@ export function RunLibrary() {
       replayRun(detail.config);
       setOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load run");
+      setError(
+        err instanceof Error ? err.message : "Couldn\u2019t open that run",
+      );
       setBusyId(null);
     }
   }
@@ -130,7 +138,7 @@ export function RunLibrary() {
       setCopiedId(id);
       window.setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1500);
     } catch {
-      setError("Could not copy the link to your clipboard");
+      setError("Couldn\u2019t copy the link");
     }
   }
 
@@ -142,7 +150,9 @@ export function RunLibrary() {
       await deleteRun(id);
       setRuns((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete run");
+      setError(
+        err instanceof Error ? err.message : "Couldn\u2019t delete that run",
+      );
     } finally {
       setBusyId(null);
     }
@@ -170,8 +180,8 @@ export function RunLibrary() {
         <DialogHeader>
           <DialogTitle>Run library</DialogTitle>
           <DialogDescription>
-            Save the current run and replay any saved one. Runs are
-            deterministic, so a replay unfolds exactly as it first did.
+            Save the run you are watching, or replay one you saved earlier. A
+            replay plays out exactly the same way it did the first time.
           </DialogDescription>
         </DialogHeader>
 
@@ -182,7 +192,7 @@ export function RunLibrary() {
                 htmlFor="run-name"
                 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground/70"
               >
-                Save current run
+                Save this run
               </label>
               <input
                 id="run-name"
@@ -211,7 +221,7 @@ export function RunLibrary() {
           </div>
           {!started && (
             <p className="text-xs text-muted-foreground">
-              Start a run from the setup screen to save it.
+              Nothing is running yet. Start a run from the setup screen first.
             </p>
           )}
 
@@ -233,7 +243,7 @@ export function RunLibrary() {
               </div>
             ) : runs.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                No saved runs yet.
+                You have not saved anything yet.
               </p>
             ) : (
               <ul className="flex flex-col gap-1.5">
@@ -249,7 +259,7 @@ export function RunLibrary() {
                       <div className="mt-0.5 flex flex-wrap gap-x-2.5 gap-y-0.5 font-mono text-xs text-muted-foreground tabular-nums">
                         <span>{timeAgo(run.createdAt)}</span>
                         <span>turn {run.turn.toLocaleString()}</span>
-                        <span>Gini {run.gini.toFixed(2)}</span>
+                        <span>inequality {run.gini.toFixed(2)}</span>
                         <span>{run.alive.toLocaleString()} alive</span>
                       </div>
                     </div>

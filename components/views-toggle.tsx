@@ -8,7 +8,11 @@ import {
   CornersOutIcon,
 } from "@phosphor-icons/react";
 
-import { Label } from "@/components/ui/label";
+import {
+  SidebarRow,
+  SidebarSection,
+  SidebarSectionAction,
+} from "@/components/sidebar-section";
 import {
   Menubar,
   MenubarContent,
@@ -20,12 +24,12 @@ import { Switch } from "@/components/ui/switch";
 import { useSimulationStore, type ViewKey } from "@/lib/store";
 
 const VIEWS: { key: ViewKey; label: string }[] = [
-  { key: "gini", label: "Gini" },
+  { key: "gini", label: "Inequality" },
   { key: "alive", label: "Alive" },
   { key: "wealth", label: "Wealth" },
   { key: "price", label: "Price" },
   { key: "stream", label: "Motivations" },
-  { key: "money", label: "Money" },
+  { key: "money", label: "IOUs" },
   { key: "trust", label: "Trust" },
   { key: "narrator", label: "Narrator" },
 ];
@@ -55,53 +59,35 @@ export function ViewsToggle() {
   const anyVisible = Object.values(views).some(Boolean);
 
   return (
-    <div className="space-y-2 px-3 py-2.5">
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            Windows
-          </span>
-          <button
-            type="button"
-            onClick={() => setAllViews(!anyVisible)}
-            className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {anyVisible ? "Hide all" : "Show all"}
-          </button>
-        </div>
-        <div className="flex flex-col">
-          {VIEWS.map((v) => {
-            const id = `view-${v.key}`;
-            return (
-              <div
-                key={v.key}
-                className="flex items-center justify-between gap-2 py-0.5"
-              >
-                <Label
-                  htmlFor={id}
-                  className="cursor-pointer text-[11px] text-foreground/85"
-                >
-                  {v.label}
-                </Label>
-                <Switch
-                  id={id}
-                  size="sm"
-                  checked={views[v.key]}
-                  onCheckedChange={() => toggleView(v.key)}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
+    <SidebarSection
+      title="Windows"
+      action={
+        <SidebarSectionAction onClick={() => setAllViews(!anyVisible)}>
+          {anyVisible ? "Hide all" : "Show all"}
+        </SidebarSectionAction>
+      }
+    >
+      {VIEWS.map((v) => {
+        const id = `view-${v.key}`;
+        return (
+          <SidebarRow key={v.key} label={v.label} htmlFor={id}>
+            <Switch
+              id={id}
+              size="sm"
+              checked={views[v.key]}
+              onCheckedChange={() => toggleView(v.key)}
+            />
+          </SidebarRow>
+        );
+      })}
 
-      <div className="flex items-center justify-between gap-2 border-t border-foreground/10 pt-2">
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          Align
-        </span>
+      <SidebarRow
+        label="Align to"
+        className="mt-1.5 border-t border-foreground/10 pt-1.5"
+      >
         <Menubar>
           <MenubarMenu>
-            <MenubarTrigger>
+            <MenubarTrigger className="text-foreground/55 hover:text-foreground">
               <CornersOutIcon size={11} weight="bold" />
               Corner
             </MenubarTrigger>
@@ -111,7 +97,7 @@ export function ViewsToggle() {
                   <Icon
                     size={12}
                     weight="bold"
-                    className="text-muted-foreground"
+                    className="text-foreground/55"
                   />
                   <span className="text-xs">{label}</span>
                 </MenubarItem>
@@ -119,7 +105,7 @@ export function ViewsToggle() {
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
-      </div>
-    </div>
+      </SidebarRow>
+    </SidebarSection>
   );
 }

@@ -28,40 +28,34 @@ export function MetricsPage() {
     return (
       <PageWelcome
         eyebrow="Metrics · The numbers"
-        headline={
-          <>
-            Read a society&rsquo;s <em className="text-brand">body language</em>{" "}
-            in plain numbers.
-          </>
-        }
+        headline={<>The numbers that tell you how the run is going.</>}
         lead={
           <>
-            Nomos doesn&rsquo;t program inequality, classes, or markets — they
-            emerge or they don&rsquo;t. The measures on this page are how that
-            emergence reveals itself in aggregate. None of them are inputs. All
-            of them are outputs of what the conditions produced.
+            Nothing on this page is a setting you chose. These are all
+            measurements taken from what the agents actually did. If inequality
+            shows up here, it is because the run produced it.
           </>
         }
         steps={[
           {
             n: "01",
-            title: "Gini coefficient",
-            body: "Wealth concentration on a 0 to 1 scale. 0 means everyone holds the same; 1 means a single agent holds everything. Watch it rise and you&rsquo;re watching an oligarchy form bottom-up.",
+            title: "Inequality (Gini)",
+            body: "One number between 0 and 1 for how unevenly the food is spread. 0 means everyone holds the same amount. 1 means one agent holds everything. Most real countries sit somewhere between 0.25 and 0.6.",
           },
           {
             n: "02",
             title: "Trade price",
-            body: "Sugar per spice. There is no global market rule — the price you see is the geometric mean of every local Pareto-improving exchange this tick. A market <em>emerges</em> from individual gains, then a price <em>emerges</em> from the market.",
+            body: "How much sugar a unit of spice goes for. Nobody sets this price. It is the average of every swap two neighbours agreed to this turn, because both of them came out ahead.",
           },
           {
             n: "03",
-            title: "Demography",
-            body: "Mean age, oldest, youth share. Whether the society is replacing itself, slowing into stagnation, or aging toward collapse.",
+            title: "Ages",
+            body: "Average age, the oldest agent alive, and how much of the population is young. This tells you whether the society is replacing itself or slowly dying out.",
           },
           {
             n: "04",
-            title: "Distribution",
-            body: "Top 10% holds, bottom 50% holds, median and mean wealth — where on the Lorenz curve the run is sitting, in plain numbers. The story the Gini summarises in one digit.",
+            title: "Who holds what",
+            body: "How much the richest 10% hold, how much the poorest half hold, and the middle. This is the detail behind the single inequality number.",
           },
         ]}
       />
@@ -100,17 +94,17 @@ export function MetricsPage() {
             <Summary
               label="Gini"
               value={snapshot.gini.toFixed(3)}
-              hint="wealth concentration"
+              hint="0 = equal, 1 = one agent has it all"
             />
             <Summary
               label="Trade price"
               value={
                 snapshot.tradePrice > 0 ? snapshot.tradePrice.toFixed(3) : "—"
               }
-              hint="sugar per spice"
+              hint="sugar per unit of spice"
             />
             <Summary
-              label="Money supply"
+              label="IOUs in circulation"
               value={
                 snapshot.tokenSupply > 0
                   ? Math.round(snapshot.tokenSupply).toLocaleString()
@@ -118,8 +112,8 @@ export function MetricsPage() {
               }
               hint={
                 snapshot.circulatingIssuers > 0
-                  ? `${snapshot.circulatingIssuers} circulating issuer${snapshot.circulatingIssuers === 1 ? "" : "s"}`
-                  : "no tokens yet"
+                  ? `${snapshot.circulatingIssuers} issuer${snapshot.circulatingIssuers === 1 ? "" : "s"} trusted by strangers`
+                  : "no IOUs yet"
               }
             />
           </section>
@@ -127,37 +121,37 @@ export function MetricsPage() {
           {advanced && (
             <section className="space-y-3">
               <SectionTitle
-                title="Derived"
-                hint="Numbers the windows compress away."
+                title="More detail"
+                hint="The numbers the small charts leave out."
               />
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <Summary
-                  label="Mean age"
+                  label="Average age"
                   value={`${advanced.meanAge.toFixed(1)}t`}
                 />
                 <Summary label="Oldest" value={`${advanced.maxAge}t`} />
                 <Summary
-                  label="Youth share"
+                  label="Under a quarter of life"
                   value={`${(advanced.youthShare * 100).toFixed(0)}%`}
                 />
                 <Summary
-                  label="Spice-rich"
+                  label="Holding more spice"
                   value={`${(advanced.spiceRichShare * 100).toFixed(0)}%`}
                 />
                 <Summary
-                  label="Top 10% holds"
+                  label="Richest 10% hold"
                   value={`${(advanced.top10Share * 100).toFixed(1)}%`}
                 />
                 <Summary
-                  label="Bottom 50% holds"
+                  label="Poorest 50% hold"
                   value={`${(advanced.bottom50Share * 100).toFixed(1)}%`}
                 />
                 <Summary
-                  label="Median wealth"
+                  label="Middle wealth"
                   value={advanced.medianWealth.toFixed(2)}
                 />
                 <Summary
-                  label="Mean wealth"
+                  label="Average wealth"
                   value={advanced.meanWealth.toFixed(2)}
                 />
               </div>
@@ -186,32 +180,31 @@ function TokenEconomySection({
   return (
     <section className="space-y-3">
       <SectionTitle
-        title="Token economy"
-        hint="Private IOUs an agent prints when short on sugar. When the same issuer's tokens end up held by many strangers, you're watching money emerge."
+        title="IOUs and money"
+        hint="When an agent runs short on sugar it can write an IOU instead. Once one agent's IOUs are being held by people who never met them, that IOU has become money."
       />
       {noTokens ? (
         <div className="rounded-md border border-foreground/10 bg-card/40 px-4 py-6">
-          <p className="text-[14px] italic leading-relaxed text-foreground/70">
-            No tokens are in circulation. Either no buyer has yet been short
-            enough on sugar to ask for credit, or no seller has trusted the
-            offered IOU enough to accept it. Watch this section once trade
-            thickens — the first circulating issuer is the first private bank.
+          <p className="text-[14px] leading-relaxed text-foreground/70">
+            Nobody has issued an IOU yet, or nobody has been willing to accept
+            one. Check back once trade picks up. The first agent whose IOUs
+            circulate is effectively the first bank in this world.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Summary
-            label="Tokens outstanding"
+            label="IOUs outstanding"
             value={Math.round(snapshot.tokenSupply).toLocaleString()}
-            hint="across all holders"
+            hint="held across everyone"
           />
           <Summary
-            label="Token trades · turn"
+            label="IOU trades this turn"
             value={snapshot.tokenTradeVolume.toString()}
-            hint="IOU-paid exchanges"
+            hint="swaps paid with an IOU"
           />
           <Summary
-            label="Circulating issuers"
+            label="Trusted issuers"
             value={snapshot.circulatingIssuers.toString()}
             hint={
               <span className="inline-flex items-baseline gap-0.5">
@@ -227,11 +220,11 @@ function TokenEconomySection({
             }
           />
           <Summary
-            label="Top issuer"
+            label="Biggest issuer"
             value={snapshot.topIssuerId >= 0 ? `#${snapshot.topIssuerId}` : "—"}
             hint={
               snapshot.topIssuerLiability > 0
-                ? `${Math.round(snapshot.topIssuerLiability)} outstanding`
+                ? `owes ${Math.round(snapshot.topIssuerLiability)}`
                 : undefined
             }
           />
@@ -246,17 +239,17 @@ function Header({ badge }: { badge?: React.ReactNode }) {
     <header className="space-y-3">
       <div className="flex items-start justify-between gap-4">
         <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
-          Metrics · Signals
+          Metrics · Live numbers
         </p>
         {badge}
       </div>
       <h1 className="text-3xl leading-tight tracking-tight text-foreground">
-        What the numbers say.
+        How the run is going.
       </h1>
       <p className="text-[15px] leading-relaxed text-foreground/70">
-        Time series of the headline measures, plus the shape underneath — who
-        holds what, how old they are, how the market is moving. Snapshotted on
-        arrival; press Refresh to take a fresh sample.
+        How many are alive, how unevenly the food is spread, what things cost,
+        and how old everyone is. This is a snapshot from when you opened the
+        page. Press Refresh for a newer one.
       </p>
     </header>
   );

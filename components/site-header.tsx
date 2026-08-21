@@ -28,7 +28,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { SectionKey } from "@/components/sidebar";
+import {
+  sectionGroupTitle,
+  sectionLabel,
+  type SectionKey,
+} from "@/components/sidebar";
 import { useSimulationStore } from "@/lib/store";
 import { version as APP_VERSION } from "@/package.json";
 
@@ -53,14 +57,6 @@ interface SiteHeaderProps {
   onStop: () => void;
 }
 
-const SECTION_LABELS: Record<SectionKey, { group: string; label: string }> = {
-  world: { group: "Run", label: "World" },
-  agents: { group: "Run", label: "Agents" },
-  metrics: { group: "Run", label: "Metrics" },
-  narrator: { group: "Run", label: "Narrator" },
-  docs: { group: "Reference", label: "Docs" },
-};
-
 export function SiteHeader({
   running,
   paused,
@@ -75,7 +71,7 @@ export function SiteHeader({
   onStop,
 }: SiteHeaderProps) {
   const router = useRouter();
-  const breadcrumb = SECTION_LABELS[activeSection];
+
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
   const speed = useSimulationStore((s) => s.speed);
   const setSpeed = useSimulationStore((s) => s.setSpeed);
@@ -181,13 +177,17 @@ export function SiteHeader({
             aria-label="breadcrumb"
             className="flex min-w-0 items-center gap-2 text-sm"
           >
-            <span className="text-muted-foreground">{breadcrumb.group}</span>
+            <span className="text-muted-foreground">
+              {sectionGroupTitle(activeSection)}
+            </span>
             <CaretRightIcon
               size={12}
               weight="bold"
               className="shrink-0 text-muted-foreground/50"
             />
-            <span className="truncate text-foreground">{breadcrumb.label}</span>
+            <span className="truncate text-foreground">
+              {sectionLabel(activeSection)}
+            </span>
           </nav>
         </div>
 
@@ -195,7 +195,7 @@ export function SiteHeader({
           {showSpeed && (
             <div
               role="radiogroup"
-              aria-label="Simulation speed"
+              aria-label="Speed"
               className="hidden items-center gap-0.5 rounded-md border border-foreground/10 bg-card p-0.5 sm:flex"
             >
               {SPEEDS.map((s) => {
@@ -252,11 +252,11 @@ export function SiteHeader({
         <Dialog open={stopConfirmOpen} onOpenChange={setStopConfirmOpen}>
           <DialogContent showCloseButton={false} className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Stop this simulation?</DialogTitle>
+              <DialogTitle>Stop the run?</DialogTitle>
               <DialogDescription>
-                The current run will end and the turn counter will reset to
-                zero. Your settings are kept — you can begin a new run any time.
-                If you only want to step away for a moment, use Pause instead.
+                This ends the run and puts the turn counter back to zero. Your
+                settings are kept, so you can start again whenever you like. If
+                you just need a break, use Pause instead.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="border-t-0">
@@ -269,7 +269,7 @@ export function SiteHeader({
               </Button>
               <Button variant="default" size="sm" onClick={confirmStop}>
                 <StopIcon weight="fill" />
-                Stop simulation
+                Stop the run
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Nomos",
   description:
-    "A society simulation where agents follow simple rules and AI theorists observe what emerges.",
+    "A browser simulation. You set the starting conditions, a few thousand simple agents live out their lives, and you watch what the society turns into.",
   manifest: "/site.webmanifest",
   icons: {
     icon: [
@@ -41,13 +41,6 @@ export default function RootLayout({
         <link
           rel="preload"
           href="/fonts/HankenGrotesk-Variable.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          href="/fonts/Newsreader-Italic-Variable.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

@@ -167,9 +167,7 @@ export function DocsPage({
             </ReactMarkdown>
           </article>
         ) : (
-          <p className="mt-8 italic text-muted-foreground">
-            That doc page is not in the index.
-          </p>
+          <p className="mt-8 text-muted-foreground">There is no page here.</p>
         )}
         <DocsSeeAlso activeSlug={activeSlug} />
       </div>
@@ -330,7 +328,7 @@ function DocsSeeAlso({ activeSlug }: { activeSlug: string }) {
             >
               {entry.title}
             </Link>
-            <span className="ml-2 text-sm italic text-muted-foreground">
+            <span className="ml-2 text-sm text-muted-foreground">
               {entry.blurb}
             </span>
           </li>
@@ -348,15 +346,14 @@ function DocsLanding() {
           Documentation
         </p>
         <h1 className="mt-3 text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl">
-          What <span className="italic text-brand">Nomos</span> is, how it runs,
-          and how to extend it.
+          What Nomos is, how it runs, and how to change it.
         </h1>
         <p className="mt-5 text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
-          A grid of agents follows local rules; macro phenomena — markets,
-          classes, conflict, money — emerge or fail to emerge from those rules.
-          A panel of AI theorists watches the same field and narrates what they
-          see in their own vocabulary. These pages explain what that actually
-          means.
+          A few thousand simple agents live on a grid. They gather food, trade,
+          fight, have children and die. Markets, classes, money and conflict are
+          not built in. They either show up on their own or they do not. A group
+          of AI observers watches the same run and writes about it. These pages
+          explain how all of that works.
         </p>
         <p className="mt-6 text-start text-[17px] leading-relaxed text-foreground/80 sm:text-lg">
           Nomos is an{" "}

@@ -29,7 +29,7 @@ export default function AuthLayout({
               Nomos
             </span>
             <span className="text-sm text-muted-foreground">
-              A generative society simulation.
+              A society simulation you can run in the browser.
             </span>
           </span>
         </Link>
@@ -48,7 +48,7 @@ export default function AuthLayout({
           <span>All rights reserved</span>
         </div>
         <div className="text-sm text-muted-foreground/70">
-          An open-source project.{" "}
+          Open source.{" "}
           <a
             href="https://github.com/nenadmarinkovic/nomos"
             target="_blank"

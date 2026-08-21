@@ -14,11 +14,13 @@ import {
   UsersThreeIcon,
 } from "@phosphor-icons/react";
 
+import { useSimulationStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { CanvasLegend } from "@/components/canvas-legend";
 import { CanvasViewToggle } from "@/components/canvas-view-toggle";
 import { MonochromeToggle } from "@/components/monochrome-toggle";
 import { SidebarFooter } from "@/components/sidebar-footer";
+import { SIDEBAR_TONE, SidebarSection } from "@/components/sidebar-section";
 import { ViewsToggle } from "@/components/views-toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -47,13 +49,51 @@ type SectionDef = {
   icon: typeof GlobeIcon;
 };
 
-const SECTIONS: SectionDef[] = [
-  { key: "world", href: "/", label: "World", icon: GlobeIcon },
-  { key: "agents", href: "/agents", label: "Agents", icon: UsersThreeIcon },
-  { key: "metrics", href: "/metrics", label: "Metrics", icon: PulseIcon },
-  { key: "narrator", href: "/narrator", label: "Narrator", icon: EyeIcon },
-  { key: "docs", href: "/docs", label: "Docs", icon: BookOpenIcon },
+type NavGroupDef = {
+  title: string;
+  sections: SectionDef[];
+};
+
+/**
+ * The nav, and the only place the grouping is defined. The header breadcrumb
+ * reads its first crumb from here via `sectionGroupTitle`, so a section can
+ * never sit under one heading in the sidebar and another in the header.
+ */
+const NAV_GROUPS: NavGroupDef[] = [
+  {
+    title: "Simulation",
+    sections: [{ key: "world", href: "/", label: "World", icon: GlobeIcon }],
+  },
+  {
+    title: "Analysis",
+    sections: [
+      { key: "agents", href: "/agents", label: "Agents", icon: UsersThreeIcon },
+      { key: "metrics", href: "/metrics", label: "Metrics", icon: PulseIcon },
+      { key: "narrator", href: "/narrator", label: "Narrator", icon: EyeIcon },
+    ],
+  },
+  {
+    title: "Reference",
+    sections: [
+      { key: "docs", href: "/docs", label: "Docs", icon: BookOpenIcon },
+    ],
+  },
 ];
+
+export function sectionLabel(key: SectionKey): string {
+  for (const group of NAV_GROUPS) {
+    const section = group.sections.find((s) => s.key === key);
+    if (section) return section.label;
+  }
+  return key;
+}
+
+export function sectionGroupTitle(key: SectionKey): string {
+  for (const group of NAV_GROUPS) {
+    if (group.sections.some((s) => s.key === key)) return group.title;
+  }
+  return "";
+}
 
 export function sectionFromPath(pathname: string): SectionKey {
   if (pathname.startsWith("/agents")) return "agents";
@@ -85,7 +125,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <div className="absolute right-2.75 top-0 h-full w-px transition-colors duration-150 group-hover/handle:bg-foreground/20" />
           <div className="relative opacity-0 transition-opacity duration-150 group-hover/handle:opacity-100">
             <div className="absolute inset-y-0 left-1/2 w-3 -translate-x-1/2 bg-background" />
-            <div className="relative flex size-6 items-center justify-center rounded-full border border-foreground/10 bg-background text-muted-foreground hover:text-foreground">
+            <div className="relative flex size-6 items-center justify-center rounded-full border border-foreground/10 bg-background text-foreground/55 transition-colors hover:text-foreground">
               {collapsed ? (
                 <CaretRightIcon size={12} weight="bold" />
               ) : (
@@ -145,31 +185,34 @@ function SidebarBody({
   active: SectionKey;
   onNavigate?: () => void;
 }) {
+  const started = useSimulationStore((s) => s.started);
+
   return (
     <>
       <ScrollArea className="flex-1">
         <div className={cn("pb-3 pt-4", collapsed ? "px-1.5" : "px-2")}>
-          <NavGroup
-            sections={SECTIONS}
-            active={active}
-            collapsed={collapsed}
-            onNavigate={onNavigate}
-          />
+          {NAV_GROUPS.map((group, i) => (
+            <NavGroup
+              key={group.title}
+              title={group.title}
+              sections={group.sections}
+              active={active}
+              collapsed={collapsed}
+              first={i === 0}
+              onNavigate={onNavigate}
+            />
+          ))}
         </div>
       </ScrollArea>
 
-      {!collapsed && (
-        <div className="flex shrink-0 flex-col empty:hidden">
-          <div className="border-t border-foreground/10 empty:hidden">
+      {!collapsed && started && (
+        <div className="flex shrink-0 flex-col">
+          <SidebarSection title="Canvas">
             <CanvasViewToggle />
             <MonochromeToggle />
-          </div>
-          <div className="border-t border-foreground/10 empty:hidden">
-            <ViewsToggle />
-          </div>
-          <div className="border-t border-foreground/10 empty:hidden">
             <CanvasLegend />
-          </div>
+          </SidebarSection>
+          <ViewsToggle />
         </div>
       )}
       <SidebarFooter collapsed={collapsed} />
@@ -178,18 +221,39 @@ function SidebarBody({
 }
 
 function NavGroup({
+  title,
   sections,
   active,
   collapsed,
+  first,
   onNavigate,
 }: {
+  title: string;
   sections: SectionDef[];
   active: SectionKey;
   collapsed: boolean;
+  first: boolean;
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex flex-col gap-px">
+    <nav
+      aria-label={title}
+      className={cn(
+        "flex flex-col gap-px",
+        !first &&
+          (collapsed ? "mt-2 border-t border-foreground/10 pt-2" : "mt-5"),
+      )}
+    >
+      {!collapsed && (
+        <h2
+          className={cn(
+            "px-2.5 pb-1.5 font-mono text-xs uppercase tracking-[0.16em]",
+            SIDEBAR_TONE.faint,
+          )}
+        >
+          {title}
+        </h2>
+      )}
       {sections.map(({ key, href, label: itemLabel, icon: Icon }) => {
         const isActive = active === key;
         const link = (
@@ -198,24 +262,19 @@ function NavGroup({
             onClick={onNavigate}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "group relative flex cursor-pointer items-center rounded-md text-left text-sm transition-colors",
+              "group relative flex cursor-pointer items-center rounded-md text-left text-[15px] transition-colors",
               isActive
-                ? "bg-foreground/6 font-medium text-foreground"
-                : "text-foreground/65 hover:bg-foreground/3 hover:text-foreground",
+                ? "bg-foreground/6 font-semibold text-foreground"
+                : "font-medium text-foreground/75 hover:bg-foreground/4 hover:text-foreground",
               collapsed
                 ? "h-10 justify-center"
                 : "justify-between gap-2.5 px-2.5 py-2",
             )}
           >
             <div className="flex items-center gap-2.5">
-              <Icon
-                size={18}
-                weight="regular"
-                className={cn(
-                  "shrink-0 transition-colors",
-                  isActive ? "text-foreground" : "text-foreground/40",
-                )}
-              />
+              {/* No colour of its own: currentColor keeps the glyph on exactly
+                  the same tone as the label beside it, in every state. */}
+              <Icon size={19} weight="regular" className="shrink-0" />
               {!collapsed && <span className="leading-tight">{itemLabel}</span>}
             </div>
             {!collapsed && (

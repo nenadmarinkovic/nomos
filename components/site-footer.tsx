@@ -33,7 +33,7 @@ export function SiteFooter({
               : agentCount.toLocaleString()
           }
         />
-        <Stat label="Gini" value={started ? gini.toFixed(3) : "—"} />
+        <Stat label="Inequality" value={started ? gini.toFixed(3) : "—"} />
         <Stat label="Observers" value={observerCount.toString()} />
       </div>
 

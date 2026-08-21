@@ -41,41 +41,36 @@ export function NarratorPage() {
   if (!started) {
     return (
       <PageWelcome
-        eyebrow="Narrator · The voices"
-        headline={
-          <>
-            Watch <em className="text-brand">different vocabularies</em> read
-            the same emergence.
-          </>
-        }
+        eyebrow="Narrator · The observers"
+        headline={<>Ten people watching the same run, seeing ten things.</>}
         lead={
           <>
-            Nomos grows societies from the bottom up. The Narrator hands the
-            same run to a panel of theorists and lets each read it through their
-            own lens. The events are identical; the readings won&rsquo;t be.
-            That asymmetry is the whole intellectual move.
+            When something notable happens in the run, it gets handed to one of
+            the observers, who writes a short paragraph about it. They all see
+            exactly the same events. They rarely say the same thing about them,
+            and that is the point.
           </>
         }
         steps={[
           {
             n: "01",
-            title: "Marx, Bourdieu & Polanyi",
-            body: "<em>Capital, distinction, the great transformation.</em> Who owns what and who reproduces their advantage (Marx); whose taste tracks whose holdings (Bourdieu); when the trade loop disembeds from kinship and locality into a self-regulating market (Polanyi).",
+            title: "Marx, Bourdieu, Polanyi",
+            body: "Marx watches who owns things and who keeps ending up on top. Bourdieu watches status, and whether taste follows money around. Polanyi watches the moment trading between neighbours turns into a market with a life of its own.",
           },
           {
             n: "02",
-            title: "Flack & Granovetter",
-            body: "<em>Slow variables and embeddedness.</em> Flack reads what stabilises the run across time — the standing of a trusted issuer, the credibility of policing — and what fails when those erode. Granovetter reads the trade-tie graph directly: who brokers between clusters, which weak ties carry the information that strong ones can&rsquo;t.",
+            title: "Granovetter, Flack",
+            body: "Granovetter reads the map of who trades with whom, and looks for the people connecting groups that would otherwise never meet. Flack looks for the quiet things holding the society together, and what breaks when they go.",
           },
           {
             n: "03",
-            title: "Schelling & Turchin",
-            body: "<em>Cascades and secular cycles.</em> The persistent structures behind the daily motion — small preference shifts compounding into tipping points; multi-generation elite overproduction tipping into crisis.",
+            title: "Schelling, Turchin",
+            body: "Schelling watches for tipping points, where a small preference nobody thinks much about ends up sorting the whole map. Turchin takes the long view, across generations, and looks for the build-up before a crisis.",
           },
           {
             n: "04",
-            title: "Farmer, Epstein & Flack",
-            body: "<em>The methodological mirrors.</em> Doyne Farmer reads the emergent price as complexity economics. Joshua Epstein reads it as a Sugarscape modeller — &lsquo;if you didn&rsquo;t grow it, you didn&rsquo;t explain it.&rsquo; Jessica Flack reads it as a complexity ethologist: hierarchy as a computation, slow variables as a society&rsquo;s memory.",
+            title: "Farmer, Epstein, Axelrod",
+            body: "Farmer reads the prices and the money. Epstein built the original model this one is based on and asks whether the thing you claim to explain actually grew here. Axelrod watches who cooperates, who cheats, and what happens to them next.",
           },
         ]}
       />
@@ -96,13 +91,13 @@ export function NarratorPage() {
             <EmptyState
               title={
                 filter
-                  ? "No readings from this observer yet"
-                  : "The observers are watching"
+                  ? "This observer hasn't written anything yet"
+                  : "Nothing to report yet"
               }
               hint={
                 filter
-                  ? "Try another voice from the right panel, or wait for the next significant moment."
-                  : "Readings appear when the society shifts — a surge in inequality, a famine, a market in motion."
+                  ? "Pick someone else on the right, or wait for the next thing to happen."
+                  : "Writing shows up when something changes: inequality jumps, food runs out, trade picks up."
               }
             />
           ) : (
@@ -118,16 +113,16 @@ export function NarratorPage() {
       <aside className="hidden w-64 shrink-0 flex-col border-l border-foreground/10 bg-card/40 lg:flex">
         <div className="border-b border-foreground/10 px-4 py-3">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Voices
+            Observers
           </p>
           <p className="mt-1 text-xs leading-snug text-muted-foreground">
-            Click a theorist to filter to their readings.
+            Click a name to see only their writing.
           </p>
         </div>
         <ScrollArea className="flex-1">
           <div className="space-y-px p-2">
             <FilterRow
-              label="All voices"
+              label="Everyone"
               count={chronicle.filter((e) => e.status === "done").length}
               active={filter === null}
               onClick={() => setFilter(null)}
@@ -157,14 +152,14 @@ function Header() {
   return (
     <header className="space-y-2">
       <p className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">
-        Narrator · Voices
+        Narrator · Observers
       </p>
       <h1 className="text-3xl leading-tight tracking-tight text-foreground">
-        How the theorists read what just happened.
+        What the observers made of it.
       </h1>
       <p className="text-[15px] leading-relaxed text-foreground/70">
-        Each observer narrates significant moments through their own vocabulary.
-        Same event, different vocabularies — that&rsquo;s the intellectual move.
+        Whenever something notable happens, an observer writes about it here.
+        Newest first.
       </p>
     </header>
   );
@@ -201,7 +196,7 @@ function FilterRow({
         </span>
       </div>
       {hint && (
-        <span className="text-xs italic leading-snug text-muted-foreground">
+        <span className="text-xs leading-snug text-muted-foreground">
           {hint}
         </span>
       )}
@@ -241,7 +236,7 @@ function NarrationCard({ entry }: { entry: ChronicleEntry }) {
       )}
       {entry.status === "error" && (
         <p className="text-sm leading-snug text-muted-foreground">
-          {entry.error ?? "The observer could not be reached."}
+          {entry.error ?? "Couldn\u2019t reach this observer."}
         </p>
       )}
       <p className="text-xs text-muted-foreground">

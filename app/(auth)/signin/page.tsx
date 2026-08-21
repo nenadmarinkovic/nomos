@@ -37,7 +37,10 @@ function SignInForm() {
     const res = await signIn.email({ email, password });
     if (res.error) {
       setPending(false);
-      setError(res.error.message ?? "Sign-in failed.");
+      setError(
+        res.error.message ??
+          "That didn\u2019t work. Check your email and password.",
+      );
       return;
     }
 
@@ -58,7 +61,7 @@ function SignInForm() {
           Welcome back
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Sign in to access your saved runs and the Chronicle.
+          Sign in to get to your saved runs.
         </p>
       </header>
 

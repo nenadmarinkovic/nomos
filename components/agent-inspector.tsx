@@ -102,21 +102,21 @@ export function AgentInspectorOverlay({
       </div>
       <div className="px-3 py-3">
         {!snap.alive ? (
-          <p className="text-sm italic text-foreground/70">Deceased.</p>
+          <p className="text-sm text-foreground/70">This one is dead.</p>
         ) : (
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-            <InspectorRow label="Motivation" value={snap.motivation} />
+            <InspectorRow label="Wants" value={snap.motivation} />
             <InspectorRow
               label="Wealth"
               value={(snap.sugar + snap.spice).toFixed(1)}
             />
             <InspectorRow label="Sugar" value={snap.sugar.toFixed(1)} />
             <InspectorRow label="Spice" value={snap.spice.toFixed(1)} />
-            <InspectorRow label="Position" value={`${snap.x}, ${snap.y}`} />
+            <InspectorRow label="At" value={`${snap.x}, ${snap.y}`} />
             <InspectorRow label="Age" value={`${snap.age} / ${snap.maxAge}`} />
-            <InspectorRow label="Vision" value={snap.vision.toString()} />
+            <InspectorRow label="Sees" value={snap.vision.toString()} />
             <InspectorRow
-              label="Metabolism"
+              label="Burns"
               value={`${snap.sugarMetab.toFixed(1)} / ${snap.spiceMetab.toFixed(1)}`}
             />
           </dl>

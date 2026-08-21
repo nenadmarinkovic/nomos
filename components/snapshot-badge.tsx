@@ -29,7 +29,7 @@ export function SnapshotBadge({ turn, stale, onRefresh }: SnapshotBadgeProps) {
           "size-1.5 rounded-full transition-colors",
           stale ? "bg-amber-500/80" : "bg-emerald-500/80",
         )}
-        title={stale ? "Older than the live turn" : "Up to date"}
+        title={stale ? "The run has moved on since this" : "Up to date"}
       />
       <span className="mx-1 h-3 w-px bg-foreground/10" aria-hidden />
       <ArrowsClockwiseIcon

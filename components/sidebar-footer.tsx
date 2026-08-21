@@ -61,14 +61,14 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
             <button
               type="button"
               className={cn(
-                "flex w-full cursor-pointer items-center gap-3 rounded-md text-foreground/70 transition-colors hover:bg-foreground/4 hover:text-foreground",
+                "flex w-full cursor-pointer items-center gap-3 rounded-md text-foreground/75 transition-colors hover:bg-foreground/4 hover:text-foreground",
                 collapsed ? "h-10 justify-center px-0" : "h-10 px-1.5",
               )}
               aria-label="Account & settings"
             >
               <span
                 aria-hidden
-                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-muted-foreground"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/55"
               >
                 <UserIcon size={13} weight="regular" />
               </span>
@@ -78,14 +78,14 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
                     <span className="truncate text-sm font-medium text-foreground">
                       Guest
                     </span>
-                    <span className="truncate font-mono text-xs text-muted-foreground">
+                    <span className="truncate font-mono text-xs text-foreground/55">
                       Not signed in
                     </span>
                   </span>
                   <CaretUpDownIcon
                     size={13}
                     weight="regular"
-                    className="shrink-0 text-muted-foreground"
+                    className="shrink-0 text-foreground/55"
                   />
                 </>
               )}
@@ -111,7 +111,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
             <DropdownMenuItem asChild>
               <Link
                 href="/signup"
-                className="flex cursor-pointer items-center gap-2 text-muted-foreground"
+                className="flex cursor-pointer items-center gap-2 text-foreground/75"
               >
                 <UserIcon size={16} weight="regular" />
                 <span className="text-sm">Create account</span>
@@ -155,7 +155,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
           >
             <span
               aria-hidden
-              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-muted-foreground"
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/55"
             >
               <UserIcon size={13} weight="regular" />
             </span>
@@ -165,14 +165,14 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
                   <span className="truncate text-sm font-medium text-foreground">
                     {display}
                   </span>
-                  <span className="truncate font-mono text-xs text-muted-foreground">
+                  <span className="truncate font-mono text-xs text-foreground/55">
                     {user.email}
                   </span>
                 </span>
                 <CaretUpDownIcon
                   size={13}
                   weight="regular"
-                  className="shrink-0 text-muted-foreground"
+                  className="shrink-0 text-foreground/55"
                 />
               </>
             )}
@@ -187,7 +187,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
           <div className="flex items-center gap-3 px-2 py-2">
             <span
               aria-hidden
-              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-muted-foreground"
+              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/55"
             >
               <UserIcon size={15} weight="regular" />
             </span>
@@ -195,7 +195,7 @@ export function SidebarFooter({ collapsed }: { collapsed: boolean }) {
               <p className="truncate text-sm font-medium text-foreground">
                 {display}
               </p>
-              <p className="truncate font-mono text-sm text-muted-foreground">
+              <p className="truncate font-mono text-sm text-foreground/55">
                 {user.email}
               </p>
             </div>
@@ -224,7 +224,7 @@ function ThemeRow() {
 
   return (
     <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-      <span className="text-sm text-muted-foreground">Theme</span>
+      <span className="text-sm text-foreground/75">Theme</span>
       <div className="flex items-center gap-0.5 rounded-md border border-foreground/10 bg-background/40 p-0.5">
         {THEME_OPTIONS.map(({ value, Icon, label }) => {
           const active = mounted && theme === value;
@@ -241,7 +241,7 @@ function ThemeRow() {
                 "flex size-6 cursor-pointer items-center justify-center rounded-[3px] transition-colors",
                 active
                   ? "bg-foreground/10 text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
+                  : "text-foreground/55 hover:text-foreground",
               )}
             >
               <Icon size={12} weight="regular" />
