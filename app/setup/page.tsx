@@ -96,7 +96,7 @@ const STEPS: readonly StepDef[] = [
     framing:
       "A small world lets you follow individual lives. A big one gets you crowds, neighbourhoods and crashes.",
     theoryHook:
-      "Size changes what you can see. In a village of 500 you can watch a single agent get rich or starve. In a city of 50,000 individuals blur and you start seeing whole districts move. Bigger worlds are slower to run.",
+      "Size changes what you can see. In a village of 500 you can watch a single agent get rich or starve. In a city of 5,000 individuals blur and you start seeing whole districts move. Bigger worlds are slower to run.",
   },
   {
     key: "equality",
